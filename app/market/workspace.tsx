@@ -94,6 +94,25 @@ export default function Workspace() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
+    // Handle shared product links
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('product');
+        if (productId) {
+            api('listings/' + productId)
+                .then((d: any) => {
+                    if (d && !d.error) {
+                        setActiveProduct(d);
+                        setView('Product');
+                        setModal(null);
+                        window.history.replaceState({}, '', '/product/' + productId);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                })
+                .catch(() => {});
+        }
+    }, []);
+
     const boot = useLoad('bootstrap', revision);
     const user = boot.data?.user || null;
     const refresh = () => setRevision(v => v + 1);
@@ -103,13 +122,13 @@ export default function Workspace() {
             setActiveProduct(item);
             setView('Product');
             setModal(null);
+            window.history.pushState({}, '', '/product/' + item.id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
-        if (!user && ['listing-form', 'request-form', 'offer-form', 'payment', 'report', 'conversation'].includes(type)) {
-            setPending({ type, item });
-            setAuth('login');
+        if (type === 'login' || (!user && ['listing-form', 'request-form', 'offer-form', 'payment', 'report', 'conversation'].includes(type))) {
+            window.location.href = '/login';
             return;
         }
         setModal({ type, item });
@@ -117,11 +136,12 @@ export default function Workspace() {
 
     const go = (next: string) => {
         if (!user && protectedViews.includes(next)) {
-            setAuth('login');
+            window.location.href = '/login';
             return;
         }
         setView(next);
         setModal(null);
+        window.history.pushState({}, '', '/');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -304,11 +324,9 @@ export default function Workspace() {
 
                         {/* Auth / Account actions */}
                         <div className="pp-header-auth">
-                            {user && (
-                                <button id="header-wishlist-btn" className="pp-icon-btn pp-relative" aria-label="Wishlist" onClick={() => go('Saved')}>
-                                    <Heart size={20} />
-                                </button>
-                            )}
+                            <button id="header-wishlist-btn" className="pp-icon-btn pp-relative" aria-label="Wishlist" onClick={() => go('Saved')}>
+                                <Heart size={20} />
+                            </button>
                             {!user ? (
                                 <>
                                     <button id="header-login-btn" className="pp-login-btn" onClick={() => window.location.href = '/login'}>Login</button>
