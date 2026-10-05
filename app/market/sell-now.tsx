@@ -116,7 +116,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-quota-info { font-size: 12px; font-weight: 600; color: #334155; }
                 .sn-quota-info strong { color: #0f172a; }
                 .sn-quota-info span { display: block; font-size: 11px; color: #64748b; margin-top: 2px; }
-                .sn-buy-btn { font-size: 11px; color: #e8621a; font-weight: 700; background: #fff7ed; padding: 4px 10px; border-radius: 20px; border: 0; cursor: pointer; }
+                .sn-buy-btn { font-size: 11px; color: #e8621a; font-weight: 700; background: #fff7ed; padding: 4px 10px; border-radius: 20px; border: 0; cursor: pointer; white-space: nowrap; }
+                .sn-quota-info .sn-slots-left { background: #fee2e2; color: #ef4444; padding: 2px 6px; border-radius: 10px; font-size: 10px; display: inline-block; margin: 0; white-space: nowrap; }
+                .sn-offer-box { background: #fff; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; width: 220px; }
 
                 .sn-layout { display: grid; grid-template-columns: 1fr 380px; gap: 30px; }
 
@@ -160,7 +162,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-checkbox input { width: 16px; height: 16px; accent-color: #059669; cursor: pointer; }
 
                 .sn-price-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-                .sn-price-input { width: 100%; box-sizing: border-box; font-size: 24px; font-weight: 800; color: #0f172a; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+                .sn-price-input { width: 100%; min-width: 0; flex: 1; box-sizing: border-box; font-size: 24px; font-weight: 800; color: #0f172a; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
                 .sn-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: flex-start; }
                 .sn-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
                 .sn-toggle-row:last-child { border: 0; padding-bottom: 0; }
@@ -199,7 +201,12 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                     .sn-submit-bar { padding: 16px; justify-content: space-between; }
                 }
                 @media(max-width: 600px) {
-                    .sn-header { flex-direction: column; gap: 16px; }
+                    .sn-header { flex-direction: column; gap: 14px; margin-bottom: 20px; }
+                    .sn-header h1 { font-size: 22px; margin-bottom: 6px; }
+                    .sn-header p { font-size: 13px; }
+                    .sn-quota-box { width: 100%; flex-wrap: wrap; gap: 10px; }
+                    .sn-price-row { grid-template-columns: 1fr; gap: 14px; }
+                    .sn-offer-box { width: 100%; }
                     .sn-row, .sn-row-3 { grid-template-columns: 1fr; }
                     .sn-cat-grid { grid-template-columns: 1fr 1fr; }
                     .sn-cond-grid { grid-template-columns: 1fr; }
@@ -220,7 +227,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                         <Package size={16} color="#059669"/>
                                         Free Listing Quota
-                                        <span style={{background:'#fee2e2', color:'#ef4444', padding:'2px 6px', borderRadius:'10px', fontSize:'10px', display:'inline-block', margin:0}}>
+                                        <span className="sn-slots-left">
                                             {Math.max(0, me.data.settings.freeListings + me.data.profile.extra_slots - me.data.counts.listings)} SLOTS LEFT
                                         </span>
                                     </div>
@@ -333,7 +340,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                             <input type="number" required className="sn-price-input" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0" />
                                         </div>
                                     </div>
-                                    <div style={{background:'#fff', padding:'12px', borderRadius:'12px', border:'1px solid #e2e8f0', width:'220px'}}>
+                                    <div className="sn-offer-box">
                                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'4px'}}>
                                             <strong style={{fontSize:'12px'}}>Allow Offers</strong>
                                             <input type="checkbox" checked={allowOffers} onChange={e => setAllowOffers(e.target.checked)} style={{accentColor:'#059669'}} />

@@ -504,22 +504,47 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-category-nav{top:93px}
   .pp-header-right{gap:8px}
 }
+/* Phone header. Row 1: logo, then location, Buying/Selling, notifications and login/profile.
+   Row 2 (.pp-mobile-row): Sell Now + Post Request on the left, Wishlist + Messages on the right.
+   Row 3: the scrolling category navbar. Both header rows have fixed heights because the navbar
+   sticks directly beneath them: 52 + 44 + 1px border = 97px. */
+.pp-mobile-row{display:none}
 @media(max-width:600px){
-  .pp-logo-picking,.pp-logo-price{font-size:16px}
-  .pp-logo-icon svg{width:24px;height:24px}
-  .pp-header-inner{padding:8px 0;gap:8px;flex-wrap:nowrap;align-items:center}
-  .pp-login-btn{display:none}
-  .pp-header-auth{gap:6px}
-  .pp-sell-btn{padding:7px 11px;font-size:13px}
-  .pp-signup-btn{padding:7px 12px;font-size:13px}
-  .pp-account-name{display:none}
-  .pp-account-btn{padding:4px !important;min-width:auto}
+  .pp-header-inner{height:52px;padding:0;gap:6px;flex-wrap:nowrap;align-items:center}
+  .pp-logo{flex:0 1 auto;min-width:0}
+  .pp-logo img{height:auto !important;width:auto !important;max-height:30px;max-width:100%}
   .pp-search-form{display:none !important}
-  .pp-category-nav{top:52px;padding:0}
+  .pp-header-right{gap:5px;flex-shrink:0}
+  .pp-location-wrap,.pp-mode-tabs{display:flex}
+  .pp-location-btn{padding:6px 5px;gap:1px}
+  .pp-loc-text{display:none}
+  .pp-location-dropdown{left:50%;transform:translateX(-50%);min-width:170px}
+  .pp-mode-tab{padding:6px 7px;font-size:11.5px}
+  .pp-bell-btn{width:30px;height:30px}
+  .pp-bell-btn svg{width:16px;height:16px}
+  .pp-header-auth{gap:5px}
+  .pp-signup-btn,.pp-sell-btn{display:none}
+  .pp-login-btn{border:1.5px solid #2d6a4f;color:#2d6a4f;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px}
+  .pp-account-name{display:none}
+  .pp-account-btn{padding:0 !important;min-width:auto}
+  .pp-header-auth .pp-icon-btn{width:30px;height:30px}
+  .pp-mobile-row{display:flex;align-items:center;justify-content:space-between;gap:6px;height:44px;border-top:1px solid #eef2ea}
+  .pp-mobile-group{display:flex;align-items:center;gap:6px;min-width:0}
+  .pp-mobile-pill{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;font-size:12px;font-weight:700;border-radius:7px;white-space:nowrap;cursor:pointer}
+  .pp-mobile-pill.sell{background:#e8621a;color:#fff;border:0}
+  .pp-mobile-pill.request{background:#fff;color:#2d6a4f;border:1.5px solid #2d6a4f}
+  .pp-mobile-link{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 5px;font-size:12px;font-weight:600;color:#4a6a4a;background:none;border:0;white-space:nowrap;cursor:pointer}
+  .pp-mobile-link.active{color:#1e5038;font-weight:700}
+  .pp-category-nav{top:97px;padding:0}
   .pp-category-nav-inner{padding:0 4%;gap:0;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .pp-cat-nav-item{padding:10px 10px;font-size:12px;flex-shrink:0}
   .pp-nav-right{display:none}
-  .pp-header-mobile-extras{display:flex;align-items:center;gap:6px}
+}
+/* Narrow phones: Wishlist and Messages keep their icons and drop the words. */
+@media(max-width:374px){
+  .pp-mobile-link span{display:none}
+  .pp-mobile-link{padding:0 8px}
+  .pp-mobile-link svg{width:18px;height:18px}
 }
 
 /* ===== PRE-LOVED PAGE ===== */
@@ -2127,10 +2152,9 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 /* Ensure pp-header elements don't break on 360px phones */
 @media(max-width: 380px) {
   .pp-header-inner { gap: 4px; }
-  .pp-sell-btn { padding: 7px 9px; font-size: 12px; }
-  .pp-sell-btn svg { width: 13px; height: 13px; }
-  .pp-signup-btn { padding: 6px 9px; font-size: 12px; }
-  .pp-bell-btn { width: 32px; height: 32px; }
+  .pp-header-right, .pp-header-auth { gap: 4px; }
+  .pp-mode-tab { padding: 6px 5px; font-size: 11px; }
+  .pp-mobile-pill { padding: 0 8px; }
 }
 
 /* Collapsible sidebar filters on mobile */
@@ -2270,3 +2294,9 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .msg-back-btn{display:flex}
 }
 
+
+/* The phone header is two rows tall (see "Phone header" above), so the chat screen gets less height. */
+@media(max-width:600px){
+  .msg-page{min-height:0}
+  .msg-layout{height:calc(100vh - 160px);height:calc(100dvh - 160px)}
+}

@@ -297,7 +297,8 @@ export default function Workspace() {
                             <button
                                 className="pp-location-btn"
                                 onClick={() => setLocationOpen(v => !v)}
-                                aria-label="Select location"
+                                aria-label={'Location: ' + location}
+                                title={location}
                                 id="header-location-btn"
                             >
                                 <MapPin size={14} className="pp-loc-icon" />
@@ -381,6 +382,28 @@ export default function Workspace() {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                {/* Phones only (see styles.css): selling and requesting on the left, saved items and chat on the right */}
+                <div className="pp-mobile-row">
+                    <div className="pp-mobile-group">
+                        <button id="mobile-sell-btn" className="pp-mobile-pill sell" onClick={() => open('listing-form')}>
+                            <Plus size={14} /> Sell Now
+                        </button>
+                        <button id="mobile-request-btn" className="pp-mobile-pill request" onClick={() => open('request-form')}>
+                            Post Request
+                        </button>
+                    </div>
+                    {user && (
+                        <div className="pp-mobile-group">
+                            <button id="mobile-saved-btn" className={`pp-mobile-link${view === 'Saved' ? ' active' : ''}`} aria-label="Wishlist" onClick={() => go('Saved')}>
+                                <Heart size={15} /> <span>Wishlist</span>
+                            </button>
+                            <button id="mobile-messages-btn" className={`pp-mobile-link${view === 'Messages' ? ' active' : ''}`} aria-label="Messages" onClick={() => go('Messages')}>
+                                <MessageCircle size={15} /> <span>Messages</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </header>
 
