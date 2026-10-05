@@ -11,7 +11,7 @@ const pg=new PGlite();
 const adapter={query:async(sql:string,args:unknown[]=[])=>{const result=await pg.query(sql,args);return {rows:result.rows,rowCount:result.affectedRows}},connect:async()=>({...adapter,release(){}})};
 const pool=adapter as unknown as Pool;
 await migrate(pool);
-const config={origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',adminSetupCode:'test-setup-code-0123456789'};
+const config={origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',googleSiteVerification:'test-verify_Code-123"><x',adminSetupCode:'test-setup-code-0123456789'};
 const server=createApp(new PgDatabase(pool),config).listen(0,'127.0.0.1');
 await new Promise<void>(r=>server.once('listening',r));
 const address=server.address();if(!address||typeof address==='string')throw Error('Server address missing');
@@ -88,6 +88,9 @@ try{
  r=await send('/api/auth/login',{email:signup.email,password:renewed});equal(r.status,200);
  r=await get('/admin');equal(r.status,200);r=await get('/login');equal(r.status,200);
  r=await send('/api/auth/logout',{},cookie);equal(r.status,200);r=await fetch(config.origin+'/api/market/me',{headers:{Cookie:cookie}});equal(r.status,401);
- r=await fetch(config.origin);equal(r.status,200);assert((await r.text()).includes('Picking Price'));checks++;
+ r=await fetch(config.origin);equal(r.status,200);const home=await r.text();assert(home.includes('Picking Price'));checks++;
+ assert(home.includes('<meta name="google-site-verification" content="test-verify_Code-123x"/></head>'));checks++;
+ r=await get('/privacy');equal(r.status,200);const privacy=await r.text();assert(privacy.includes('<title>Privacy Policy — Picking Price</title>')&&privacy.includes('Information from your Google account')&&privacy.includes('We do not sell your personal information')&&privacy.includes('google-site-verification'));checks++;
+ r=await get('/terms/');equal(r.status,200);const terms=await r.text();assert(terms.includes('<h1>Terms of Service</h1>')&&terms.includes('governed by the laws of Pakistan')&&!terms.includes('<div id="root"></div>'));checks++;
  console.log(checks+' Express HTTP assertions passed with embedded PostgreSQL.');
 }finally{await new Promise<void>((resolve,reject)=>server.close(e=>e?reject(e):resolve()));await pg.close();}

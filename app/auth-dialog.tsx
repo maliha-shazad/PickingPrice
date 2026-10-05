@@ -201,9 +201,9 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                 )}
 
             <div className="pp-auth-footer-links">
-                <a href="#">Terms of Service</a>
+                <a href="/terms">Terms of Service</a>
                 <span className="dot">•</span>
-                <a href="#">Privacy Policy</a>
+                <a href="/privacy">Privacy Policy</a>
             </div>
         </div>
     );

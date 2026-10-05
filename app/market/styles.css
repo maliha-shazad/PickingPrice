@@ -2508,3 +2508,32 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .market-main.is-dashboard .bd-container{padding-top:24px;padding-bottom:24px}
   .market-main.is-dashboard~.hp-footer{margin-top:0}
 }
+
+/* Privacy Policy and Terms of Service pages */
+.pp-legal-page{min-height:100vh;background:#f5f7f2;padding:0 20px 56px;color:#294333}
+.pp-legal-top{max-width:820px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0}
+.pp-legal-top img{height:34px;width:auto;display:block}
+.pp-legal-top nav{display:flex;gap:6px}
+.pp-legal-top nav a{font-size:13.5px;font-weight:600;color:#4a6a4a;text-decoration:none;padding:7px 12px;border-radius:7px;white-space:nowrap}
+.pp-legal-top nav a:hover{background:#e8f0e4}
+.pp-legal-top nav a.active{background:#2d6a4f;color:#fff}
+.pp-legal-card{max-width:820px;margin:0 auto;background:#fff;border:1px solid #e0e8d8;border-radius:16px;padding:40px 44px}
+.pp-legal-card h1{font-size:30px;line-height:1.2;font-weight:700;color:#1e3d2f;margin:0 0 6px}
+.pp-legal-updated{font-size:13px;color:#7a9a7a;margin:0 0 28px}
+.pp-legal-card h2{font-size:17px;font-weight:700;color:#1e3d2f;margin:28px 0 8px}
+.pp-legal-card p{font-size:15px;line-height:1.65;color:#3c5446;margin:0 0 10px}
+.pp-legal-card ul{margin:0 0 10px;padding-left:22px}
+.pp-legal-card li{font-size:15px;line-height:1.6;color:#3c5446;margin-bottom:6px}
+.pp-legal-back{display:inline-block;margin-top:28px;font-size:14px;font-weight:600;color:#2d6a4f;text-decoration:none}
+.pp-legal-back:hover{text-decoration:underline}
+@media(max-width:600px){
+  .pp-legal-page{padding:0 14px 32px}
+  .pp-legal-top{padding:12px 0;gap:8px}
+  .pp-legal-top img{height:26px}
+  .pp-legal-top nav{gap:2px}
+  .pp-legal-top nav a{font-size:12px;padding:6px 8px}
+  .pp-legal-card{padding:24px 18px;border-radius:12px}
+  .pp-legal-card h1{font-size:23px}
+  .pp-legal-card h2{font-size:15.5px;margin-top:22px}
+  .pp-legal-card p,.pp-legal-card li{font-size:14px}
+}

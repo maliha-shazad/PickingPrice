@@ -587,8 +587,8 @@ export default function Workspace() {
                         <h4>Company</h4>
                         <button onClick={() => open('safety')}>About Us</button>
                         <button onClick={() => open('safety')}>Careers</button>
-                        <button onClick={() => open('safety')}>Privacy Policy</button>
-                        <button onClick={() => open('safety')}>Terms of Service</button>
+                        <button onClick={() => window.location.href = '/privacy'}>Privacy Policy</button>
+                        <button onClick={() => window.location.href = '/terms'}>Terms of Service</button>
                         {workspaceEnabled && (
                             <button onClick={async () => { await fetch('/api/auth/workspace', { method: 'POST' }); setView('Dashboard'); refresh(); }}>
                                 Use workspace account

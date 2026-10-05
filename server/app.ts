@@ -8,6 +8,7 @@ import { one, run, stmt, ensureProfile, initialize } from '../lib/market/core';
 import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode } from '../lib/market/password-reset';
+import { legalHtml, legalTitle } from '../app/legal-content';
 import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '../lib/market/admin-auth';
 export type Config = {
     origin: string;
@@ -16,6 +17,8 @@ export type Config = {
     adminSetupCode?: string;
     googleClientId?: string;
     googleClientSecret?: string;
+    /** Google Search Console "HTML tag" code, proving to Google that we own this website. */
+    googleSiteVerification?: string;
     resendKey?: string;
     emailFrom?: string;
 };
@@ -115,7 +118,15 @@ export function createApp(db: Database, config: Config) {
     app.use('/api/admin/market', async (req, res) => { const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); res.json(await adminMarket(db, cookie(req, adminName), req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {})); });
     app.use('/api/market', async (req, res) => { const c = await context(req); const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); const result = await market(c, req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {}); res.json(result); });
     app.use(express.static(config.publicDir, { index: false }));
-    app.get('/{*path}', (_req, res) => res.sendFile(resolve(config.publicDir, 'index.html')));
+    // The page shell, read once. Google's ownership check looks for its tag in the home page's <head>.
+    let shell: Promise<string> | undefined;
+    const verification = (config.googleSiteVerification || '').replace(/[^\w-]/g, '');
+    const indexHtml = () => shell ??= readFile(resolve(config.publicDir, 'index.html'), 'utf8').then(html => verification ? html.replace('</head>', '<meta name="google-site-verification" content="' + verification + '"/></head>') : html);
+    // Privacy Policy and Terms of Service are sent with their full text in the HTML, so they can be read
+    // without JavaScript (Google's app review reads them that way); the page script then draws the same thing.
+    app.get(['/privacy', '/terms'], async (req, res) => { const kind = req.path.startsWith('/privacy') ? 'privacy' : 'terms';
+        res.type('html').send((await indexHtml()).replace(/<title>[^<]*<\/title>/, () => '<title>' + legalTitle(kind) + '</title>').replace('<div id="root"></div>', () => '<div id="root"><div class="pp-legal-page">' + legalHtml(kind) + '</div></div>')); });
+    app.get('/{*path}', async (_req, res) => { res.type('html').send(await indexHtml()); });
     app.use((e: unknown, _req: Request, res: Response, _next: NextFunction) => { if (e instanceof MarketError)
         return res.status(e.status).json({ error: e.message }); const err = e as {type?: string; message?: string}; if (err?.type === 'entity.parse.failed')
         return res.status(400).json({ error: 'Invalid JSON form.' }); if (err?.type === 'entity.too.large')
