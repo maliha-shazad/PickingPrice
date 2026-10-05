@@ -92,13 +92,13 @@ export async function saveListing(c: Context, body: unknown, key?: string) {
         const old = await owned(c, 'listings', key);
         if (old.status === 'Deleted')
             throw new MarketError('This listing was removed.');
-        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,phone=?,whatsapp=?,meetup_spot=?,images=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify(d.images), now(), key);
+        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,phone=?,whatsapp=?,meetup_spot=?,delivery=?,images=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), now(), key);
         return { id: key };
     }
     const keyNew = id(), token = id(), t = now(), conf = await configuration(c.db);
     const [reservation] = await c.db.batch([
         stmt(c.db, 'UPDATE profiles SET used_slots=used_slots+1,slot_token=? WHERE id=? AND used_slots<?+extra_slots RETURNING id', token, u.userId, conf.freeListings),
-        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,phone,whatsapp,meetup_spot,images,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify(d.images), t, t, u.userId, token),
+        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,phone,whatsapp,meetup_spot,delivery,images,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), t, t, u.userId, token),
     ]);
     if (!reservation.results?.length) {
         await c.db.batch([notice(c.db, u.userId, 'Listing limit reached', 'Request additional listing slots from Seller services.', 'services', '', `limit:${u.userId}:${t.slice(0, 10)}`)]);

@@ -188,6 +188,11 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             </div>
           </div>
 
+          {Array.isArray(item.delivery) && item.delivery.length > 0 && <div className="pp-delivery-options">
+            <strong>Delivery & Pickup:</strong>
+            {item.delivery.map((option: string) => <span key={option}><CheckCircle2 size={13} /> {option}</span>)}
+          </div>}
+
           {(item.meetup_spot || sellerData?.profile?.meetup_spot) && <div className="pp-meetup-spot">
             <div className="meetup-icon-wrap"><MapPin size={16} /></div>
             <div className="meetup-text">

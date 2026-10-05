@@ -29,7 +29,13 @@ try{
  r=await send('/api/market/listings',null,cookie);equal(r.status,400);
  const listing={title:'HTTP listing',description:'A product created through real HTTP.',category:'Books',price:200,quantity:1,condition:'Good',location:'Peshawar',images:['https://example.test/photo.jpg']};
  r=await send('/api/market/listings',listing,cookie);equal(r.status,200);const created=await r.json() as {id:string};
- r=await fetch(config.origin+'/api/market/listings/'+created.id);equal(r.status,200);
+ r=await fetch(config.origin+'/api/market/listings/'+created.id);equal(r.status,200);equal((await r.json() as {delivery:string[]}).delivery,[]);
+ // Delivery and pickup options are saved with the listing and returned as a list.
+ const patch=(body:unknown)=>fetch(config.origin+'/api/market/listings/'+created.id,{method:'PATCH',headers:{Origin:config.origin,'Content-Type':'application/json',Cookie:cookie},body:JSON.stringify(body)});
+ r=await patch({...listing,delivery:['Drone drop']});equal(r.status,400);
+ r=await patch({...listing,delivery:['In-Store Pickup','Nationwide Delivery','In-Store Pickup']});equal(r.status,200);
+ r=await fetch(config.origin+'/api/market/listings/'+created.id);equal((await r.json() as {delivery:string[]}).delivery,['In-Store Pickup','Nationwide Delivery']);
+ r=await fetch(config.origin+'/api/market/listings');equal(((await r.json()) as {items:{id:string;delivery:string[]}[]}).items.find(i=>i.id===created.id)!.delivery,['In-Store Pickup','Nationwide Delivery']);
  r=await fetch(config.origin+'/api/market/admin/users',{headers:{Cookie:cookie}});equal(r.status,403);
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII=','base64');
  const upload=(bytes:Buffer,c=cookie)=>fetch(config.origin+'/api/files',{method:'POST',headers:{Origin:config.origin,Cookie:c,'Content-Type':'image/png'},body:new Uint8Array(bytes).buffer});

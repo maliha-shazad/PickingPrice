@@ -14,8 +14,14 @@ export type Actions = {
     revision: number;
     categories: Item[];
     refresh: () => void;
+    /** The search that is currently applied. Each search box keeps its own typed text and only applies it on submit. */
     searchQuery: string;
     setSearchQuery: (q: string) => void;
+    /** Applies a search from either search box and asks the home page to scroll to the results. */
+    submitSearch: (q: string) => void;
+    searchTick: number;
+    /** True once per submitted search, so only the submit scrolls and never typing or a later visit. */
+    takeSearchScroll: () => boolean;
     searchCategory: string;
     setSearchCategory: (c: string) => void;
     /** Set by the admin panel: records are shown without member actions (contact, offer, report, review). */
@@ -24,6 +30,10 @@ export type Actions = {
 let apiBase = '/api/market/';
 /** The admin panel points the shared screens at its own, separately authenticated API. */
 export const setApiBase = (base: string) => { apiBase = base; };
+/** Ways a seller can hand an item over; also the buyer-side filter options. Must match the server's list. */
+export const DELIVERY_OPTIONS = ['Same-Day Delivery', 'In-Store Pickup', 'Nationwide Delivery'];
+/** True when nothing is ticked, or the product offers at least one of the ticked delivery options. */
+export const offersDelivery = (product: Item, ticked: string[]) => ticked.length === 0 || ticked.some(d => Array.isArray(product.delivery) && product.delivery.includes(d));
 export const money = (n: number) => 'Rs. ' + Number(n).toLocaleString('en-PK');
 export const date = (s: string) => s ? new Date(s).toLocaleDateString('en-PK') : '';
 export async function api(path: string, method = 'GET', body?: Record<string, unknown>) { const r = await fetch(apiBase + path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, ...(body ? { body: JSON.stringify(body) } : {}) }); const d: {error?: string} & Record<string, unknown> = await r.json(); if (!r.ok)

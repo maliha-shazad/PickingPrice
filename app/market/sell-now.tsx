@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
-import { Actions, Item, money, useLoad, Load, Photo, Status } from './ui';
+import { Actions, Item, money, useLoad, Load, Photo, Status, DELIVERY_OPTIONS } from './ui';
 import { ShieldCheck, CheckCircle2, UploadCloud, Image as ImageIcon, Video, Star, Zap, Lock, RefreshCw, X, Plus, Package, MessageSquare, Info, ChevronRight, Headphones, Smartphone, Laptop, Watch, Shirt, Home, Gamepad, Book, Camera, Car, Coffee, Gem, Baby, Palette, Briefcase, Phone, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +41,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         phone: initialItem?.phone || '',
         whatsapp: '',
         meetup_spot: initialItem?.meetup_spot || '',
+        delivery: Array.isArray(initialItem?.delivery) ? initialItem.delivery : [],
         images: initialItem?.images || (initialItem?.image ? [initialItem.image] : []),
         quantity: initialItem?.quantity || 1
     }));
@@ -164,6 +165,10 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-price-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
                 .sn-price-input { width: 100%; min-width: 0; flex: 1; box-sizing: border-box; font-size: 24px; font-weight: 800; color: #0f172a; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
                 .sn-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: flex-start; }
+                .sn-delivery-options { display: flex; flex-wrap: wrap; gap: 8px; }
+                .sn-delivery-option { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
+                .sn-delivery-option.on { border-color: #059669; background: #ecfdf5; color: #065f46; }
+                .sn-delivery-option input { accent-color: #059669; width: 16px; height: 16px; }
                 .sn-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
                 .sn-toggle-row:last-child { border: 0; padding-bottom: 0; }
                 .sn-toggle-info strong { display: block; font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
@@ -202,6 +207,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 }
                 @media(max-width: 600px) {
                     .sn-header { flex-direction: column; gap: 14px; margin-bottom: 20px; }
+                    .sn-submit-bar { padding: 12px 14px; gap: 10px; }
+                    .sn-cancel-btn { font-size: 13px; padding: 0; white-space: nowrap; flex-shrink: 0; }
+                    .sn-publish-btn { flex: 1; justify-content: center; padding: 12px 14px; font-size: 14px; white-space: nowrap; }
                     .sn-header h1 { font-size: 22px; margin-bottom: 6px; }
                     .sn-header p { font-size: 13px; }
                     .sn-quota-box { width: 100%; flex-wrap: wrap; gap: 10px; }
@@ -390,6 +398,21 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <label>Preferred Meetup Spot</label>
                                     <input className="sn-input" value={f.meetup_spot} onChange={e => set('meetup_spot', e.target.value)} placeholder="e.g. Packages Mall Food Court" />
                                 </div>
+                            </div>
+                            <div className="sn-field">
+                                <label>Delivery & Pickup</label>
+                                <div className="sn-delivery-options">
+                                    {DELIVERY_OPTIONS.map(option => {
+                                        const on = (f.delivery || []).includes(option);
+                                        return (
+                                            <label key={option} className={'sn-delivery-option' + (on ? ' on' : '')}>
+                                                <input type="checkbox" checked={on} onChange={() => set('delivery', on ? f.delivery.filter((d: string) => d !== option) : [...(f.delivery || []), option])} />
+                                                {option}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                                <span className="sn-contact-hint">Tick every way a buyer can get this item. Buyers can filter products by these.</span>
                             </div>
                             <div className="sn-row">
                                 <div className="sn-field">

@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Check, User, MapPin, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
+/** Where to send someone after they sign in: the page they were heading to (`?next=`), or home. Only paths on this site are accepted. */
+export function afterAuthPath() {
+    const next = new URLSearchParams(window.location.search).get('next') || '/';
+    return /^\/(?![\/\\])/.test(next) ? next : '/';
+}
+
 export default function AuthDialog({ mode, onSuccess }: { mode: string, onSuccess: () => Promise<void> }) {
     const [tab, setTab] = useState(mode === 'login' ? 'login' : 'signup');
     const [show, setShow] = useState(false);

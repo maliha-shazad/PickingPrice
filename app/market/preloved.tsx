@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, ArrowRight, Timer, CheckCheck, FileCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, useLoad } from './ui';
+import { Actions, useLoad, DELIVERY_OPTIONS, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 
@@ -13,6 +13,8 @@ export function PreLoved({ actions }: { actions: Actions }) {
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [sort, setSort] = useState<string>('Best Condition First');
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
+  const toggleDelivery = (d: string) => setSelectedDelivery(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
 
   const toggleWishlist = (id: string) => {
     if (!actions.user) {
@@ -31,6 +33,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
     setMinPrice('');
     setMaxPrice('');
     setSort('Best Condition First');
+    setSelectedDelivery([]);
   };
 
   const toggleCondition = (cond: string) => {
@@ -84,6 +87,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
     if (minPrice && p.price < parseInt(minPrice)) return false;
     if (maxPrice && p.price > parseInt(maxPrice)) return false;
     if (selectedArea && p.location !== currentCity) return false;
+    if (!offersDelivery(p, selectedDelivery)) return false;
     return true;
   });
 
@@ -103,7 +107,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedConditions, minPrice, maxPrice, selectedArea, sort]);
+  }, [selectedCategory, selectedConditions, minPrice, maxPrice, selectedArea, selectedDelivery, sort]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const paginatedProducts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -159,6 +163,29 @@ export function PreLoved({ actions }: { actions: Actions }) {
             </div>
 
             <div className="pl-filter-section">
+              <div className="pl-filter-label">Categories</div>
+              <button 
+                className={`pl-cat-row ${selectedCategory === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('all')}
+              >
+                <span className="pl-cat-icon"><Package size={14} /></span>
+                <span className="pl-cat-name">All Categories</span>
+                <span className="pl-count"></span>
+              </button>
+              {actions.categories.map(cat => (
+                <button 
+                  key={cat.id || cat.name}
+                  className={`pl-cat-row ${selectedCategory === cat.name ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat.name)}
+                >
+                  <span className="pl-cat-icon">{getCategoryIcon(cat.name)}</span>
+                  <span className="pl-cat-name">{cat.name}</span>
+                  <span className="pl-count"></span>
+                </button>
+              ))}
+            </div>
+
+            <div className="pl-filter-section">
               <div className="pl-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
               <div className="pl-area-pills">
                 {areas.map(area => (
@@ -197,25 +224,12 @@ export function PreLoved({ actions }: { actions: Actions }) {
             </div>
 
             <div className="pl-filter-section">
-              <div className="pl-filter-label">Categories</div>
-              <button 
-                className={`pl-cat-row ${selectedCategory === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('all')}
-              >
-                <span className="pl-cat-icon"><Package size={14} /></span>
-                <span className="pl-cat-name">All Categories</span>
-                <span className="pl-count"></span>
-              </button>
-              {actions.categories.map(cat => (
-                <button 
-                  key={cat.id || cat.name}
-                  className={`pl-cat-row ${selectedCategory === cat.name ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.name)}
-                >
-                  <span className="pl-cat-icon">{getCategoryIcon(cat.name)}</span>
-                  <span className="pl-cat-name">{cat.name}</span>
-                  <span className="pl-count"></span>
-                </button>
+              <div className="pl-filter-label">Delivery & Pickup</div>
+              {DELIVERY_OPTIONS.map(d => (
+                <label className="pl-checkbox-row" key={d}>
+                  <input type="checkbox" checked={selectedDelivery.includes(d)} onChange={() => toggleDelivery(d)} />
+                  <span className="pl-checkbox-label">{d}</span>
+                </label>
               ))}
             </div>
 
@@ -261,7 +275,8 @@ export function PreLoved({ actions }: { actions: Actions }) {
               {selectedArea && <span className="pl-chip">Area: {selectedArea} <button className="pl-chip-x" onClick={() => setSelectedArea('')}><X size={10}/></button></span>}
               {selectedCategory !== 'all' && <span className="pl-chip">Category: {selectedCategory} <button className="pl-chip-x" onClick={() => setSelectedCategory('all')}><X size={10}/></button></span>}
               {minPrice && maxPrice && <span className="pl-chip">Rs. {minPrice} - {maxPrice} <button className="pl-chip-x" onClick={() => {setMinPrice(''); setMaxPrice('');}}><X size={10}/></button></span>}
-              {(selectedConditions.length > 0 || selectedArea || selectedCategory !== 'all' || minPrice || maxPrice) && <button className="pl-chip-clear" onClick={resetFilters}>Clear All</button>}
+              {selectedDelivery.map(d => <span className="pl-chip" key={d}>{d} <button className="pl-chip-x" onClick={() => toggleDelivery(d)}><X size={10}/></button></span>)}
+              {(selectedConditions.length > 0 || selectedArea || selectedCategory !== 'all' || minPrice || maxPrice || selectedDelivery.length > 0) && <button className="pl-chip-clear" onClick={resetFilters}>Clear All</button>}
             </div>
 
             <div className="pl-grid">

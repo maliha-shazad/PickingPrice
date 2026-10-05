@@ -184,7 +184,7 @@ export default function AdminApp() {
         perform,
         user: { id: 'admin', name: 'Administrator', role: 'admin' },
         location: '', revision, categories: [], refresh: () => setRevision(v => v + 1),
-        searchQuery: '', setSearchQuery: () => { }, searchCategory: 'all', setSearchCategory: () => { },
+        searchQuery: '', setSearchQuery: () => { }, submitSearch: () => { }, searchTick: 0, takeSearchScroll: () => false, searchCategory: 'all', setSearchCategory: () => { },
         readOnly: true,
     };
     const signOut = async () => {

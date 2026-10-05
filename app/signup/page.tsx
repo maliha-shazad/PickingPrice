@@ -1,12 +1,12 @@
 'use client';
 import { Suspense } from 'react';
-import AuthDialog from '../auth-dialog';
+import AuthDialog, { afterAuthPath } from '../auth-dialog';
 import '../market/styles.css';
 
 function SignupContainer() {
     return (
         <div className="pp-auth-page-container">
-            <AuthDialog mode="signup" onSuccess={async () => { window.location.href = '/'; }} />
+            <AuthDialog mode="signup" onSuccess={async () => { window.location.href = afterAuthPath(); }} />
         </div>
     );
 }

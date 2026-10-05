@@ -151,6 +151,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .cond-badge span{display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:4px}
 .cond-badge strong{display:block;font-size:13px;color:#111827}
 
+.pp-delivery-options{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px;font-size:13px;color:#334155}
+.pp-delivery-options strong{margin-right:4px}
+.pp-delivery-options span{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-size:12px;font-weight:600}
 .pp-meetup-spot{background:#fff7ed;border:1px solid #ffedd5;border-radius:12px;padding:16px;display:flex;gap:12px;margin-bottom:24px}
 .meetup-icon-wrap{color:#ea580c;flex-shrink:0}
 .meetup-text strong{color:#c2410c;font-size:13px}
@@ -504,8 +507,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-category-nav{top:93px}
   .pp-header-right{gap:8px}
 }
-/* Phone header. Row 1: logo, then location, Buying/Selling, notifications and login/profile.
-   Row 2 (.pp-mobile-row): Sell Now + Post Request on the left, Wishlist + Messages on the right.
+/* Phone header. Row 1: logo, then location, Buying/Selling (members only), notifications and login/profile.
+   Row 2 (.pp-mobile-row), signed out: tagline on the left, Post a Request then Sell Now at the far right.
+   Row 2, signed in: Sell Now + Post a Request on the left, Wishlist + Messages on the right.
    Row 3: the scrolling category navbar. Both header rows have fixed heights because the navbar
    sticks directly beneath them: 52 + 44 + 1px border = 97px. */
 .pp-mobile-row{display:none}
@@ -528,17 +532,28 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-account-name{display:none}
   .pp-account-btn{padding:0 !important;min-width:auto}
   .pp-header-auth .pp-icon-btn{width:30px;height:30px}
-  .pp-mobile-row{display:flex;align-items:center;justify-content:space-between;gap:6px;height:44px;border-top:1px solid #eef2ea}
-  .pp-mobile-group{display:flex;align-items:center;gap:6px;min-width:0}
+  .pp-mobile-row{display:flex;align-items:center;justify-content:space-between;gap:6px;height:44px;border-top:1px solid #eef2ea;container-type:inline-size}
+  .pp-mobile-group{display:flex;align-items:center;gap:6px;flex-shrink:0}
   .pp-mobile-pill{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;font-size:12px;font-weight:700;border-radius:7px;white-space:nowrap;cursor:pointer}
   .pp-mobile-pill.sell{background:#e8621a;color:#fff;border:0}
   .pp-mobile-pill.request{background:#fff;color:#2d6a4f;border:1.5px solid #2d6a4f}
   .pp-mobile-link{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 5px;font-size:12px;font-weight:600;color:#4a6a4a;background:none;border:0;white-space:nowrap;cursor:pointer}
   .pp-mobile-link.active{color:#1e5038;font-weight:700}
+  /* One line, sized to the space left beside the two buttons: at letter-spacing -.2px the sentence is
+     20.32 x font-size - 8px wide, and the buttons with their gaps take 203px (cqw = 1% of the row). */
+  .pp-mobile-tagline{flex:1 1 0;min-width:0;white-space:nowrap;text-align:left;font-size:clamp(7px,calc(4.921cqw - 9.99px),11px);font-weight:600;letter-spacing:-.2px;line-height:1;color:#2d6a4f}
   .pp-category-nav{top:97px;padding:0}
   .pp-category-nav-inner{padding:0 4%;gap:0;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .pp-cat-nav-item{padding:10px 10px;font-size:12px;flex-shrink:0}
   .pp-nav-right{display:none}
+}
+/* Phones up to 440px: tighter spacing so all four row-2 buttons fit at full size, and the
+   signed-out tagline gets more room (buttons and gaps take 186px here). */
+@media(max-width:440px){
+  .pp-mobile-row,.pp-mobile-group{gap:5px}
+  .pp-mobile-pill{padding:0 6px}
+  .pp-mobile-link{padding:0 2px;gap:3px}
+  .pp-mobile-tagline{font-size:clamp(7px,calc(4.921cqw - 9.1px),11px)}
 }
 /* Narrow phones: Wishlist and Messages keep their icons and drop the words. */
 @media(max-width:374px){
@@ -2154,7 +2169,6 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pp-header-inner { gap: 4px; }
   .pp-header-right, .pp-header-auth { gap: 4px; }
   .pp-mode-tab { padding: 6px 5px; font-size: 11px; }
-  .pp-mobile-pill { padding: 0 8px; }
 }
 
 /* Collapsible sidebar filters on mobile */
@@ -2200,7 +2214,7 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 @media(max-width:600px){
   .hp-hero{padding:60px 4% 40px}
   .hp-hero-title{font-size:22px;margin:0 0 10px}
-  .hp-hero-sub{font-size:13px;margin:0 0 20px}
+  .hp-hero-sub{font-size:13px;margin:0 auto 20px;max-width:290px;text-wrap:balance}
   .hp-hero-sub br{display:none}
   .hp-hero-pills{gap:6px}
   .hp-hero-pill{padding:5px 12px;font-size:11px}
@@ -2299,4 +2313,42 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 @media(max-width:600px){
   .msg-page{min-height:0}
   .msg-layout{height:calc(100vh - 160px);height:calc(100dvh - 160px)}
+}
+
+/* Product list pages: the filter sidebar stays in view beside the products. A sidebar taller than
+   the window could never stick, so it scrolls inside itself instead. */
+@media(min-width:801px){
+  .pl-sidebar{max-height:calc(100vh - 150px);overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain}
+}
+
+/* A submitted search scrolls its results to just below the sticky header, never underneath it. */
+.hp-search-results{scroll-margin-top:124px}
+@media(max-width:900px){.hp-search-results{scroll-margin-top:154px}}
+
+/* Phones: two products per row on the product list pages, with a compact card. */
+@media(max-width:600px){
+  .pl-grid,.bn-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pl-card-img-wrap,.bn-card-img-wrap{height:130px}
+  .pl-card-cond-pill{top:6px;left:6px;padding:2px 7px;font-size:9.5px}
+  .pl-card-detail-pill{display:none}
+  .pl-heart-btn,.bn-heart-btn{top:6px;right:6px;width:26px;height:26px}
+  .bn-card-badges-top{top:6px;left:6px;gap:3px}
+  .bn-badge-dark{font-size:8.5px;padding:3px 5px}
+  .bn-badge-light{font-size:8px;padding:2px 5px}
+  .pl-card-body{padding:9px}
+  .pl-card-catrow{flex-wrap:wrap;gap:3px 6px;margin-bottom:4px}
+  .pl-card-cat{font-size:9px;letter-spacing:.3px;flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pl-card-badge{font-size:9px;padding:1px 6px}
+  .pl-card-title{font-size:12.5px;margin-bottom:5px;line-height:1.35}
+  .pl-card-price-row{flex-wrap:wrap;gap:0 6px;margin-bottom:3px}
+  .pl-card-price{font-size:14px}
+  .pl-card-orig{font-size:10.5px}
+  .pl-card-ref{font-size:9.5px;margin-bottom:7px}
+  .pl-card-seller{gap:6px;margin-bottom:8px;padding-top:7px}
+  .pl-seller-avatar{width:22px;height:22px;font-size:10px}
+  .pl-seller-name{font-size:11px}
+  .pl-seller-loc{font-size:10px}
+  .pl-seller-rating{display:none}
+  .pl-card-actions{grid-template-columns:1fr;gap:6px}
+  .pl-btn-inspect,.pl-btn-chat{padding:7px 4px;font-size:11.5px}
 }

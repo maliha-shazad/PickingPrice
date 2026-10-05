@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoad, Photo, money } from './ui';
+import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
+import { Actions, useLoad, Photo, money, DELIVERY_OPTIONS, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -20,41 +20,69 @@ const getCategoryIcon = (name: string) => {
 };
 
 const FALLBACK_CATS = ['Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
+const CONDITIONS = ['New', 'Like New', 'Good', 'Fair', 'Used'];
+const PRICE_BRACKETS = [
+  { label: 'Under 1k', min: 0, max: 1000 },
+  { label: '1k - 5k', min: 1000, max: 5000 },
+  { label: '5k - 25k', min: 5000, max: 25000 },
+  { label: '25k+', min: 25000, max: Infinity },
+];
+const AREAS: Record<string, string[]> = {
+  Lahore: ['Gulberg', 'DHA', 'Johar Town', 'Model Town', 'Wapda Town'],
+  Karachi: ['Clifton', 'DHA', 'Gulshan', 'Tariq Road', 'Nazimabad'],
+  Islamabad: ['F-7/F-8', 'G-9/G-11', 'Blue Area', 'Bahria Town', 'DHA'],
+  Rawalpindi: ['Saddar', 'Bahria Town', 'Satellite Town', 'Commercial Market', 'DHA'],
+  Faisalabad: ['D-Ground', 'Kohinoor', 'Peoples Colony', 'Samanabad', 'Gulberg'],
+  Multan: ['Gulgasht', 'Cantt', 'Bosan Road', 'Shah Rukn-e-Alam', 'Wapda Town'],
+  Peshawar: ['Hayatabad', 'University Rd', 'Saddar', 'Town', 'Cantt'],
+};
+const toggled = (list: string[], value: string) => list.includes(value) ? list.filter(x => x !== value) : [...list, value];
 
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return <span className="pl-chip">{label} <button className="pl-chip-x" aria-label={'Remove ' + label} onClick={onRemove}><X size={10}/></button></span>;
+}
+
+// Every filter offered on the New Products and Pre-Loved pages, over all products.
 export function AllCategories({ actions }: { actions: Actions }) {
   const cats = actions.categories.length > 0
     ? actions.categories
     : FALLBACK_CATS.map(name => ({ id: name, name }));
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedCondition, setSelectedCondition] = useState<string>('all');
+  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [selectedWarranty, setSelectedWarranty] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const params = new URLSearchParams();
-  params.set('size', '12');
-  params.set('page', String(page));
-  if (selectedCategory !== 'all') params.set('category', selectedCategory);
-  if (selectedCondition !== 'all') params.set('condition', selectedCondition);
-  if (minPrice) params.set('min', minPrice);
-  if (maxPrice) params.set('max', maxPrice);
-  if (sort === 'low') params.set('sort', 'low');
-  else if (sort === 'high') params.set('sort', 'high');
-  else params.set('sort', 'newest');
+  const currentCity = actions.location && actions.location !== 'all' ? actions.location : 'Lahore';
+  const areas = AREAS[currentCity] || ['Center', 'North', 'South', 'East', 'West'];
 
   const state = useLoad('listings?size=100', actions.revision);
-  const realListings = state.data?.items || [];
-  const hasRealData = state.data?.total > 0;
-  const sourceData = hasRealData ? realListings : samples;
+  const realListings = (state.data?.items || []) as any[];
+  const hasRealData = Number(state.data?.total) > 0;
+  const sourceData: any[] = hasRealData ? realListings : samples;
 
-  let filtered = sourceData.filter((p: any) => {
+  const options = (field: string) => Array.from(new Set(sourceData.map(p => p[field]).filter(Boolean) as string[]))
+    .map(name => ({ name, count: sourceData.filter(p => p[field] === name).length }));
+  const availableBrands = options('brand');
+  const availableWarranties = options('warranty');
+  const brackets = PRICE_BRACKETS.filter(b => sourceData.some(p => p.price >= b.min && p.price < b.max));
+
+  const filtered = sourceData.filter((p: any) => {
     if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
-    if (selectedCondition !== 'all' && p.condition !== selectedCondition) return false;
+    if (selectedConditions.length > 0 && !selectedConditions.includes(p.condition)) return false;
     if (minPrice && p.price < parseInt(minPrice)) return false;
     if (maxPrice && p.price > parseInt(maxPrice)) return false;
+    if (selectedArea && p.location !== currentCity) return false;
+    if (selectedBrands.length > 0 && !selectedBrands.includes(p.brand || '')) return false;
+    if (selectedWarranty.length > 0 && !selectedWarranty.includes(p.warranty || '')) return false;
+    if (!offersDelivery(p, selectedDelivery)) return false;
     return true;
   });
 
@@ -69,7 +97,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
   const items = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  useEffect(() => { setPage(1); }, [selectedCategory, selectedCondition, minPrice, maxPrice, sort]);
+  useEffect(() => { setPage(1); }, [selectedCategory, selectedArea, selectedConditions, minPrice, maxPrice, selectedWarranty, selectedBrands, selectedDelivery, sort]);
 
   const toggleWishlist = (id: string) => {
     if (!actions.user) { actions.open('login'); return; }
@@ -78,13 +106,18 @@ export function AllCategories({ actions }: { actions: Actions }) {
     actions.perform('favorites/' + id, 'PUT', { saved: !isSaved });
   };
 
+  const setPriceRange = (min: string, max: string) => { setMinPrice(min); setMaxPrice(max); };
   const resetFilters = () => {
     setSelectedCategory('all');
-    setSelectedCondition('all');
-    setMinPrice('');
-    setMaxPrice('');
+    setSelectedArea('');
+    setSelectedConditions([]);
+    setPriceRange('', '');
+    setSelectedWarranty([]);
+    setSelectedBrands([]);
+    setSelectedDelivery([]);
     setSort('newest');
   };
+  const anyFilter = selectedCategory !== 'all' || !!selectedArea || selectedConditions.length > 0 || !!minPrice || !!maxPrice || selectedWarranty.length > 0 || selectedBrands.length > 0 || selectedDelivery.length > 0;
 
   return (
     <div className="pl-root">
@@ -140,11 +173,20 @@ export function AllCategories({ actions }: { actions: Actions }) {
             </div>
 
             <div className="pl-filter-section">
-              <div className="pl-filter-label">Condition</div>
-              {['all', 'New', 'Like New', 'Good', 'Used'].map(cond => (
-                <label className="pl-checkbox-row" key={cond} style={{cursor:'pointer'}}>
-                  <input type="radio" name="condition" checked={selectedCondition === cond} onChange={() => setSelectedCondition(cond)} style={{accentColor:'#059669'}} />
-                  <span className="pl-checkbox-label">{cond === 'all' ? 'All Conditions' : cond}</span>
+              <div className="pl-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
+              <div className="pl-area-pills">
+                {areas.map(area => (
+                  <button key={area} className={`pl-area-pill ${selectedArea === area ? 'active' : ''}`} onClick={() => setSelectedArea(selectedArea === area ? '' : area)}>{area}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pl-filter-section">
+              <div className="pl-filter-label">Condition Grade</div>
+              {CONDITIONS.map(cond => (
+                <label className="pl-checkbox-row" key={cond}>
+                  <input type="checkbox" checked={selectedConditions.includes(cond)} onChange={() => setSelectedConditions(toggled(selectedConditions, cond))} />
+                  <span className="pl-checkbox-label">{cond}</span>
                 </label>
               ))}
             </div>
@@ -152,17 +194,69 @@ export function AllCategories({ actions }: { actions: Actions }) {
             <div className="pl-filter-section">
               <div className="pl-filter-label">Price Range (PKR)</div>
               <div className="pl-price-inputs">
-                <input type="text" className="pl-price-input" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value.replace(/[^0-9]/g,''))} />
+                <input type="text" inputMode="numeric" className="pl-price-input" placeholder="Min" aria-label="Minimum price" value={minPrice} onChange={e => setMinPrice(e.target.value.replace(/[^0-9]/g,''))} />
                 <span className="pl-price-sep">-</span>
-                <input type="text" className="pl-price-input" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value.replace(/[^0-9]/g,''))} />
+                <input type="text" inputMode="numeric" className="pl-price-input" placeholder="Max" aria-label="Maximum price" value={maxPrice} onChange={e => setMaxPrice(e.target.value.replace(/[^0-9]/g,''))} />
               </div>
+              {brackets.length > 0 && (
+                <div className="pl-area-pills" style={{marginTop:'8px',marginBottom:0}}>
+                  {brackets.map(b => {
+                    const min = String(b.min), max = b.max === Infinity ? '' : String(b.max);
+                    return <button key={b.label} className={`pl-area-pill ${minPrice === min && maxPrice === max ? 'active' : ''}`} onClick={() => setPriceRange(min, max)}>{b.label}</button>;
+                  })}
+                </div>
+              )}
+            </div>
+
+            {availableWarranties.length > 0 && (
+              <div className="pl-filter-section">
+                <div className="pl-filter-label">Seal & Warranty</div>
+                {availableWarranties.map(w => (
+                  <label className="pl-checkbox-row" key={w.name}>
+                    <input type="checkbox" checked={selectedWarranty.includes(w.name)} onChange={() => setSelectedWarranty(toggled(selectedWarranty, w.name))} />
+                    <span className="pl-checkbox-label">{w.name}</span>
+                    <span className="pl-count">{w.count}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {availableBrands.length > 0 && (
+              <div className="pl-filter-section">
+                <div className="pl-filter-label">Brand</div>
+                {availableBrands.map(brand => (
+                  <label className="pl-checkbox-row" key={brand.name}>
+                    <input type="checkbox" checked={selectedBrands.includes(brand.name)} onChange={() => setSelectedBrands(toggled(selectedBrands, brand.name))} />
+                    <span className="pl-checkbox-label">{brand.name}</span>
+                    <span className="pl-count">{brand.count}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="pl-filter-section">
+              <div className="pl-filter-label">Delivery & Pickup</div>
+              {DELIVERY_OPTIONS.map(d => (
+                <label className="pl-checkbox-row" key={d}>
+                  <input type="checkbox" checked={selectedDelivery.includes(d)} onChange={() => setSelectedDelivery(toggled(selectedDelivery, d))} />
+                  <span className="pl-checkbox-label">{d}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="pl-filter-section">
+              <div className="pl-filter-label">Trust Perks</div>
+              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">SECP Verified Sellers</span></label>
+              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Rating 4.8 & Above</span></label>
+              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">Safe Handover Hubs</span></label>
+              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Original Box & Bill</span></label>
             </div>
           </aside>
 
           <div style={{flex:1}}>
             <div className="pl-feed-header">
               <div>
-                <h2 className="pl-feed-title">{selectedCategory === 'all' ? 'All Products' : selectedCategory} {selectedCondition !== 'all' ? `- ${selectedCondition}` : ''}</h2>
+                <h2 className="pl-feed-title">{selectedCategory === 'all' ? 'All Products' : selectedCategory}{selectedConditions.length === 1 ? ` - ${selectedConditions[0]}` : ''}</h2>
                 <p className="pl-feed-sub">{total} products found</p>
               </div>
               <div className="pl-sort-wrap">
@@ -179,10 +273,14 @@ export function AllCategories({ actions }: { actions: Actions }) {
             </div>
 
             <div className="pl-active-chips">
-              {selectedCategory !== 'all' && <span className="pl-chip">{selectedCategory} <button className="pl-chip-x" onClick={() => setSelectedCategory('all')}><X size={10}/></button></span>}
-              {selectedCondition !== 'all' && <span className="pl-chip">{selectedCondition} <button className="pl-chip-x" onClick={() => setSelectedCondition('all')}><X size={10}/></button></span>}
-              {(minPrice || maxPrice) && <span className="pl-chip">Rs. {minPrice || '0'} - {maxPrice || 'Any'} <button className="pl-chip-x" onClick={() => {setMinPrice('');setMaxPrice('');}}><X size={10}/></button></span>}
-              {(selectedCategory !== 'all' || selectedCondition !== 'all' || minPrice || maxPrice) && <button className="pl-chip-clear" onClick={resetFilters}>Clear All</button>}
+              {selectedCategory !== 'all' && <Chip label={selectedCategory} onRemove={() => setSelectedCategory('all')} />}
+              {selectedArea && <Chip label={'Area: ' + selectedArea} onRemove={() => setSelectedArea('')} />}
+              {selectedConditions.map(c => <Chip key={c} label={c} onRemove={() => setSelectedConditions(toggled(selectedConditions, c))} />)}
+              {(minPrice || maxPrice) && <Chip label={`Rs. ${minPrice || '0'} - ${maxPrice || 'Any'}`} onRemove={() => setPriceRange('', '')} />}
+              {selectedWarranty.map(w => <Chip key={w} label={w} onRemove={() => setSelectedWarranty(toggled(selectedWarranty, w))} />)}
+              {selectedBrands.map(b => <Chip key={b} label={b} onRemove={() => setSelectedBrands(toggled(selectedBrands, b))} />)}
+              {selectedDelivery.map(d => <Chip key={d} label={d} onRemove={() => setSelectedDelivery(toggled(selectedDelivery, d))} />)}
+              {anyFilter && <button className="pl-chip-clear" onClick={resetFilters}>Clear All</button>}
             </div>
 
             <div className="pl-grid">
@@ -191,7 +289,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
                   <div className="pl-card-img-wrap">
                     <Photo src={Array.isArray(p.images) ? p.images[0] : p.image} alt={p.title} />
                     <span className="pl-card-cond-pill">{p.condition}</span>
-                    <button className="pl-heart-btn" onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}>
+                    <button className="pl-heart-btn" aria-label={'Save ' + p.title} onClick={e => { e.stopPropagation(); toggleWishlist(p.id); }}>
                       <Heart size={16} fill={wishlist.includes(p.id) ? '#ef4444' : 'none'} color={wishlist.includes(p.id) ? '#ef4444' : 'currentColor'} />
                     </button>
                   </div>

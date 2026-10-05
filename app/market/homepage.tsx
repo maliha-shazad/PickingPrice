@@ -109,21 +109,23 @@ export function Homepage({ actions }: { actions: Actions }) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
 
-  // Use shared search state from actions (synced with header search)
+  // The applied search is shared with the header; the text typed in this box is not, and is applied only on submit.
   const searchQ = actions.searchQuery;
   const setSearchQ = actions.setSearchQuery;
+  const [heroSearch, setHeroSearch] = useState('');
+  useEffect(() => { if (!searchQ) setHeroSearch(''); }, [searchQ]);
   const searchCategory = actions.searchCategory;
   const setSearchCategory = actions.setSearchCategory;
 
   const toggleSave = (id: string) => {
-    if (!actions.user) { actions.open('listing-form'); return; }
+    if (!actions.user) { actions.open('login'); return; }
     setSavedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     actions.perform('favorites/' + id, 'PUT', { saved: !savedIds.has(id) });
   };
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setScrollToResults(true);
+    actions.submitSearch(heroSearch);
   };
 
   const scrollDeals = (dir: 'left' | 'right') => {
@@ -142,14 +144,12 @@ export function Homepage({ actions }: { actions: Actions }) {
   const filteredArrivals = filterItems(freshArrivals);
   const isSearching = searchQ.trim().length > 0 || searchCategory !== 'all';
   const searchResultsRef = useRef<HTMLDivElement>(null);
-  const [scrollToResults, setScrollToResults] = useState(false);
 
+  // Runs for each submitted search (from here or the header), including when that submit brought the visitor to this page.
   useEffect(() => {
-    if (scrollToResults && isSearching && searchResultsRef.current) {
-      searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setScrollToResults(false);
-    }
-  }, [scrollToResults, isSearching]);
+    if (actions.takeSearchScroll() && searchResultsRef.current)
+      searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [actions.searchTick]);
 
   const HERO_CATS = ['All Categories', 'Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
 
@@ -161,7 +161,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         <div className="hp-hero-content">
           <h1 className="hp-hero-title">Find what you need. Sell what you don&apos;t.</h1>
           <p className="hp-hero-sub">
-            Buy new and pre-loved products or post a request and let<br />sellers come to you.
+            Buy new and pre-loved products or post a request and let <br />sellers come to you.
           </p>
 
           {/* Hero search bar — exact Figma style */}
@@ -206,8 +206,8 @@ export function Homepage({ actions }: { actions: Actions }) {
               className="hp-hero-input"
               type="search"
               placeholder="What are you looking for?"
-              value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
+              value={heroSearch}
+              onChange={e => setHeroSearch(e.target.value)}
               aria-label="Search products"
               autoComplete="off"
             />
@@ -353,7 +353,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             <div className="hp-scroll-btns">
               <button className="hp-scroll-btn" onClick={() => scrollDeals('left')} aria-label="Scroll left"><ChevronLeft size={16} /></button>
               <button className="hp-scroll-btn" onClick={() => scrollDeals('right')} aria-label="Scroll right"><ChevronRight size={16} /></button>
-              <button className="hp-see-all" onClick={() => actions.go('Explore')}>See All <ChevronRight size={14} /></button>
+              <button className="hp-see-all" id="preloved-see-all" onClick={() => actions.go('PreLoved')}>See All <ChevronRight size={14} /></button>
             </div>
           </div>
           <div className="hp-horizontal-scroll" id="deals-scroll">
@@ -378,7 +378,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               <Zap size={18} className="hp-zap-icon" />
               <h2 className="hp-section-title">Fresh Arrivals</h2>
             </div>
-            <button className="hp-see-all" onClick={() => actions.go('Explore')}>See All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" id="arrivals-see-all" onClick={() => actions.go('BrandNew')}>See All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-arrivals-grid">
             {filteredArrivals.length > 0 ? filteredArrivals.map(item => (

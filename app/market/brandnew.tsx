@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Camera, Package, ArrowRight, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, RefreshCcw, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, useLoad } from './ui';
+import { Actions, useLoad, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -71,10 +71,12 @@ export function BrandNew({ actions }: { actions: Actions }) {
     if (selectedBrands.length > 0 && !selectedBrands.includes((p as any).brand || '')) return false;
     if (selectedWarranty.length > 0 && !selectedWarranty.includes((p as any).warranty || '')) return false;
     if (selectedArea && p.location !== currentCity) return false;
+    if (!offersDelivery(p, selectedDelivery)) return false;
     return true;
   });
 
-  const newProducts = samples.filter(p => p.condition === 'New');
+  // Brand, warranty and price options come from the products actually on this page.
+  const newProducts = sourceData.filter((p: any) => p.condition === 'New');
   
   const dynamicBrackets = [
     { label: 'Under 1k', min: 0, max: 1000 },
@@ -169,37 +171,9 @@ export function BrandNew({ actions }: { actions: Actions }) {
           </button>
           <aside className={`pl-sidebar${filtersOpen ? '' : ' collapsed'}`}>
             <div className="pl-sidebar-header">
-              <div className="pl-sidebar-title" style={{display:'flex', alignItems: 'center', gap:'8px', fontWeight: 600, fontSize: '15px'}}><span style={{display:'flex', alignItems:'center', justifyContent:'center', width:'24px', height:'24px', background:'#e0f2fe', color:'#0284c7', borderRadius:'4px'}}><Package size={14} /></span> Filter Products</div>
+              <div className="pl-sidebar-title"><SlidersHorizontal size={16} /> Filter Products</div>
               <button className="pl-reset-btn" onClick={resetFilters}>Reset All</button>
             </div>
-
-            {/* Location Radius Filter - TOP */}
-            <div className="bn-filter-section">
-              <div className="bn-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
-              <div className="pl-area-pills">
-                {areas.map(area => (
-                  <button
-                    key={area}
-                    className={`pl-area-pill ${selectedArea === area ? 'active' : ''}`}
-                    onClick={() => setSelectedArea(selectedArea === area ? '' : area)}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bn-filter-section">
-              <div className="bn-filter-label">SEAL & WARRANTY</div>
-              {availableWarranties.map(w => (
-                <label className="bn-checkbox-row" key={w.name}>
-                  <input type="checkbox" checked={selectedWarranty.includes(w.name)} onChange={() => toggleWarranty(w.name)} />
-                  <span className="bn-checkbox-label">{w.name} ({w.count})</span>
-                </label>
-              ))}
-            </div>
-
-
 
             <div className="bn-filter-section">
               <div className="bn-filter-label">CATEGORIES</div>
@@ -244,6 +218,33 @@ export function BrandNew({ actions }: { actions: Actions }) {
             </div>
 
             <div className="bn-filter-section">
+              <div className="bn-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
+              <div className="pl-area-pills">
+                {areas.map(area => (
+                  <button
+                    key={area}
+                    className={`pl-area-pill ${selectedArea === area ? 'active' : ''}`}
+                    onClick={() => setSelectedArea(selectedArea === area ? '' : area)}
+                  >
+                    {area}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {availableWarranties.length > 0 && <div className="bn-filter-section">
+              <div className="bn-filter-label">SEAL & WARRANTY</div>
+              {availableWarranties.map(w => (
+                <label className="bn-checkbox-row" key={w.name}>
+                  <input type="checkbox" checked={selectedWarranty.includes(w.name)} onChange={() => toggleWarranty(w.name)} />
+                  <span className="bn-checkbox-label">{w.name} ({w.count})</span>
+                </label>
+              ))}
+            </div>}
+
+
+
+            <div className="bn-filter-section">
               <div className="bn-filter-label">PRICE RANGE (PKR)</div>
               <div className="bn-price-inputs" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <div className="bn-price-input-inner" style={{ display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0 12px', flex: 1 }}>
@@ -261,7 +262,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
               </div>
             </div>
 
-            <div className="bn-filter-section">
+            {availableBrands.length > 0 && <div className="bn-filter-section">
               <div className="bn-filter-label">BRAND</div>
               <div className="bn-brand-grid">
                 {availableBrands.map(brand => (
@@ -271,7 +272,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
                   </label>
                 ))}
               </div>
-            </div>
+            </div>}
 
             <div className="bn-filter-section">
               <div className="bn-filter-label">DELIVERY & PICKUP</div>

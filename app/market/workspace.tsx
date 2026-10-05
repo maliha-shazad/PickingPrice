@@ -37,7 +37,10 @@ export default function Workspace() {
     const [workspaceEnabled, setWorkspaceEnabled] = useState(false);
 
     // Header state
-    const [searchQ, setSearchQ] = useState('');
+    const [searchQ, setSearchQ] = useState('');          // the applied search
+    const [headerSearch, setHeaderSearch] = useState(''); // text typed in the header box, applied only on submit
+    const [searchTick, setSearchTick] = useState(0);
+    const searchScroll = useRef(false);
     const [searchCategory, setSearchCategory] = useState('all');
     const [location, setLocation] = useState('Peshawar');
     const [locationOpen, setLocationOpen] = useState(false);
@@ -120,7 +123,7 @@ export default function Workspace() {
             setView('PostRequest');
         } else if (window.location.hash) {
             const hash = window.location.hash.replace('#', '');
-            const mappedView = [ 'Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'PostRequest', 'BuyerRequests' ]
+            const mappedView = [ 'Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'AllCategories', 'PostRequest', 'SellNow', 'BuyerRequests' ]
                 .find(v => v.toLowerCase() === hash.toLowerCase());
             if (mappedView) setView(mappedView);
         }
@@ -129,6 +132,21 @@ export default function Workspace() {
     const boot = useLoad('bootstrap', revision);
     const user = boot.data?.user || null;
     const refresh = () => setRevision(v => v + 1);
+
+    // One rule for every page that needs an account: a signed-out visitor goes to the login page
+    // and is brought back to the page they asked for. `boot.data` is null until we know who they are.
+    const signedOut = !!boot.data && !user;
+    const viewPath = (v: string) => v === 'Explore' ? '/' : v === 'PostRequest' ? '/request-form' : '/#' + v.toLowerCase();
+    const here = () => window.location.pathname + window.location.search + window.location.hash;
+    const requireLogin = (next: string) => { window.location.href = '/login?next=' + encodeURIComponent(next); };
+    useEffect(() => {
+        if (signedOut && protectedViews.includes(view)) requireLogin(viewPath(view));
+    }, [signedOut, view]);
+
+    // The Buying/Selling toggle starts on the side the member registered for; it is theirs to switch afterwards.
+    useEffect(() => {
+        setMode(user?.role === 'seller' ? 'Selling' : 'Buying');
+    }, [user?.id, user?.role]);
 
     const open = (type: string, item: Item = {}) => {
         if (type === 'listing') {
@@ -141,6 +159,7 @@ export default function Workspace() {
         }
 
         if (type === 'request-form' && !item?.id) {
+            if (signedOut) return requireLogin(viewPath('PostRequest'));
             setView('PostRequest');
             setModal(null);
             window.history.pushState({}, '', '/request-form');
@@ -149,24 +168,25 @@ export default function Workspace() {
         }
 
         if (type === 'listing-form') {
+            if (signedOut) return requireLogin(viewPath('SellNow'));
             setActiveProduct(item);
             setView('SellNow');
             setModal(null);
-            window.history.pushState({}, '', '/sell-now');
+            window.history.pushState({}, '', viewPath('SellNow'));
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
-        if (type === 'login' || (!user && ['listing-form', 'offer-form', 'payment', 'report', 'conversation'].includes(type))) {
-            window.location.href = '/login';
+        if (type === 'login' || (!user && ['offer-form', 'payment', 'report', 'conversation'].includes(type))) {
+            requireLogin(here());
             return;
         }
         setModal({ type, item });
     };
 
     const go = (next: string) => {
-        if (!user && protectedViews.includes(next)) {
-            window.location.href = '/login';
+        if (signedOut && protectedViews.includes(next)) {
+            requireLogin(viewPath(next));
             return;
         }
         setView(next);
@@ -185,13 +205,23 @@ export default function Workspace() {
             return d;
         } catch (e: unknown) {
             const err = e as { message?: string; status?: number };
-            toast.error(err.message);
-            if (err.status === 401) setAuth('login');
+            if (err.status === 401) requireLogin(here());
+            else toast.error(err.message);
             return null;
         }
     };
 
-    const actions: Actions = { open, go, perform, user, location, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, searchCategory, setSearchCategory };
+    // Only a submitted search is applied and scrolled to; typing in either search box changes nothing else.
+    const submitSearch = (q: string) => {
+        setSearchQ(q.trim());
+        searchScroll.current = true;
+        setSearchTick(t => t + 1);
+        if (view !== 'Explore') go('Explore');
+    };
+    const takeSearchScroll = () => { const pendingScroll = searchScroll.current; searchScroll.current = false; return pendingScroll; };
+    useEffect(() => { if (!searchQ) setHeaderSearch(''); }, [searchQ]);
+
+    const actions: Actions = { open, go, perform, user, location, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, submitSearch, searchTick, takeSearchScroll, searchCategory, setSearchCategory };
 
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
@@ -231,6 +261,7 @@ export default function Workspace() {
             const r = await fetch('/api/auth/logout', { method: 'POST' });
             if (!r.ok) throw Error();
             setView('Explore');
+            window.history.pushState({}, '', '/');
             refresh();
             toast.success('Signed out');
         } catch {
@@ -240,7 +271,7 @@ export default function Workspace() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (view !== 'Explore') go('Explore');
+        submitSearch(headerSearch);
     };
 
     const handleModeToggle = () => {
@@ -258,6 +289,16 @@ export default function Workspace() {
     };
     const item = modal?.item || {};
     const close = () => setModal(null);
+    const mobileSell = (
+        <button id="mobile-sell-btn" className="pp-mobile-pill sell" onClick={() => open('listing-form')}>
+            <Plus size={14} /> Sell Now
+        </button>
+    );
+    const mobileRequest = (
+        <button id="mobile-request-btn" className="pp-mobile-pill request" onClick={() => open('request-form')}>
+            Post a Request
+        </button>
+    );
 
     return (
         <>
@@ -282,8 +323,8 @@ export default function Workspace() {
                                 className="pp-search-input"
                                 type="search"
                                 placeholder="Search products or active buyer requests..."
-                                value={searchQ}
-                                onChange={e => setSearchQ(e.target.value)}
+                                value={headerSearch}
+                                onChange={e => setHeaderSearch(e.target.value)}
                                 aria-label="Search products or buyer requests"
                             />
                         </div>
@@ -322,8 +363,8 @@ export default function Workspace() {
                             )}
                         </div>
 
-                        {/* Buying / Selling tabs */}
-                        <div className="pp-mode-tabs" role="group" aria-label="Marketplace mode">
+                        {/* Buying / Selling tabs: members only */}
+                        {user && <div className="pp-mode-tabs" role="group" aria-label="Marketplace mode">
                             <button
                                 id="mode-buying-btn"
                                 className={`pp-mode-tab${mode === 'Buying' ? ' active' : ''}`}
@@ -338,7 +379,7 @@ export default function Workspace() {
                             >
                                 Selling
                             </button>
-                        </div>
+                        </div>}
 
                         {/* Bell notification */}
                         <button
@@ -384,15 +425,15 @@ export default function Workspace() {
                     </div>
                 </div>
 
-                {/* Phones only (see styles.css): selling and requesting on the left, saved items and chat on the right */}
-                <div className="pp-mobile-row">
+                {/* Phones only (see styles.css). Signed out: tagline on the left, then Post a Request and Sell Now
+                    at the far right. Signed in: Sell Now and Post a Request on the left, Wishlist and Messages on the
+                    right. Hidden until we know which, so nothing jumps sideways after the page loads. */}
+                <div className="pp-mobile-row" style={boot.data ? undefined : { visibility: 'hidden' }}>
+                    {signedOut && <div className="pp-mobile-tagline">Buy Smart. Sell Easy. Find What You Need.</div>}
                     <div className="pp-mobile-group">
-                        <button id="mobile-sell-btn" className="pp-mobile-pill sell" onClick={() => open('listing-form')}>
-                            <Plus size={14} /> Sell Now
-                        </button>
-                        <button id="mobile-request-btn" className="pp-mobile-pill request" onClick={() => open('request-form')}>
-                            Post Request
-                        </button>
+                        {user && mobileSell}
+                        {mobileRequest}
+                        {!user && mobileSell}
                     </div>
                     {user && (
                         <div className="pp-mobile-group">

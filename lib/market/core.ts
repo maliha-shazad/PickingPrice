@@ -5,7 +5,8 @@ export const one = (db: Database, sql: string, ...args: unknown[]) => db.prepare
 export const rows = async (db: Database, sql: string, ...args: unknown[]) => (await db.prepare(sql).bind(...args).all<Row>()).results;
 export const run = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args).run();
 export const stmt = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args);
-export const parseImages = (r: Row) => ({ ...r, images: typeof r.images === 'string' ? JSON.parse(r.images) : r.images || [], featured: !!r.featured });
+const list = (v: unknown) => { if (Array.isArray(v)) return v; try { const parsed = JSON.parse(String(v || '[]')); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
+export const parseImages = (r: Row) => ({ ...r, images: typeof r.images === 'string' ? JSON.parse(r.images) : r.images || [], delivery: list(r.delivery), featured: !!r.featured });
 export function authenticated(c: Context) { if (!c.user)
     throw new MarketError('Sign in to continue.', 401); return c.user; }
 export function permit(c: Context, role: 'buyer' | 'seller' | 'admin') { const u = authenticated(c); if (u.role !== 'admin' && u.role !== 'both' && u.role !== role)
@@ -51,6 +52,8 @@ export async function initialize(db: Database) {
         if (col !== 'meetup_spot') { try { await run(db, `ALTER TABLE listings ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`); } catch {} }
         else { try { await run(db, `ALTER TABLE listings ADD COLUMN meetup_spot TEXT NOT NULL DEFAULT ''`); } catch {} }
     }
+    // Delivery and pickup options the seller offers, stored as a JSON list.
+    try { await run(db, "ALTER TABLE listings ADD COLUMN delivery TEXT NOT NULL DEFAULT '[]'"); } catch {}
     initialized.add(db);
 }
 export async function expireForUser(c: Context) {
