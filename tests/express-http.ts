@@ -75,6 +75,16 @@ try{
  r=await get('/api/admin/market/listings/'+created.id,admin);equal(r.status,200);
  r=await send('/api/admin/market/listings',listing,admin);equal(r.status,404);
  r=await get('/api/admin/market/admin/users',admin);equal((await r.json() as {items:{id:string}[]}).items.some(u=>u.id==='admin'),false);
+ // Categories: add, refuse a duplicate name, delete an unused one, refuse to delete one a product still uses.
+ const cats=async()=>((await (await get('/api/admin/market/admin/settings',admin)).json()) as {categories:{id:string;name:string}[]}).categories;
+ r=await send('/api/admin/market/admin/categories',{name:'HTTP Gadgets',subcategories:['Drones'],active:true},admin);equal(r.status,200);
+ r=await send('/api/admin/market/admin/categories',{name:'http gadgets',subcategories:[],active:true},admin);equal(r.status,409);
+ const gadget=(await cats()).find(c=>c.name==='HTTP Gadgets')!;
+ r=await fetch(config.origin+'/api/admin/market/admin/categories/'+gadget.id,{method:'DELETE',headers:{Origin:config.origin,Cookie:cookie}});equal(r.status,401);
+ r=await fetch(config.origin+'/api/admin/market/admin/categories/'+gadget.id,{method:'DELETE',headers:{Origin:config.origin,Cookie:admin}});equal(r.status,200);equal((await cats()).some(c=>c.name==='HTTP Gadgets'),false);
+ const books=(await cats()).find(c=>c.name==='Books')!;
+ r=await fetch(config.origin+'/api/admin/market/admin/categories/'+books.id,{method:'DELETE',headers:{Origin:config.origin,Cookie:admin}});equal(r.status,409);assert(/still used by/.test(((await r.json()) as {error:string}).error));checks++;equal((await cats()).some(c=>c.name==='Books'),true);
+ r=await fetch(config.origin+'/api/admin/market/admin/categories/no-such-category',{method:'DELETE',headers:{Origin:config.origin,Cookie:admin}});equal(r.status,404);
  r=await send('/api/admin/login',{email:boss,password:'incorrect-password-123'});equal(r.status,401);
  r=await send('/api/admin/login',{email:signup.email,password:signup.password});equal(r.status,401);
  r=await send('/api/admin/password',{current:'incorrect-password-123',next:second},admin);equal(r.status,403);

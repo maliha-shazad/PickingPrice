@@ -1,10 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Actions, Item, useLoad, Load, Pager, Choice, money, date, Status, Empty } from './ui';
 import { TextField } from './forms';
-import { ShieldAlert, Users, Package, Settings, BadgeDollarSign, Activity, Settings2, ListChecks, Megaphone, Star, History } from 'lucide-react';
+import { ShieldAlert, Users, Package, Settings, BadgeDollarSign, Activity, Settings2, ListChecks, Megaphone, Star, History, Trash2 } from 'lucide-react';
+
+// Overview cards: an icon and a colour for each count.
+const STAT_LOOK: Record<string, { icon: ReactNode; bg: string; fg: string }> = {
+    users: { icon: <Users size={18} />, bg: '#e0f2fe', fg: '#0369a1' },
+    listings: { icon: <Package size={18} />, bg: '#ffedd5', fg: '#c2410c' },
+    requests: { icon: <ListChecks size={18} />, bg: '#dcfce7', fg: '#15803d' },
+    payments: { icon: <BadgeDollarSign size={18} />, bg: '#fef9c3', fg: '#a16207' },
+    reports: { icon: <ShieldAlert size={18} />, bg: '#fee2e2', fg: '#b91c1c' },
+    promotions: { icon: <Megaphone size={18} />, bg: '#ede9fe', fg: '#6d28d9' },
+};
 
 export function Admin({ actions }: { actions: Actions; }) { 
     const [tab, setTab] = useState('users');
@@ -73,8 +83,8 @@ export function Admin({ actions }: { actions: Actions; }) {
                 {/* Left Sidebar */}
                 <aside className="bd-sidebar">
                     <div className="bd-profile-card">
-                        <div className="bd-profile-cover" style={{ background: 'linear-gradient(135deg, #4f46e5, #3730a3)' }}></div>
-                        <div className="bd-profile-info" style={{ marginTop: '30px' }}>
+                        <div className="bd-profile-cover adm-logo-cover"><img src="/new-logo.png" alt="Picking Price" /></div>
+                        <div className="bd-profile-info" style={{ marginTop: '0' }}>
                             <h2 style={{ fontSize: '18px' }}>Super Admin</h2>
                             <div className="bd-profile-meta">
                                 <span><ShieldAlert size={12}/> Root Privileges</span>
@@ -89,7 +99,7 @@ export function Admin({ actions }: { actions: Actions; }) {
                         <Load state={stats}>
                             {stats.data && Object.entries(stats.data).map(([k, v]) => (
                                 <div className="bd-v-stat" key={k}>
-                                    <div className="bd-v-stat-icon" style={{ background: '#f1f5f9', color: '#475569' }}><Activity size={16}/></div>
+                                    <div className="bd-v-stat-icon" style={{ background: STAT_LOOK[k]?.bg || '#f1f5f9', color: STAT_LOOK[k]?.fg || '#475569' }}>{STAT_LOOK[k]?.icon || <Activity size={18}/>}</div>
                                     <div className="bd-v-stat-text">
                                         <strong style={{ fontSize: '14px', textTransform: 'capitalize' }}>{k}</strong>
                                         <span style={{ fontSize: '16px', color: '#0f172a', fontWeight: 800 }}>{String(v)}</span>
@@ -206,6 +216,7 @@ export function Admin({ actions }: { actions: Actions; }) {
 
 const actionBtnStyle = { padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#334155' };
 const actionBtnStyleDark = { padding: '6px 12px', background: '#1e293b', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#fff' };
+const actionBtnStyleDanger = { display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#fff', border: '1px solid #fca5a5', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#b91c1c', whiteSpace: 'nowrap' as const };
 
 function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) { 
     const [f, setF] = useState({ ...data.settings }); 
@@ -252,6 +263,7 @@ function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) {
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                 <Status>{c.active ? 'Active' : 'Disabled'}</Status>
                                 <button style={actionBtnStyle} onClick={() => actions.open('category-form', c)}>Edit</button>
+                                <button style={actionBtnStyleDanger} aria-label={'Delete ' + c.name} onClick={() => actions.open('category-delete', c)}><Trash2 size={13} /> Delete</button>
                             </div>
                         </div>
                     ))}
@@ -273,6 +285,21 @@ export function CategoryForm({ item, actions, done }: { item: Item; actions: Act
             <button style={{ padding: '12px 24px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginTop: '8px' }}>Save Category</button>
         </form>
     ); 
+}
+
+/** Confirms and deletes a category. One that products or requests still use cannot be deleted, only switched off. */
+export function CategoryDelete({ item, actions, done }: { item: Item; actions: Actions; done: () => void; }) {
+    const [busy, setBusy] = useState(false);
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ margin: 0, fontSize: '15px', color: '#334155', lineHeight: 1.6 }}>Delete the category <strong style={{ color: '#0f172a' }}>{item.name}</strong>? It disappears from the member app and from this list. This cannot be undone.</p>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>A category that products or requests still use cannot be deleted. Switch it off with Edit instead: it stays on those items but can no longer be chosen.</p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" disabled={busy} style={{ flex: '1 1 160px', padding: '12px 20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} onClick={async () => { setBusy(true); const r = await actions.perform('admin/categories/' + encodeURIComponent(String(item.id)), 'DELETE'); setBusy(false); if (r) done(); }}>{busy ? 'Deleting…' : 'Delete category'}</button>
+                <button type="button" disabled={busy} style={{ flex: '1 1 120px', padding: '12px 20px', background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} onClick={done}>Keep it</button>
+            </div>
+        </div>
+    );
 }
 
 export function ModerateForm({ item, actions, done }: { item: Item; actions: Actions; done: () => void; }) { 

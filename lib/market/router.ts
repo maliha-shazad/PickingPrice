@@ -4,7 +4,7 @@ import { migrateLegacy } from './legacy';
 import { listCatalogue, detail, saveListing, deleteListing, saveRequest, favorite } from './catalogue';
 import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification, draftList, saveDraft, deleteDraft } from './workflows';
 import { services, requestPayment, decidePayment } from './services';
-import { adminData, saveSettings, saveCategory, moderate } from './admin';
+import { adminData, saveSettings, saveCategory, deleteCategory, moderate } from './admin';
 import { issueResetCode } from './password-reset';
 export async function market(c: Context, method: string, path: string[], q: URLSearchParams, body: Record<string, unknown> = {}) {
     if (body === null || typeof body !== 'object' || Array.isArray(body))
@@ -115,6 +115,8 @@ export async function market(c: Context, method: string, path: string[], q: URLS
             return withdrawOffer(c, key);
         if (area === 'drafts' && key)
             return deleteDraft(c, key);
+        if (area === 'admin' && key === 'categories' && sub)
+            return deleteCategory(c, sub);
     }
     throw new MarketError('This action is not available.', 404);
 }

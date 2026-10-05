@@ -30,6 +30,17 @@ export async function saveSettings(c: Context, body: Record<string, unknown>) { 
 export async function saveCategory(c: Context, body: Record<string, unknown>) { permit(c, 'admin'); const name = stringValue(body.name, 2, 80), key = body.id ? stringValue(body.id, 1, 160) : id(); if (!Array.isArray(body.subcategories) || body.subcategories.length > 30)
     throw new MarketError('Provide up to 30 subcategories.'); const subs = [...new Set(body.subcategories.map((x: unknown) => stringValue(x, 1, 80)))]; const taken = await one(c.db, 'SELECT id,active FROM categories WHERE LOWER(name)=LOWER(?) AND id!=?', name, key); if (taken)
     throw new MarketError('A category named "' + name + '" already exists' + (taken.active ? '.' : ' (it is switched off).') + ' Edit that one instead.', 409); const old = await one(c.db, 'SELECT name FROM categories WHERE id=?', key); await c.db.batch([stmt(c.db, 'INSERT INTO categories (id,name,subcategories,active) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,subcategories=excluded.subcategories,active=excluded.active', key, name, JSON.stringify(subs), body.active === false ? 0 : 1), ...(old && old.name !== name ? [stmt(c.db, 'UPDATE listings SET category=? WHERE category=?', name, old.name), stmt(c.db, 'UPDATE buyer_requests SET category=? WHERE category=?', name, old.name)] : []), log(c, 'category:update', key)]); return { ok: true }; }
+export async function deleteCategory(c: Context, key: string) {
+    permit(c, 'admin');
+    const cat = await one(c.db, 'SELECT id,name FROM categories WHERE id=?', key);
+    if (!cat)
+        throw new MarketError('Category not found.', 404);
+    const used = Number((await one(c.db, "SELECT (SELECT COUNT(*) FROM listings WHERE category=? AND status!='Deleted') + (SELECT COUNT(*) FROM buyer_requests WHERE category=? AND status!='Deleted') n", cat.name, cat.name))!.n);
+    if (used > 0)
+        throw new MarketError('"' + cat.name + '" is still used by ' + used + (used === 1 ? ' product or request' : ' products or requests') + '. Switch it off with Edit instead of deleting it.', 409);
+    await c.db.batch([stmt(c.db, 'DELETE FROM categories WHERE id=?', key), log(c, 'category:delete', cat.name)]);
+    return { ok: true };
+}
 export async function moderate(c: Context, body: Record<string, unknown>) {
     const u = permit(c, 'admin'), type = body.type, key = stringValue(body.id, 1, 400), action = body.action, reason = stringValue(body.reason || '', 5, 1000);
     const table = ({ user: 'profiles', listing: 'listings', request: 'buyer_requests', review: 'reviews', promotion: 'promotions', report: 'reports' } as Record<string, string>)[String(type)];

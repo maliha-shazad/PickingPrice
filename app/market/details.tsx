@@ -134,5 +134,81 @@ export function Offers({ actions, request, received = false }: {
 export function ProfileDetail({ item, actions }: {
     item: Item;
     actions: Actions;
-}) { const [page, setPage] = useState(1), [listingPage, setListingPage] = useState(1), [rating, setRating] = useState('5'), [body, setBody] = useState(''); const state = useLoad('profiles/' + item.id + '?page=' + page + '&listingPage=' + listingPage, actions.revision), data = state.data, p = data?.profile; return <Load state={state}>{data && p && <><div className="profile-heading"><Photo src={p.avatar} alt={p.name}/><div><h2>{p.name} {!!p.verified && <ShieldCheck size={19}/>}</h2><p>{p.location || 'Location not specified'} · Member since {date(p.created)}</p><span>★ {data.rating.average ? Number(data.rating.average).toFixed(1) : 'No ratings'} · {data.rating.count} reviews · {data.activeListings} active listings</span></div></div><p className="pre-wrap">{p.bio || 'This member has not added a description.'}</p><h3>Active listings</h3><div className="profile-listings">{data.listings.map((l: Item) => <button key={l.id} onClick={() => actions.open('listing', l)}><Photo src={l.images[0]} alt={l.title}/><span>{l.title}<strong>{money(l.price)}</strong></span></button>)}</div><Pager page={listingPage} total={data.activeListings} onChange={setListingPage}/><h3>Reviews</h3>{data.reviews.items.map((r: Item) => <div className="review" key={r.id}><strong>{'★'.repeat(r.rating)} · {r.reviewer}</strong><p>{r.body}</p><small>{date(r.created)}</small>{!actions.readOnly && <button className="text-link" onClick={() => actions.open('report', { type: 'review', id: r.id })}>Report review</button>}</div>)}<Pager page={page} total={data.reviews.total} onChange={setPage}/>{!actions.readOnly && actions.user && actions.user.id !== p.id && ['seller', 'both'].includes(p.role) && <form className="form review-form" onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('profiles/' + p.id + '/reviews', 'POST', { rating: Number(rating), body }))
-    setBody(''); }}><h3>Review your interaction</h3><p>You must have contacted this seller. Reviews are not proof of a completed purchase.</p><Choice label="Star rating" value={rating} onChange={setRating} options={[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: n + ' stars' }))}/><textarea aria-label="Review" minLength={10} maxLength={2000} required value={body} onChange={e => setBody(e.target.value)}/><button className="btn dark">Save review</button></form>}{!actions.readOnly && <button className="text-link" onClick={() => actions.open('report', { type: 'user', id: p.id })}>Report this member</button>}</>}</Load>; }
+}) {
+    const [page, setPage] = useState(1), [listingPage, setListingPage] = useState(1), [rating, setRating] = useState('5'), [body, setBody] = useState('');
+    const state = useLoad('profiles/' + item.id + '?page=' + page + '&listingPage=' + listingPage, actions.revision), data = state.data, p = data?.profile;
+    const stars = (n: number) => <span className="pf-stars" aria-label={n + ' out of 5 stars'}>{[1, 2, 3, 4, 5].map(i => <span key={i} className={i <= Math.round(n) ? 'on' : ''}>★</span>)}</span>;
+    const roleLabel: Record<string, string> = { buyer: 'Buyer', seller: 'Seller', both: 'Buyer & seller', admin: 'Administrator' };
+    return <Load state={state}>{data && p && (() => {
+        const average = data.rating.average ? Number(data.rating.average) : 0, count = Number(data.rating.count) || 0, active = Number(data.activeListings) || 0;
+        const canReview = !actions.readOnly && actions.user && actions.user.id !== p.id && ['seller', 'both'].includes(p.role);
+        return (
+            <div className="pf">
+                <div className="pf-head">
+                    <div className="pf-cover" />
+                    <div className="pf-id">
+                        <Photo src={p.avatar} alt={p.name} className="pf-avatar" />
+                        <div className="pf-name">
+                            <h2>{p.name}{!!p.verified && <span className="pf-verified"><ShieldCheck size={14} /> Verified</span>}</h2>
+                            <p>{p.location || 'Location not specified'} · Member since {date(p.created)}</p>
+                            <div className="pf-chips">
+                                <span className="pf-chip">{roleLabel[p.role] || 'Member'}</span>
+                                {!!p.suspended && <span className="pf-chip warn">Suspended</span>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pf-stats">
+                    <div><strong>{count ? average.toFixed(1) : 'New'}</strong>{count ? stars(average) : <span className="pf-stat-note">No ratings yet</span>}<small>Rating</small></div>
+                    <div><strong>{count}</strong><small>{count === 1 ? 'Review' : 'Reviews'}</small></div>
+                    <div><strong>{active}</strong><small>{active === 1 ? 'Active listing' : 'Active listings'}</small></div>
+                </div>
+
+                <section className="pf-section">
+                    <h3>About</h3>
+                    <p className={'pre-wrap pf-bio' + (p.bio ? '' : ' empty')}>{p.bio || 'This member has not added a description.'}</p>
+                </section>
+
+                <section className="pf-section">
+                    <h3>Active listings <span>{active}</span></h3>
+                    {data.listings.length === 0
+                        ? <div className="pf-empty">No active listings right now.</div>
+                        : <div className="pf-listings">{data.listings.map((l: Item) => (
+                            <button type="button" key={l.id} className="pf-listing" onClick={() => actions.open('listing', l)}>
+                                <Photo src={l.images[0]} alt={l.title} />
+                                <span className="pf-listing-title">{l.title}</span>
+                                <strong>{money(l.price)}</strong>
+                            </button>
+                        ))}</div>}
+                    <Pager page={listingPage} total={data.activeListings} onChange={setListingPage} />
+                </section>
+
+                <section className="pf-section">
+                    <h3>Reviews <span>{data.reviews.total}</span></h3>
+                    {data.reviews.items.length === 0
+                        ? <div className="pf-empty">No reviews yet.</div>
+                        : <div className="pf-reviews">{data.reviews.items.map((r: Item) => (
+                            <div className="pf-review" key={r.id}>
+                                <div className="pf-review-head"><span className="pf-review-avatar">{String(r.reviewer || 'M').charAt(0).toUpperCase()}</span><div><strong>{r.reviewer}</strong>{stars(Number(r.rating))}</div><small>{date(r.created)}</small></div>
+                                <p>{r.body}</p>
+                                {!actions.readOnly && <button type="button" className="pf-link" onClick={() => actions.open('report', { type: 'review', id: r.id })}>Report review</button>}
+                            </div>
+                        ))}</div>}
+                    <Pager page={page} total={data.reviews.total} onChange={setPage} />
+                </section>
+
+                {canReview && (
+                    <form className="pf-review-form" onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('profiles/' + p.id + '/reviews', 'POST', { rating: Number(rating), body })) setBody(''); }}>
+                        <h3>Review your interaction</h3>
+                        <p>You must have contacted this seller. Reviews are not proof of a completed purchase.</p>
+                        <Choice label="Star rating" value={rating} onChange={setRating} options={[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: n + (n === 1 ? ' star' : ' stars') }))} />
+                        <textarea aria-label="Review" placeholder="How did it go? At least 10 characters." minLength={10} maxLength={2000} required value={body} onChange={e => setBody(e.target.value)} />
+                        <button className="pf-btn">Save review</button>
+                    </form>
+                )}
+                {!actions.readOnly && actions.user && actions.user.id !== p.id && <button type="button" className="pf-link pf-report" onClick={() => actions.open('report', { type: 'user', id: p.id })}>Report this member</button>}
+            </div>
+        );
+    })()}</Load>;
+}

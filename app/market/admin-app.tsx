@@ -4,7 +4,7 @@ import { Toaster, toast } from 'sonner';
 import { Eye, EyeOff, KeyRound, Lock, LogOut, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Actions, Item, api, setApiBase } from './ui';
-import { Admin, CategoryForm, ModerateForm, PaymentReview, ResetCode } from './admin';
+import { Admin, CategoryForm, ModerateForm, PaymentReview, ResetCode, CategoryDelete } from './admin';
 import { ListingDetail, RequestDetail, ProfileDetail } from './details';
 
 type Session = { configured: boolean; setupAvailable: boolean; signedIn: boolean; email: string };
@@ -130,7 +130,7 @@ function PasswordForm({ done, expired }: { done: () => void; expired: () => void
 const barButton = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, borderRadius: '50px', border: '1px solid rgba(255,255,255,.25)', background: 'transparent', color: '#fff', cursor: 'pointer' } as const;
 const titles: Record<string, string> = {
     listing: 'Listing details', request: 'Request details', profile: 'Member profile', inspection: 'Record details',
-    'category-form': 'Category settings', moderate: 'Moderation action', 'payment-review': 'Verify manual payment', 'reset-code': 'Member password reset', password: 'Change admin password',
+    'category-form': 'Category settings', 'category-delete': 'Delete category', moderate: 'Moderation action', 'payment-review': 'Verify manual payment', 'reset-code': 'Member password reset', password: 'Change admin password',
 };
 
 export default function AdminApp() {
@@ -222,6 +222,7 @@ export default function AdminApp() {
                     {modal?.type === 'request' && <RequestDetail item={item} actions={actions} />}
                     {modal?.type === 'profile' && <ProfileDetail item={item} actions={actions} />}
                     {modal?.type === 'category-form' && <CategoryForm item={item} actions={actions} done={close} />}
+                    {modal?.type === 'category-delete' && <CategoryDelete item={item} actions={actions} done={close} />}
                     {modal?.type === 'moderate' && <ModerateForm item={item} actions={actions} done={close} />}
                     {modal?.type === 'payment-review' && <PaymentReview item={item} actions={actions} done={close} />}
                     {modal?.type === 'reset-code' && <ResetCode key={String(item.id)} item={item} actions={actions} />}

@@ -80,3 +80,30 @@ export function Photo({ src, alt, className = '' }: {
 export function Status({ children }: {
     children: ReactNode;
 }) { return <span className="status">{children}</span>; }
+
+/**
+ * For a row that scrolls sideways without a visible scrollbar (the dashboard tabs): on a desktop the mouse
+ * wheel and click-and-drag move it, since there is nothing else to grab. Touch screens already swipe.
+ */
+export function useSideScroll<T extends HTMLElement>() {
+    // A callback ref, not useRef: the row is often drawn after the first render (once its data has loaded),
+    // and the listeners must be attached when it actually appears.
+    const [el, setEl] = useState<T | null>(null);
+    useEffect(() => {
+        if (!el) return;
+        const wheel = (e: WheelEvent) => {
+            if (e.ctrlKey || el.scrollWidth <= el.clientWidth + 1) return;
+            const before = el.scrollLeft; el.scrollLeft += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            if (el.scrollLeft !== before) e.preventDefault();   // only swallow the wheel while the row actually moved
+        };
+        let down = false, dragged = false, startX = 0, startLeft = 0;
+        const press = (e: PointerEvent) => { if (e.pointerType !== 'mouse' || e.button !== 0) return; down = true; dragged = false; startX = e.clientX; startLeft = el.scrollLeft; };
+        const move = (e: PointerEvent) => { if (!down) return; const dx = e.clientX - startX; if (Math.abs(dx) > 5) { dragged = true; el.scrollLeft = startLeft - dx; } };
+        const release = () => { down = false; };
+        const click = (e: MouseEvent) => { if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; } };   // a drag is not a click on a tab
+        el.addEventListener('wheel', wheel, { passive: false }); el.addEventListener('pointerdown', press); el.addEventListener('click', click, true);
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', release);
+        return () => { el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', press); el.removeEventListener('click', click, true); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', release); };
+    }, [el]);
+    return setEl;
+}

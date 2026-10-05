@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Actions, Item, useLoad, Load, money, Status, Photo, Empty, Pager, Choice } from './ui';
+import { Actions, Item, useLoad, Load, money, Status, Photo, Empty, Pager, Choice, useSideScroll } from './ui';
 import { ProfileDialog } from './profile-dialog';
 import { TextField, Photos } from './forms';
 import { Offers } from './details';
@@ -12,6 +12,7 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
     setMode?: (m: 'Buying' | 'Selling') => void;
 }) {
     const [tab, setTab] = useState(actions.user?.role === 'buyer' ? 'requests' : initial);
+    const tabsRef = useSideScroll<HTMLDivElement>();
     const [page, setPage] = useState(1);
     const [invTab, setInvTab] = useState('Active');
     const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -48,7 +49,7 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
                 .bd-main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
 
                 .bd-profile-card { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); position: relative; border: 1px solid #f1f5f9; }
-                .bd-profile-cover { height: 80px; background: linear-gradient(135deg, #0f172a, #334155); }
+                .bd-profile-cover { height: 80px; background: linear-gradient(135deg, #115e59, #059669); }
                 .bd-profile-avatar-wrap { position: relative; width: 80px; height: 80px; margin: -40px auto 12px; }
                 .bd-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 4px solid #fff; background: #fff; }
                 .bd-edit-icon-btn { position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; background: #1e293b; color: #fff; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background 0.2s; }
@@ -146,7 +147,7 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
                 <aside className="bd-sidebar">
                     {/* Profile Card */}
                     <div className="bd-profile-card">
-                        <div className="bd-profile-cover" style={{ background: 'linear-gradient(to right, #0f172a, #334155)' }}></div>
+                        <div className="bd-profile-cover"></div>
                         <div className="bd-profile-avatar-wrap">
                             <Photo src={profile.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + profile.name} alt="Profile" className="bd-avatar" />
                             <button className="bd-edit-icon-btn" onClick={() => setEditProfileOpen(true)} aria-label="Edit Profile">
@@ -191,7 +192,7 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
                 {/* Right Content */}
                 <main className="bd-main-content">
                     {/* Horizontal Tabs inside main */}
-                    <div className="bd-tabs-nav">
+                    <div className="bd-tabs-nav" ref={tabsRef}>
                         {[
                             ['listings', 'Active Listings'],
                             ['services', 'Quota & Services'],
@@ -202,7 +203,7 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
                         ].map(([v, l]) => (
                             <button 
                                 key={v} 
-                                onClick={() => { setTab(v); setPage(1); }}
+                                onClick={e => { setTab(v); setPage(1); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' }); }}
                                 style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '14px', fontWeight: 600, background: tab === v ? '#0f172a' : '#f1f5f9', color: tab === v ? 'white' : '#64748b', cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
                             >
                                 {l}

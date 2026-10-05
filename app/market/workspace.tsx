@@ -649,7 +649,7 @@ export default function Workspace() {
                         {modal?.type === 'request' ? 'Request Details' : title[modal?.type || ''] || 'Community & safety'}
                     </DialogTitle>
                     <DialogDescription>
-                        {['request', 'info', 'safety', 'payment', 'enable-selling', 'enable-buying'].includes(modal?.type || '') ? '' : 'Picking Price connects buyers and sellers directly.'}
+                        {['request', 'info', 'safety', 'payment', 'enable-selling', 'enable-buying', 'conversation', 'profile'].includes(modal?.type || '') ? '' : 'Picking Price connects buyers and sellers directly.'}
                     </DialogDescription>
                     {/* Listing modal removed, now rendered as a page */}
                     {modal?.type === 'request' && <RequestDetail item={item} actions={actions} />}
