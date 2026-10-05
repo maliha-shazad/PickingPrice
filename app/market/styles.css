@@ -464,8 +464,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 
 /* Auth buttons */
 .pp-header-auth{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.pp-login-btn{background:none;border:0;font-size:13.5px;color:#2c4a32;font-weight:500;padding:7px 10px;border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap}
-.pp-login-btn:hover{background:#f0f6f0;color:#1e5038}
+.pp-login-btn{background:#fff;border:1.5px solid #cbd9c7;font-size:13.5px;color:#2c4a32;font-weight:600;padding:7px 16px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.pp-login-btn:hover{background:#f0f6f0;color:#1e5038;border-color:#2d6a4f}
 .pp-signup-btn{background:#fff;border:1.5px solid #2d6a4f;color:#2d6a4f;font-size:13.5px;font-weight:600;padding:7px 16px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap}
 .pp-signup-btn:hover{background:#f0f8f4}
 .pp-sell-btn{display:flex;align-items:center;gap:6px;background:#e8621a;color:#fff;border:0;font-size:13.5px;font-weight:700;padding:8px 16px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap}
@@ -491,6 +491,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-cat-all:hover{color:#1e5038}
 
 .pp-nav-right{display:flex;align-items:center;margin-left:auto;border-left:1px solid #e8efe4;padding-left:4px;flex-shrink:0}
+.pp-nav-right .pp-cat-nav-item+.pp-cat-nav-item{border-left:1px solid #e8efe4;margin-left:4px}
 
 /* Responsive header */
 @media(max-width:1200px){
@@ -527,8 +528,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-bell-btn{width:30px;height:30px}
   .pp-bell-btn svg{width:16px;height:16px}
   .pp-header-auth{gap:5px}
-  .pp-signup-btn,.pp-sell-btn{display:none}
-  .pp-login-btn{border:1.5px solid #2d6a4f;color:#2d6a4f;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px}
+  .pp-sell-btn{display:none}
+  .pp-login-btn,.pp-signup-btn{font-size:12px;font-weight:600;padding:5px 8px;border-radius:7px}
   .pp-account-name{display:none}
   .pp-account-btn{padding:0 !important;min-width:auto}
   .pp-header-auth .pp-icon-btn{width:30px;height:30px}
@@ -539,6 +540,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-mobile-pill.request{background:#fff;color:#2d6a4f;border:1.5px solid #2d6a4f}
   .pp-mobile-link{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 5px;font-size:12px;font-weight:600;color:#4a6a4a;background:none;border:0;white-space:nowrap;cursor:pointer}
   .pp-mobile-link.active{color:#1e5038;font-weight:700}
+  .pp-mobile-link::before{content:"";align-self:center;width:1px;height:18px;background:#dce5d8;margin-right:5px;flex-shrink:0}
   /* One line, sized to the space left beside the two buttons: at letter-spacing -.2px the sentence is
      20.32 x font-size - 8px wide, and the buttons with their gaps take 203px (cqw = 1% of the row). */
   .pp-mobile-tagline{flex:1 1 0;min-width:0;white-space:nowrap;text-align:left;font-size:clamp(7px,calc(4.921cqw - 9.99px),11px);font-weight:600;letter-spacing:-.2px;line-height:1;color:#2d6a4f}
@@ -552,13 +554,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 @media(max-width:440px){
   .pp-mobile-row,.pp-mobile-group{gap:5px}
   .pp-mobile-pill{padding:0 6px}
-  .pp-mobile-link{padding:0 2px;gap:3px}
+  .pp-mobile-link{padding:0;gap:3px}
+  .pp-mobile-link::before{margin-right:1px}
   .pp-mobile-tagline{font-size:clamp(7px,calc(4.921cqw - 9.1px),11px)}
+}
+/* 375-400px: the two dividers need a few pixels, taken from the buttons' padding and the link text. */
+@media(max-width:400px){
+  .pp-mobile-pill{padding:0 5px}
+  .pp-mobile-link{font-size:11.5px}
 }
 /* Narrow phones: Wishlist and Messages keep their icons and drop the words. */
 @media(max-width:374px){
   .pp-mobile-link span{display:none}
-  .pp-mobile-link{padding:0 8px}
+  .pp-mobile-link{padding:0 8px 0 0;gap:8px;font-size:12px}
+  .pp-mobile-link::before{margin-right:0}
   .pp-mobile-link svg{width:18px;height:18px}
 }
 
@@ -2447,4 +2456,55 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pr-field-tag{margin-left:auto}
   /* Too long for one line at a readable size: break them into two even lines. */
   .pl-feed-title,.bn-cta-title{text-wrap:balance}
+}
+
+/* Phone header, signed out: where row 1 has room beside the logo, the city name is shown as on desktop.
+   The logo, bell, Login and Signup come first, so that is from 436px up; narrower screens, and members
+   (who get the Buying/Selling switch and profile buttons there), keep the icon alone. The name may take
+   what the others leave free: the row is 92vw wide and they use 337px with their gaps. */
+@media(min-width:436px) and (max-width:600px){
+  .pp-location-wrap.signed-out .pp-location-btn{padding:6px 8px;gap:4px;font-size:12px}
+  .pp-location-wrap.signed-out .pp-loc-text{display:inline;max-width:min(120px,calc(92vw - 337px))}
+}
+/* Under 350px Login and Signup are a little smaller so the logo keeps its size. */
+@media(max-width:349px){
+  .pp-login-btn,.pp-signup-btn{font-size:11px;padding:5px 5px}
+  .pp-header-inner,.pp-header-right,.pp-header-auth{gap:3px}
+}
+
+/* Pre-Loved and All Categories on small screens: the sort dropdown sits on the heading's line, at its
+   right, instead of on a line of its own; the sub-line runs underneath across the full width.
+   The heading takes the room it needs and the dropdown keeps its own width. The words "Sort by:" are
+   shown when the two leave room for them: the sort group wraps right-to-left inside a one-line-tall
+   box, so when the label does not fit it drops to a second line that the box cuts off.
+   Screens under 350px keep the stacked layout. */
+@media(min-width:350px) and (max-width:800px){
+  .pl-feed-inline{display:grid;grid-template-columns:auto minmax(min-content,1fr);align-items:center;gap:3px 8px}
+  .pl-feed-inline>div:first-child{display:contents}
+  .pl-feed-inline .pl-feed-title{grid-area:1/1;margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pl-feed-inline .pl-feed-sub{grid-area:2/1/3/3}
+  .pl-feed-inline .pl-sort-wrap{grid-area:1/2;flex-direction:row-reverse;flex-wrap:wrap;align-content:flex-start;gap:0 5px;height:36px;overflow:hidden}
+  .pl-feed-inline .pl-sort-wrap>div{order:1}
+  .pl-feed-inline .pl-sort-label{order:2;line-height:36px}
+}
+@media(min-width:350px) and (max-width:600px){
+  .pl-feed-inline .pl-feed-title{font-size:clamp(12.5px,3.6vw,15px) !important}
+  .pl-feed-inline .pl-sort-wrap{height:32px}
+  .pl-feed-inline .pl-sort-label{font-size:12px;line-height:32px}
+  .pl-feed-inline .pl-sort-btn{font-size:12px;padding:6px 20px 6px 9px !important}
+  .pl-feed-inline .pl-sort-wrap svg{right:6px !important}
+}
+@media(min-width:350px) and (max-width:400px){
+  .pl-feed-inline .pl-sort-wrap{height:31px}
+  .pl-feed-inline .pl-sort-label{font-size:11px;line-height:31px}
+  .pl-feed-inline .pl-sort-btn{font-size:11px;padding:6px 18px 6px 8px !important}
+  .pl-feed-inline .pl-sort-wrap svg{right:5px !important;width:12px;height:12px}
+}
+
+/* Dashboards on phones: the same 24px of empty space above the heading and below the last card.
+   (It was 36-52px above and 88-104px below: page padding, the dashboard's own, and the footer's margin.) */
+@media(max-width:600px){
+  .market-main.is-dashboard{padding-top:0;padding-bottom:0}
+  .market-main.is-dashboard .bd-container{padding-top:24px;padding-bottom:24px}
+  .market-main.is-dashboard~.hp-footer{margin-top:0}
 }

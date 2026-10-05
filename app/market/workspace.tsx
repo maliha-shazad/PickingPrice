@@ -334,7 +334,7 @@ export default function Workspace() {
                     {/* Grouping right elements to push them to the far right */}
                     <div className="pp-header-right">
                         {/* Location Picker */}
-                        <div className="pp-location-wrap" ref={locationRef}>
+                        <div className={`pp-location-wrap${signedOut ? ' signed-out' : ''}`} ref={locationRef}>
                             <button
                                 className="pp-location-btn"
                                 onClick={() => setLocationOpen(v => !v)}
@@ -526,7 +526,7 @@ export default function Workspace() {
             {view === 'PostRequest' && <PostRequest actions={actions} />}
             {view === 'BuyerRequests' && <MyRequests actions={actions} />}
             {view === 'AllCategories' && <AllCategories actions={actions} />}
-            <main className={`market-main${(view === 'Explore' || view === 'PreLoved' || view === 'BrandNew' || view === 'PostRequest' || view === 'BuyerRequests' || view === 'SellNow' || view === 'AllCategories') ? ' hidden' : ''}`}>
+            <main className={`market-main${(view === 'Explore' || view === 'PreLoved' || view === 'BrandNew' || view === 'PostRequest' || view === 'BuyerRequests' || view === 'SellNow' || view === 'AllCategories') ? ' hidden' : ''}${view === 'Dashboard' ? ' is-dashboard' : ''}`}>
                 <Load state={{ ...boot, loading: boot.loading && !boot.data }}>
                     {view === 'Requests' && <Catalogue kind="requests" actions={actions} />}
                     {view === 'Product' && activeProduct && <ProductPage item={activeProduct} actions={actions} />}

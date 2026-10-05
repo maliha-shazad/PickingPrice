@@ -246,7 +246,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
 
           {/* Main List */}
           <div>
-            <div className="pl-feed-header">
+            <div className="pl-feed-header pl-feed-inline">
               <div>
                 <h2 className="pl-feed-title">Explore Verified Deals</h2>
                 <p className="pl-feed-sub">Check the product before you buy.</p>

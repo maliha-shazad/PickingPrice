@@ -254,7 +254,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
           </aside>
 
           <div style={{flex:1}}>
-            <div className="pl-feed-header">
+            <div className="pl-feed-header pl-feed-inline">
               <div>
                 <h2 className="pl-feed-title">{selectedCategory === 'all' ? 'All Products' : selectedCategory}{selectedConditions.length === 1 ? ` - ${selectedConditions[0]}` : ''}</h2>
                 <p className="pl-feed-sub">{total} products found</p>
