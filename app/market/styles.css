@@ -457,7 +457,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 /* Bell */
 .pp-bell-btn{position:relative;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;background:none;border:1.5px solid #dce5d8;color:#4a6a4a;cursor:pointer;transition:all .2s;flex-shrink:0}
 .pp-bell-btn:hover{border-color:#2d6a4f;background:#f0f8f0;color:#2d6a4f}
-.pp-bell-badge{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#e8621a;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.pp-bell-badge{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 4px;border-radius:10px;background:#e8621a;color:#fff;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-sizing:border-box}
 
 /* Toggle switch */
 .pp-toggle-switch{display:none} /* removed from UI as requested */
@@ -485,7 +485,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-cat-nav-item.active{color:#1e5038;font-weight:700;border-bottom-color:#2d6a4f}
 .pp-cat-discover.active{background:#f0f8f0}
 
-.pp-nav-badge{font-size:10px;background:#e8621a;color:#fff;border-radius:10px;padding:1px 6px;font-weight:700;min-width:16px;text-align:center}
+.pp-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e8621a;color:#fff;font-size:10px;font-weight:700;line-height:1;box-sizing:border-box}
 
 .pp-cat-all{color:#2d6a4f;font-weight:600}
 .pp-cat-all:hover{color:#1e5038}
@@ -523,10 +523,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-location-wrap,.pp-mode-tabs{display:flex}
   .pp-location-btn{padding:6px 5px;gap:1px}
   .pp-loc-text{display:none}
-  .pp-location-dropdown{left:50%;transform:translateX(-50%);min-width:170px}
+  .pp-location-wrap .pp-location-dropdown{left:50%;transform:translateX(-50%);min-width:170px}
   .pp-mode-tab{padding:6px 7px;font-size:11.5px}
   .pp-bell-btn{width:30px;height:30px}
   .pp-bell-btn svg{width:16px;height:16px}
+  .pp-bell-badge{top:-6px;right:-6px;min-width:17px;height:17px;padding:0 3px;font-size:9px;border-width:1.5px}
   .pp-header-auth{gap:5px}
   .pp-sell-btn{display:none}
   .pp-login-btn,.pp-signup-btn{font-size:12px;font-weight:600;padding:5px 8px;border-radius:7px}
@@ -542,29 +543,37 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-mobile-link.active{color:#1e5038;font-weight:700}
   .pp-mobile-link::before{content:"";align-self:center;width:1px;height:18px;background:#dce5d8;margin-right:5px;flex-shrink:0}
   /* One line, sized to the space left beside the two buttons: at letter-spacing -.2px the sentence is
-     20.32 x font-size - 8px wide, and the buttons with their gaps take 203px (cqw = 1% of the row). */
-  .pp-mobile-tagline{flex:1 1 0;min-width:0;white-space:nowrap;text-align:left;font-size:clamp(7px,calc(4.921cqw - 9.99px),11px);font-weight:600;letter-spacing:-.2px;line-height:1;color:#2d6a4f}
+     20.32 x font-size - 8px wide, and the buttons with their gaps take 227px (cqw = 1% of the row). */
+  .pp-mobile-tagline{flex:1 1 0;min-width:0;white-space:nowrap;text-align:left;font-size:clamp(7.5px,calc(4.921cqw - 11px),11px);font-weight:600;letter-spacing:-.2px;line-height:1;color:#2d6a4f}
   .pp-category-nav{top:97px;padding:0}
   .pp-category-nav-inner{padding:0 4%;gap:0;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .pp-cat-nav-item{padding:10px 10px;font-size:12px;flex-shrink:0}
   .pp-nav-right{display:none}
 }
-/* Phones up to 440px: tighter spacing so all four row-2 buttons fit at full size, and the
-   signed-out tagline gets more room (buttons and gaps take 186px here). */
-@media(max-width:440px){
+/* Phones up to 460px: tighter spacing so all four row-2 buttons fit at full size, and the
+   signed-out tagline gets more room (buttons and gaps take 209px here). */
+@media(max-width:460px){
   .pp-mobile-row,.pp-mobile-group{gap:5px}
   .pp-mobile-pill{padding:0 6px}
   .pp-mobile-link{padding:0;gap:3px}
   .pp-mobile-link::before{margin-right:1px}
-  .pp-mobile-tagline{font-size:clamp(7px,calc(4.921cqw - 9.1px),11px)}
+  .pp-mobile-tagline{font-size:clamp(7.5px,calc(4.921cqw - 10.1px),11px)}
 }
-/* 375-400px: the two dividers need a few pixels, taken from the buttons' padding and the link text. */
+/* Up to 400px: a little less button padding and smaller link text (buttons and gaps take 205px). */
 @media(max-width:400px){
   .pp-mobile-pill{padding:0 5px}
   .pp-mobile-link{font-size:11.5px}
+  .pp-mobile-tagline{font-size:clamp(7.5px,calc(4.921cqw - 9.9px),11px)}
+}
+/* Under 385px one line would need type smaller than 7.5px, so the tagline takes two lines. */
+@media(max-width:384px){
+  .pp-mobile-tagline{white-space:normal;text-wrap:balance;font-size:9.5px;line-height:1.2;letter-spacing:-.1px}
+}
+@media(max-width:340px){
+  .pp-mobile-tagline{font-size:8px}
 }
 /* Narrow phones: Wishlist and Messages keep their icons and drop the words. */
-@media(max-width:374px){
+@media(max-width:389px){
   .pp-mobile-link span{display:none}
   .pp-mobile-link{padding:0 8px 0 0;gap:8px;font-size:12px}
   .pp-mobile-link::before{margin-right:0}
@@ -2537,3 +2546,290 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pp-legal-card h2{font-size:15.5px;margin-top:22px}
   .pp-legal-card p,.pp-legal-card li{font-size:14px}
 }
+
+/* Request details popup, sample request: a greyed preview of the two buttons a seller gets on a real one. */
+.rd-sample-actions{display:flex;gap:12px}
+.rd-sample-actions button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:12px;font-size:15px;font-weight:600;background:#f1f5f9;border:1px dashed #cbd5e1;color:#94a3b8;cursor:not-allowed}
+
+/* Footer Support and Company popups */
+.pp-info{display:flex;flex-direction:column;gap:4px;color:#3c5446;padding:0 2px 8px}
+.pp-info-lead{font-size:14.5px;line-height:1.6;color:#4a6a4a;margin:0 0 6px}
+.pp-info section{margin-top:14px}
+.pp-info h3,.pp-info-legal h2{font-size:15.5px;font-weight:700;color:#1e3d2f;margin:0 0 6px}
+.pp-info-legal section{margin-top:18px}
+.pp-info p{font-size:14px;line-height:1.65;margin:0 0 8px}
+.pp-info ul{margin:0 0 6px;padding-left:20px}
+.pp-info li{font-size:14px;line-height:1.6;margin-bottom:5px}
+.pp-info a{color:#2d6a4f;font-weight:600}
+.pp-info-contact{list-style:none;padding:0 !important;margin:6px 0 14px !important;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pp-info-contact li{display:flex;align-items:flex-start;gap:10px;background:#f5f8f2;border:1px solid #e0e8d8;border-radius:10px;padding:12px;margin:0}
+.pp-info-contact li>svg{color:#2d6a4f;flex-shrink:0;margin-top:2px}
+.pp-info-contact li div{display:flex;flex-direction:column;min-width:0}
+.pp-info-contact strong{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6a8a6a}
+.pp-info-contact a,.pp-info-contact span{font-size:14px;font-weight:600;color:#1e3d2f;text-decoration:none;overflow-wrap:anywhere}
+.pp-info-btn{align-self:flex-start;background:#2d6a4f;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+.pp-info-btn:hover{background:#1e5038}
+@media(max-width:600px){
+  .pp-info-contact{grid-template-columns:1fr}
+  .pp-info p,.pp-info li{font-size:13.5px}
+  .rd-sample-actions button{font-size:13px;padding:12px 6px;gap:6px;white-space:nowrap}
+  .rd-actions button{font-size:13.5px !important;padding:13px 6px !important;white-space:nowrap}
+}
+
+/* Phones: the four footer link groups sit two to a row, under the logo block. */
+@media(max-width:600px){
+  .hp-footer .hp-footer-inner{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:26px 16px !important}
+  .hp-footer-brand{grid-column:1/-1}
+}
+
+/* Phones: in the offers lists the heading stays on the left with its sort on the same line. */
+@media(max-width:800px){
+  .section-head.offers-head{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;flex-wrap:nowrap;text-align:left}
+  .offers-head h3{margin:0;font-size:17px;text-align:left;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .offers-head select{flex-shrink:0;font-size:13px;padding:7px 8px !important}
+}
+
+/* New Products filter chips match the ones on Pre-Loved. */
+.bn-chip{border-color:#d1d5db;border-radius:20px;padding:5px 10px 5px 12px;color:#374151}
+.bn-chip-x{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid #d1d5db;background:#f3f4f6;color:#6b7280;padding:0;transition:all .15s}
+.bn-chip-x:hover{background:#fee2e2;border-color:#f87171;color:#dc2626}
+
+/* Popups without a sub-line: no empty gap under the title. */
+.market-modal [data-slot=dialog-description]:empty{display:none}
+
+/* Buyer dashboard on phones: same side padding as the seller dashboard, and each card's heading
+   keeps its link on the same line at the right (it drops below only when the two cannot fit). */
+@media(max-width:600px){
+  .market-main.is-dashboard .bd-container{padding-left:12px;padding-right:12px}
+  .bd-container .bd-section-header{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px}
+  .bd-container .bd-section-header h3{font-size:15.5px}
+  .bd-container .bd-section-header>button,.bd-container .bd-section-header>a{white-space:nowrap;flex-shrink:0;font-size:13px}
+}
+@media(max-width:400px){
+  .offers-head h3{font-size:15px}
+  .offers-head select{font-size:12.5px;padding:7px 6px !important}
+}
+
+/* The count badge sits on the bell's corner, partly outside it; a general rule clips buttons, which cut the badge. */
+.pp-bell-btn{overflow:visible}
+
+/* Dropdowns in the dashboards and popups: our own arrow close to the text, text at the left, and
+   (where the browser supports it) only as wide as the chosen option instead of the longest one. */
+.pp-select{appearance:none;-webkit-appearance:none;field-sizing:content;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232d6a4f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center/14px;border:1px solid #d5ddcd;border-radius:8px;padding:8px 30px 8px 12px;font-size:14px;font-weight:600;color:#1e3d2f;text-align:left;text-align-last:left;line-height:1.3;cursor:pointer;outline:none;transition:border-color .2s,box-shadow .2s}
+.pp-select:hover{border-color:#2d6a4f}
+.pp-select:focus-visible{border-color:#2d6a4f;box-shadow:0 0 0 3px rgba(45,106,79,.14)}
+.bd-input.pp-select{field-sizing:fixed;width:100%;padding:12px 36px 12px 16px;font-weight:500;border-color:#cbd5e1;border-radius:10px;background-position:right 14px center}
+.bd-field-hint{font-size:12px;color:#64748b;line-height:1.5}
+/* The component dropdowns (profile editor) inside the dashboards: full width, arrow at the edge. */
+.bd-container [data-slot=select-trigger]{width:100%;height:44px;justify-content:space-between;background:#fff;border-color:#cbd5e1;border-radius:10px;padding:0 14px;font-size:14px;color:#1e3d2f}
+.bd-container [data-slot=select-trigger] svg{width:16px;height:16px;opacity:.8;color:#2d6a4f;flex-shrink:0}
+@media(max-width:800px){.offers-head .pp-select{font-size:13px;padding:7px 28px 7px 10px !important}}
+@media(max-width:400px){.offers-head .pp-select{font-size:12.5px;padding:7px 26px 7px 9px !important;background-position:right 7px center}}
+
+/* Quota & Services: the two packs are choices; the button below carries the choice into the form. */
+.sd-quota-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.sd-quota-option{position:relative;display:block;width:100%;text-align:center;padding:16px 12px;border:1.5px solid #d5ddcd;border-radius:12px;background:#fff;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;max-width:none;overflow:visible}
+.sd-quota-option:hover{border-color:#2d6a4f}
+.sd-quota-option strong{display:block;font-size:16px;color:#1e3d2f}
+.sd-quota-option span{font-size:13px;color:#64748b}
+.sd-quota-option.selected{border-color:#2d6a4f;background:#eef7f1;box-shadow:0 0 0 3px rgba(45,106,79,.12)}
+.sd-quota-option.selected strong{color:#1e5038}
+.sd-quota-option.selected span{color:#2d6a4f}
+.sd-quota-option.selected::after{content:"✓";position:absolute;top:8px;right:10px;width:18px;height:18px;border-radius:50%;background:#2d6a4f;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.sd-quota-request{width:100%;padding:14px;background:#2d6a4f;color:#fff;border:0;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s}
+.sd-quota-request:hover{background:#1e5038}
+
+/* Service request popup */
+.pay-form{display:flex;flex-direction:column;gap:14px;padding:2px 2px 6px}
+.pay-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#eef2ea;border-radius:10px;padding:4px}
+.pay-tabs button{border:0;background:none;border-radius:8px;padding:9px 8px;font-size:13.5px;font-weight:600;color:#4a6a4a;cursor:pointer;max-width:none}
+.pay-tabs button.active{background:#fff;color:#1e5038;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pay-card{background:#fff;border:1px solid #e0e8d8;border-radius:14px;padding:18px}
+.pay-card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.pay-step{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#2d6a4f;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.pay-card-head h3{font-size:16px;font-weight:700;color:#1e3d2f;margin:0 0 3px;line-height:1.3}
+.pay-card-head p{font-size:13px;color:#6a8a6a;margin:0;line-height:1.5}
+.pay-qty{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pay-stepper{display:flex;align-items:stretch;border:1.5px solid #d5ddcd;border-radius:10px;overflow:hidden;background:#fff}
+.pay-stepper button{width:42px;border:0;background:#f4f8f2;color:#1e5038;font-size:20px;font-weight:600;line-height:1;cursor:pointer;overflow:visible}
+.pay-stepper button:hover:not(:disabled){background:#e3efe0}
+.pay-stepper button:disabled{color:#b4c4b0;cursor:not-allowed}
+.pay-stepper input{width:64px;height:42px;border:0;border-left:1.5px solid #d5ddcd;border-right:1.5px solid #d5ddcd;text-align:center;font-size:17px;font-weight:700;color:#1e3d2f;outline:none;-moz-appearance:textfield;appearance:textfield;background:#fff}
+.pay-stepper input::-webkit-outer-spin-button,.pay-stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pay-quick{display:flex;gap:8px}
+.pay-quick button{border:1.5px solid #d5ddcd;background:#fff;border-radius:20px;padding:8px 14px;font-size:13.5px;font-weight:600;color:#2c4a32;cursor:pointer;transition:all .2s}
+.pay-quick button:hover{border-color:#2d6a4f}
+.pay-quick button.selected{border-color:#2d6a4f;background:#2d6a4f;color:#fff}
+.pay-durations{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.pay-durations button{display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px solid #d5ddcd;background:#fff;border-radius:12px;padding:12px 8px;cursor:pointer;transition:all .2s;max-width:none}
+.pay-durations button strong{font-size:14.5px;color:#1e3d2f}
+.pay-durations button span{font-size:13px;color:#64748b}
+.pay-durations button.selected{border-color:#2d6a4f;background:#eef7f1;box-shadow:0 0 0 3px rgba(45,106,79,.12)}
+.pay-amount{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#1e5038,#2d6a4f);color:#fff;border-radius:14px;padding:16px 20px}
+.pay-amount div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pay-amount span{font-size:13px;font-weight:600;opacity:.9}
+.pay-amount span{color:#fff}
+.pay-amount small{font-size:12px;color:#cfe6d6}
+.pay-amount strong{font-size:26px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+.pay-instructions{background:#f5f8f2;border:1px solid #dfe8da;border-left:4px solid #2d6a4f;border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.6;color:#294333;white-space:pre-wrap;margin-bottom:14px}
+.pay-instructions-label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2d6a4f;margin-bottom:4px;white-space:normal}
+.pay-instructions.missing{background:#fff8eb;border-color:#f6dfae;border-left-color:#e8961a;color:#7a5410}
+.pay-instructions.missing .pay-instructions-label{color:#b3690a}
+.pay-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600;color:#334155}
+.pay-field input{height:46px;border:1.5px solid #d5ddcd;border-radius:10px;padding:0 14px;font-size:15px;color:#1e3d2f;background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+.pay-field input:focus{border-color:#2d6a4f;box-shadow:0 0 0 3px rgba(45,106,79,.14)}
+.pay-submit{width:100%;padding:15px;background:#e8621a;color:#fff;border:0;border-radius:12px;font-size:15.5px;font-weight:700;cursor:pointer;transition:background .2s;max-width:none}
+.pay-submit:hover:not(:disabled){background:#cf5413}
+.pay-submit:disabled{background:#d9dfd5;color:#8a9a86;cursor:not-allowed}
+
+/* "Selling is not switched on" popup */
+.pp-enable-selling{display:flex;flex-direction:column;gap:12px;padding:0 2px 6px}
+.pp-role-options{display:flex;flex-direction:column;gap:10px}
+.pp-role-option{display:flex;align-items:center;gap:12px;width:100%;max-width:none;text-align:left;background:#fff;border:1.5px solid #d5ddcd;border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;overflow:visible;white-space:normal}
+.pp-role-option:hover{border-color:#2d6a4f}
+.pp-role-option.selected{border-color:#2d6a4f;background:#eef7f1;box-shadow:0 0 0 3px rgba(45,106,79,.12)}
+.pp-role-icon{flex-shrink:0;width:38px;height:38px;border-radius:10px;background:#e3efe0;color:#1e5038;display:flex;align-items:center;justify-content:center}
+.pp-role-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pp-role-text strong{font-size:15px;color:#1e3d2f;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pp-role-text em{font-style:normal;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#e8621a;border-radius:10px;padding:2px 8px}
+.pp-role-text small{font-size:13px;color:#64748b;line-height:1.45}
+.pp-role-check{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1.5px solid #cbd5e1;display:flex;align-items:center;justify-content:center;color:#fff}
+.pp-role-option.selected .pp-role-check{background:#2d6a4f;border-color:#2d6a4f}
+.pp-role-note{font-size:12.5px;color:#6a8a6a;margin:0}
+.pp-role-actions{display:flex;gap:10px;flex-wrap:wrap}
+.pp-role-save{flex:1 1 220px;padding:13px 16px;background:#2d6a4f;color:#fff;border:0;border-radius:10px;font-size:14.5px;font-weight:700;cursor:pointer;max-width:none;white-space:nowrap}
+.pp-role-save:hover:not(:disabled){background:#1e5038}
+.pp-role-save:disabled{opacity:.6;cursor:not-allowed}
+.pp-role-cancel{padding:13px 18px;background:#fff;color:#4a6a4a;border:1.5px solid #d5ddcd;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer}
+
+/* Messages: what the chat is about, shown to both people */
+.msg-conv-avatar{overflow:hidden}
+.msg-conv-avatar img,.msg-chat-header-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.msg-chat-header-avatar{overflow:hidden}
+.msg-conv-kind{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e5038;background:#e3efe0;border-radius:4px;padding:1px 5px;margin-right:6px;vertical-align:1px}
+.msg-context{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#f5f8f2;border-bottom:1px solid #e0e8d8}
+.msg-context-thumb{flex-shrink:0;width:48px;height:48px;border-radius:10px;background:#fff;border:1px solid #dfe8da;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#8aaa8a}
+.msg-context-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.msg-context-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.msg-context-kind{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2d6a4f}
+.msg-context-info strong{font-size:14px;color:#1e3d2f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-context-info small{font-size:12.5px;color:#5a7a5a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-context-view{flex-shrink:0;background:#fff;border:1.5px solid #2d6a4f;color:#2d6a4f;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.msg-context-view:hover{background:#2d6a4f;color:#fff}
+.msg-context-gone{flex-shrink:0;font-size:12px;color:#94a3b8;font-style:italic}
+
+@media(max-width:600px){
+  .pay-card{padding:14px}
+  .pay-card-head h3{font-size:15px}
+  .pay-amount{padding:14px 16px}
+  .pay-amount strong{font-size:22px}
+  .pay-stepper input{width:56px}
+  .pay-quick button{padding:8px 12px}
+  .pp-role-save{flex-basis:100%}
+  .pp-role-cancel{flex:1}
+  .msg-context{padding:9px 12px;gap:10px}
+  .msg-context-thumb{width:42px;height:42px}
+  .msg-context-view{padding:6px 11px}
+  /* The quota packs stay side by side on phones too. */
+  .sd-quota-options{grid-template-columns:1fr 1fr !important}
+  .sd-quota-option strong{font-size:15px}
+}
+
+/* Chat bubbles: readable text on both colours (a general paragraph colour was greying it out on green). */
+.msg-bubble-body{color:#1f2937}
+.msg-bubble-wrap.mine .msg-bubble-body{color:#fff}
+
+/* Product page: the seller reviews sit under the photos on desktop, beside the details column.
+   On small screens the order stays photos, details, reviews. */
+.pp-prod-grid{grid-template-areas:"photos details" "reviews details";grid-template-rows:auto 1fr}
+.pp-prod-left{grid-area:photos;min-width:0}
+.pp-prod-right{grid-area:details;min-width:0}
+.pp-prod-grid .pp-reviews-section{grid-area:reviews;align-self:start;min-width:0;max-width:none;margin:0;padding:0}
+@media(max-width:900px){
+  .pp-prod-grid{grid-template-areas:"photos" "details" "reviews";grid-template-rows:none}
+  .pp-prod-grid .pp-reviews-section{margin:0;padding:0}
+}
+
+/* Buyer dashboard: draft requests */
+.bd-draft-card{border-style:dashed !important}
+.bd-draft-status{background:#fff7ed !important;color:#c2410c !important}
+
+/* ===== Page spacing standard =====
+   Every page keeps the same empty space above its first block and below its last one:
+   40px on desktop and tablet, 24px on phones. Pages no longer stretch to a full screen of their own
+   (that, plus the footer's margin, left 90-250px under the content); instead the footer itself drops to
+   the bottom of the window when a page is short. */
+:root{--pp-gap:40px}
+@media(max-width:600px){:root{--pp-gap:24px}}
+body,#root{min-height:100vh}
+footer.hp-footer{margin-top:0 !important;position:sticky;top:100vh}
+.hp-root,.pl-root,.br-container,.sn-page-wrap,.pr-page-root,.market-main,.pp-legal-page,.msg-page{min-height:0 !important}
+/* Pages with their own background colour: the window takes it too, so no seam shows above the footer. */
+body:has(.hp-root){background:#f5f7f2}
+body:has(.pl-root){background:#f4f5f7}
+body:has(.pr-page-root),body:has(.br-container){background:#f8fafc}
+/* Tablet widths: the navbar is drawn 36px lower than the room it takes (the search bar sits above it),
+   so it covered the top of every page. Give it that room. */
+@media(min-width:601px) and (max-width:900px){.pp-category-nav{margin-top:36px}}
+
+/* Pages inside the shared main area: the gap is the area's padding, so the first and last block of a
+   page must not add margins of their own. */
+.market-main{padding-top:var(--pp-gap);padding-bottom:var(--pp-gap)}
+.market-main>*>:first-child,.market-main>*>.section-head:first-child>h1:first-child{margin-top:0}
+.market-main>*>:last-child{margin-bottom:0 !important}
+.market-main.is-dashboard{padding-top:0;padding-bottom:0}
+.market-main.is-dashboard .bd-container{padding-top:var(--pp-gap);padding-bottom:var(--pp-gap)}
+.market-main .product-page-container{margin-top:0;margin-bottom:0;padding-bottom:0}
+/* Pages with their own root */
+.hp-root{padding-bottom:var(--pp-gap)}
+.pl-body{padding-bottom:var(--pp-gap)}
+.pl-body .pl-cta-banner:last-child,.pl-body .bn-cta-banner:last-child{margin-bottom:0}
+.pr-page-root{padding-bottom:0 !important}
+.pr-layout{padding-top:var(--pp-gap) !important;padding-bottom:var(--pp-gap) !important}
+.br-container{padding-top:var(--pp-gap) !important;padding-bottom:var(--pp-gap) !important}
+.sn-page-wrap{padding-top:var(--pp-gap) !important;padding-bottom:var(--pp-gap) !important}
+.sn-page-wrap .sn-form>.sn-section:last-of-type,.sn-page-wrap .sn-section:last-child{margin-bottom:0}
+.pp-legal-page{padding-bottom:var(--pp-gap)}
+/* Pages with a bar fixed to the bottom of the window (Sell Now; the product page on small screens):
+   the footer gets that much room underneath, so its last line is not hidden behind the bar. */
+body:has(.sn-submit-bar) footer.hp-footer{padding-bottom:78px}
+@media(max-width:900px){body:has(.product-page-container .pp-action-buttons) footer.hp-footer{padding-bottom:72px}}
+
+/* New Products cards: a product without a photo shows the "No photo" placeholder at full size. */
+.bn-card-img-wrap>.photo-placeholder{width:100%;height:100%}
+
+/* ===== Admin panel on small screens ===== */
+/* The overview sits above the sections once the layout stacks: keep it short (a strip of six numbers,
+   no decorative card), so the sections are reached without a long scroll. */
+@media(max-width:1024px){
+  .adm-panel .bd-profile-card{display:none}
+  .adm-panel .bd-sidebar{gap:0}
+  .adm-panel .bd-stats-vertical{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:0 !important}
+  .adm-panel .bd-stats-vertical .bd-section-header{grid-column:1/-1;margin-bottom:0 !important}
+  .adm-panel .bd-v-stat{flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;text-align:center}
+  .adm-panel .bd-v-stat-icon{display:none}
+  .adm-panel .bd-v-stat-text{align-items:center;min-width:0;max-width:100%}
+  .adm-panel .bd-v-stat-text strong{font-size:11.5px !important;font-weight:600;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .adm-panel .bd-v-stat-text span{font-size:17px !important}
+}
+@media(max-width:600px){
+  .adm-panel .bd-stats-vertical{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .adm-panel .bd-header-area{flex-direction:row !important;align-items:center;justify-content:space-between;margin-bottom:16px !important}
+  .adm-panel .bd-header-title h1{font-size:20px;white-space:nowrap}
+  /* Top bar: name and Sign out on the first line, the admin's email and Change password on the second. */
+  .adm-bar{display:grid !important;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px !important;padding:10px 14px !important}
+  .adm-bar-actions{display:contents !important}
+  .adm-bar-email{grid-column:1;grid-row:2;align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal !important;font-size:12.5px !important}
+  .adm-bar-title{white-space:nowrap;font-size:15px !important;min-width:0}
+  .adm-bar-actions button{white-space:nowrap;justify-self:end;font-size:12px !important;padding:6px 10px !important}
+  .adm-bar-actions button:nth-of-type(1){grid-column:2;grid-row:2}
+  .adm-bar-actions button:nth-of-type(2){grid-column:2;grid-row:1}
+  /* Settings: one field per line, each as wide as the card. */
+  .adm-panel .bd-settings-grid{grid-template-columns:minmax(0,1fr) !important}
+  .adm-panel .bd-main-content form,.adm-panel .bd-main-content form label,.adm-panel .bd-main-content .field{min-width:0;max-width:100%}
+  .adm-panel .bd-main-content input,.adm-panel .bd-main-content textarea{max-width:100%;min-width:0;box-sizing:border-box}
+}
+
+/* New Products cards: the warranty badge now carries the product's own wording, which can be long. */
+.bn-card-badges-top{max-width:calc(100% - 52px)}
+.bn-badge-dark,.bn-badge-light{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

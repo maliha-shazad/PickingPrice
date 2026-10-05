@@ -15,7 +15,7 @@ export function Admin({ actions }: { actions: Actions; }) {
     const state = useLoad('admin/' + tab + '?page=' + page + '&q=' + encodeURIComponent(q), actions.revision); 
     
     return (
-        <div className="bd-container">
+        <div className="bd-container adm-panel">
             <style dangerouslySetInnerHTML={{__html: `
                 .bd-container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; font-family: 'Inter', sans-serif; }
                 .bd-header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }

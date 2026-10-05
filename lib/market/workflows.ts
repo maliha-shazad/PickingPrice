@@ -1,4 +1,4 @@
-import { Context, MarketError, id, now, pageOf } from './types';
+import { Context, MarketError, id, now, pageOf, Row } from './types';
 import { authenticated, permit, owned, one, rows, run, stmt, notice, pagination, uploadCheck } from './core';
 import { offerSchema, messageSchema, reviewSchema, profileSchema, validate, stringValue } from './validation';
 export async function requestStatus(c: Context, key: string, body: Record<string, unknown>) { const u = permit(c, 'buyer'), r = await owned(c, 'buyer_requests', key); const status = body.status; const allowed = ['Closed', 'Cancelled', 'Seller Selected']; if (!allowed.includes(String(status)))
@@ -84,10 +84,27 @@ else
     throw new MarketError('Choose a listing, request or offer to discuss.'); if (recipient === u.userId)
     throw new MarketError('You cannot message yourself.'); if (!await one(c.db, 'SELECT id FROM profiles WHERE id=? AND suspended=0', recipient))
     throw new MarketError('Recipient unavailable.', 404); const participants = [u.userId, recipient].sort(), convKey = participants.join(':') + ':' + type + ':' + key; await run(c.db, 'INSERT INTO conversations (id,first_user,second_user,context_type,context_id,title,updated) VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING', convKey, participants[0], participants[1], type, key, title, now()); return { id: convKey }; }
-export async function conversationList(c: Context, q: URLSearchParams) { const u = authenticated(c), { page, size, offset } = pageOf(q); return pagination(c.db, 'SELECT c.*,p.name other_name FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=? ORDER BY c.updated DESC', 'SELECT COUNT(*) n FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=?', [u.userId, u.userId, u.userId], page, size, offset); }
+/** The product, buyer request or offer a conversation is about: enough to show it beside the chat. */
+async function conversationContext(c: Context, conv: Row) {
+    const firstImage = (v: unknown) => { try { const a = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(a) && a.length ? String(a[0]) : ''; } catch { return ''; } };
+    if (conv.context_type === 'listing') {
+        const r = await one(c.db, 'SELECT id,title,price,images,status,condition,location FROM listings WHERE id=?', conv.context_id);
+        return r ? { kind: 'listing', id: r.id, title: r.title, price: Number(r.price), image: firstImage(r.images), status: r.status, condition: r.condition, location: r.location, available: r.status === 'Active' } : null;
+    }
+    if (conv.context_type === 'request') {
+        const r = await one(c.db, 'SELECT id,title,price,image,status,condition,location FROM buyer_requests WHERE id=?', conv.context_id);
+        return r ? { kind: 'request', id: r.id, title: r.title, price: Number(r.price), image: r.image || '', status: r.status, condition: r.condition, location: r.location, available: !['Deleted', 'Hidden'].includes(r.status) } : null;
+    }
+    if (conv.context_type === 'offer') {
+        const r = await one(c.db, 'SELECT r.id,r.title,o.price,o.image,o.status,r.status request_status,r.location FROM seller_offers o JOIN buyer_requests r ON r.id=o.request_id WHERE o.id=?', conv.context_id);
+        return r ? { kind: 'offer', id: r.id, title: r.title, price: Number(r.price), image: r.image || '', status: r.status, condition: '', location: r.location, available: !['Deleted', 'Hidden'].includes(r.request_status) } : null;
+    }
+    return null;
+}
+export async function conversationList(c: Context, q: URLSearchParams) { const u = authenticated(c), { page, size, offset } = pageOf(q); return pagination(c.db, 'SELECT c.*,p.name other_name FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=? ORDER BY c.updated DESC', 'SELECT COUNT(*) n FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=?', [u.userId, u.userId, u.userId], page, size, offset).then(async result => ({ ...result, items: await Promise.all(result.items.map(async (conv: Row) => ({ ...conv, context: await conversationContext(c, conv) }))) })); }
 export async function getConversation(c: Context, key: string) { const u = authenticated(c), r = await one(c.db, 'SELECT * FROM conversations WHERE id=?', key); if (!r || ![r.first_user, r.second_user].includes(u.userId))
     throw new MarketError('Conversation unavailable.', 404); return r; }
-export async function messageList(c: Context, key: string, q: URLSearchParams) { const conv = await getConversation(c, key), { page, size, offset } = pageOf(q); const result = await pagination(c.db, 'SELECT m.*,p.name sender FROM chat_messages m JOIN profiles p ON p.id=m.owner WHERE m.conversation_id=? ORDER BY m.created DESC,m.id DESC', 'SELECT COUNT(*) n FROM chat_messages WHERE conversation_id=?', [key], page, size, offset); return { ...result, conversation: conv }; }
+export async function messageList(c: Context, key: string, q: URLSearchParams) { const conv = await getConversation(c, key), { page, size, offset } = pageOf(q); const result = await pagination(c.db, 'SELECT m.*,p.name sender FROM chat_messages m JOIN profiles p ON p.id=m.owner WHERE m.conversation_id=? ORDER BY m.created DESC,m.id DESC', 'SELECT COUNT(*) n FROM chat_messages WHERE conversation_id=?', [key], page, size, offset); const other = await one(c.db, 'SELECT name,avatar FROM profiles WHERE id=?', conv.first_user === c.user!.userId ? conv.second_user : conv.first_user); return { ...result, conversation: { ...conv, other_name: other?.name || 'Member', other_avatar: other?.avatar || '', context: await conversationContext(c, conv) } }; }
 export async function sendMessage(c: Context, key: string, body: Record<string, unknown>) { const u = authenticated(c), conv = await getConversation(c, key), d = validate(messageSchema, body); const recipient = conv.first_user === u.userId ? conv.second_user : conv.first_user; if (!await one(c.db, 'SELECT id FROM profiles WHERE id=? AND suspended=0', recipient))
     throw new MarketError('Recipient unavailable.', 404); const keyNew = id(), t = now(); await c.db.batch([stmt(c.db, 'INSERT INTO chat_messages (id,conversation_id,owner,body,created) VALUES (?,?,?,?,?)', keyNew, key, u.userId, d.body, t), stmt(c.db, 'UPDATE conversations SET updated=? WHERE id=?', t, key), notice(c.db, recipient, 'New message', `${u.displayName}: ${d.body.slice(0, 100)}`, 'conversation', key, 'message:' + keyNew)]); return { id: keyNew }; }
 export async function report(c: Context, body: Record<string, unknown>) { const u = authenticated(c), reason = stringValue(body.reason, 10, 2000), key = stringValue(body.targetId, 1, 400); const tables: Record<string, string> = { listing: 'listings', request: 'buyer_requests', message: 'chat_messages', user: 'profiles', review: 'reviews' }; const table = tables[String(body.targetType)]; if (!table)
@@ -99,3 +116,47 @@ export async function readNotification(c: Context, key: string) { const u = auth
     await run(c.db, 'UPDATE notifications SET read=1 WHERE owner=?', u.userId);
 else
     await run(c.db, 'UPDATE notifications SET read=1 WHERE id=? AND owner=?', key, u.userId); return { ok: true }; }
+
+// ---- Request drafts: a buyer's unfinished Post a Request form, kept for later ----
+const MAX_DRAFTS = 20;
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v : '').slice(0, max);
+function draftData(body: Record<string, unknown>) {
+    const d = (body.data && typeof body.data === 'object' && !Array.isArray(body.data) ? body.data : {}) as Record<string, unknown>;
+    const quantity = Math.round(Number(d.quantity));
+    return {
+        title: text(d.title, 120).trim(), quantity: Number.isFinite(quantity) ? Math.min(10000, Math.max(1, quantity)) : 1,
+        domain: text(d.domain, 80), subcategory: text(d.subcategory, 80), size: text(d.size, 40), condition: text(d.condition, 40),
+        budget: text(String(d.budget ?? ''), 12).replace(/[^0-9]/g, ''), negotiable: d.negotiable !== false, notes: text(d.notes, 3000), handover: text(d.handover, 40),
+        images: (Array.isArray(d.images) ? d.images : []).filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 300).slice(0, 6),
+    };
+}
+export async function draftList(c: Context) {
+    const u = authenticated(c);
+    const items = await rows(c.db, 'SELECT id,title,data,updated FROM request_drafts WHERE owner=? ORDER BY updated DESC LIMIT ?', u.userId, MAX_DRAFTS);
+    return { items: items.map((r: Row) => { let data = {}; try { data = JSON.parse(r.data); } catch { } return { id: r.id, title: r.title, updated: r.updated, data }; }), total: items.length, limit: MAX_DRAFTS };
+}
+export async function saveDraft(c: Context, body: Record<string, unknown>) {
+    const u = permit(c, 'buyer'), data = draftData(body);
+    if (!data.title && !data.notes && !data.budget && !data.images.length)
+        throw new MarketError('Add a title, a budget or a note before saving a draft.');
+    await uploadCheck(c, data.images);
+    const key = typeof body.id === 'string' && body.id ? body.id : '';
+    if (key) {
+        const old = await one(c.db, 'SELECT owner FROM request_drafts WHERE id=?', key);
+        if (!old || old.owner !== u.userId)
+            throw new MarketError('This draft is no longer available.', 404);
+        await run(c.db, 'UPDATE request_drafts SET title=?,data=?,updated=? WHERE id=?', data.title, JSON.stringify(data), now(), key);
+        return { id: key };
+    }
+    const count = Number((await one(c.db, 'SELECT COUNT(*) n FROM request_drafts WHERE owner=?', u.userId))!.n);
+    if (count >= MAX_DRAFTS)
+        throw new MarketError('You can keep up to ' + MAX_DRAFTS + ' drafts. Delete one to save another.');
+    const keyNew = id();
+    await run(c.db, 'INSERT INTO request_drafts (id,owner,title,data,updated) VALUES (?,?,?,?,?)', keyNew, u.userId, data.title, JSON.stringify(data), now());
+    return { id: keyNew };
+}
+export async function deleteDraft(c: Context, key: string) {
+    const u = authenticated(c);
+    await run(c.db, 'DELETE FROM request_drafts WHERE id=? AND owner=?', key, u.userId);
+    return { ok: true };
+}

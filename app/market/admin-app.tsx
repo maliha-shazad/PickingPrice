@@ -197,12 +197,12 @@ export default function AdminApp() {
     return (
         <>
             <Toaster position="bottom-right" richColors />
-            <header style={{ background: '#0f172a', color: '#fff', padding: '12px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '16px' }}>
+            <header className="adm-bar" style={{ background: '#0f172a', color: '#fff', padding: '12px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div className="adm-bar-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '16px' }}>
                     <ShieldCheck size={20} color="#34d399" /> Picking Price Admin
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '13px', color: '#cbd5e1', overflowWrap: 'anywhere' }}>{session.email}</span>
+                <div className="adm-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className="adm-bar-email" style={{ fontSize: '13px', color: '#cbd5e1', overflowWrap: 'anywhere' }}>{session.email}</span>
                     <button style={barButton} onClick={() => setModal({ type: 'password', item: {} })}><KeyRound size={14} /> Change password</button>
                     <button style={barButton} onClick={signOut}><LogOut size={14} /> Sign out</button>
                 </div>

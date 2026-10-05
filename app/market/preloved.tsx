@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, ArrowRight, Timer, CheckCheck, FileCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, useLoad, DELIVERY_OPTIONS, offersDelivery } from './ui';
+import { Actions, Photo, useLoad, DELIVERY_OPTIONS, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 
@@ -283,7 +283,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
               {paginatedProducts.map(p => (
                 <article className="pl-card" key={p.id} style={{ cursor: 'pointer' }} onClick={() => actions.open('listing', p)}>
                   <div className="pl-card-img-wrap">
-                    <img src={p.image} alt={p.title} />
+                    <Photo src={Array.isArray((p as any).images) && (p as any).images.length ? (p as any).images[0] : (p as any).image} alt={p.title} />
                     <span className="pl-card-cond-pill">{p.condition}</span>
                     <span className="pl-card-detail-pill"><ShieldCheck size={10} style={{display:'inline', marginRight: 2}}/> SECP Verified</span>
                     <button className="pl-heart-btn" onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}>

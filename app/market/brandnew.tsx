@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Camera, Package, ArrowRight, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, RefreshCcw, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, useLoad, offersDelivery } from './ui';
+import { Actions, Photo, useLoad, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -324,7 +324,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
             <div className="bn-active-filters-row">
               <div className="bn-active-chips">
                 {selectedArea && (
-                  <span className="bn-chip">📍 {selectedArea} <button className="bn-chip-x" onClick={() => setSelectedArea('')}><X size={10}/></button></span>
+                  <span className="bn-chip">Area: {selectedArea} <button className="bn-chip-x" onClick={() => setSelectedArea('')}><X size={10}/></button></span>
                 )}
                 {selectedCategory !== 'all' && (
                   <span className="bn-chip">{selectedCategory} <button className="bn-chip-x" onClick={() => setSelectedCategory('all')}><X size={10}/></button></span>
@@ -351,10 +351,12 @@ export function BrandNew({ actions }: { actions: Actions }) {
               {paginatedProducts.map((p, i) => (
                 <article className="pl-card" key={p.id} style={{ cursor: 'pointer' }} onClick={() => actions.open('listing', p)}>
                   <div className="bn-card-img-wrap">
-                    <img src={p.image} alt={p.title} />
+                    {/* Members' own listings carry a list of photos; the sample products carry a single image. */}
+                    <Photo src={Array.isArray((p as any).images) && (p as any).images.length ? (p as any).images[0] : (p as any).image} alt={p.title} />
                     <div className="bn-card-badges-top">
                       <span className="bn-badge-dark"><ShieldCheck size={10} /> Factory Sealed Pack</span>
-                      <span className="bn-badge-light" style={{color: i % 2 === 0 ? '#059669' : '#ea580c', background: i % 2 === 0 ? '#d1fae5' : '#ffedd5'}}>{i % 2 === 0 ? '1-Yr Sony Official' : 'PTA Approved Official'}</span>
+                      {/* Only a warranty the product really states (it used to alternate two invented ones on every card). */}
+                      {!!(p as any).warranty && <span className="bn-badge-light" style={{color: i % 2 === 0 ? '#059669' : '#ea580c', background: i % 2 === 0 ? '#d1fae5' : '#ffedd5'}}>{String((p as any).warranty)}</span>}
                     </div>
                     <button className="bn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}>
                       <Heart size={16} fill={wishlist.includes(p.id) ? '#ef4444' : 'none'} color={wishlist.includes(p.id) ? '#ef4444' : '#9ca3af'} />

@@ -2,7 +2,7 @@ import { Context, MarketError, now, pageOf } from './types';
 import { bootstrap, initialize, ensureProfile, expireForUser, authenticated, one, rows, configuration, pagination } from './core';
 import { migrateLegacy } from './legacy';
 import { listCatalogue, detail, saveListing, deleteListing, saveRequest, favorite } from './catalogue';
-import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification } from './workflows';
+import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification, draftList, saveDraft, deleteDraft } from './workflows';
 import { services, requestPayment, decidePayment } from './services';
 import { adminData, saveSettings, saveCategory, moderate } from './admin';
 import { issueResetCode } from './password-reset';
@@ -40,6 +40,8 @@ export async function market(c: Context, method: string, path: string[], q: URLS
         }
         if (area === 'conversations')
             return conversationList(c, q);
+        if (area === 'drafts')
+            return draftList(c);
         if (area === 'messages' && key)
             return messageList(c, key, q);
         if (area === 'notifications') {
@@ -66,6 +68,8 @@ export async function market(c: Context, method: string, path: string[], q: URLS
             return review(c, key, body);
         if (area === 'conversations')
             return conversation(c, body);
+        if (area === 'drafts')
+            return saveDraft(c, body);
         if (area === 'messages' && key)
             return sendMessage(c, key, body);
         if (area === 'reports')
@@ -109,6 +113,8 @@ export async function market(c: Context, method: string, path: string[], q: URLS
             return deleteListing(c, key);
         if (area === 'offers' && key)
             return withdrawOffer(c, key);
+        if (area === 'drafts' && key)
+            return deleteDraft(c, key);
     }
     throw new MarketError('This action is not available.', 404);
 }

@@ -70,5 +70,81 @@ export function PaymentForm({ item, actions, done }: {
     item: Item;
     actions: Actions;
     done: () => void;
-}) { const state = useLoad('services', actions.revision); const [purpose, setPurpose] = useState(item.id ? 'promotion' : 'slots'), [quantity, setQuantity] = useState(1), [duration, setDuration] = useState('1'), [reference, setReference] = useState(''); const conf = state.data?.settings; const amount = conf ? (purpose === 'slots' ? quantity * conf.extraListingPrice : [conf.promotion24h, conf.promotion3d, conf.promotion7d][conf.promotionDurations.indexOf(Number(duration))] || 0) : 0; return <Load state={state}>{conf && <form className="form" onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('payments', 'POST', { purpose, quantity, duration: Number(duration), listingId: item.id || '', reference }))
-    done(); }}><label className="field">Service<Choice label="Service" value={purpose} onChange={setPurpose} options={[{ value: 'slots', label: 'Additional listing slots' }, ...(item.id ? [{ value: 'promotion', label: 'Feature this listing' }] : [])]}/></label>{purpose === 'slots' ? <TextField label="Number of extra slots" type="number" value={quantity} onChange={setQuantity}/> : <><p>{item.title}</p><Choice label="Promotion duration" value={duration} onChange={setDuration} options={conf.promotionDurations.map((days: number) => ({ value: String(days), label: days === 1 ? '24 hours' : days + ' days' }))}/></>}<div className="payment-amount">Amount to pay <strong>{money(amount)}</strong></div><div className="notice whitespace-pre-wrap">{conf.paymentInstructions || 'Payment instructions are not yet configured. Please contact the administrator before paying.'}</div><p>Pay outside Picking Price, then submit your reference below. The administrator will verify the transfer before activating your service.</p><TextField label="Transaction/reference number" value={reference} onChange={setReference}/><button className="btn dark" disabled={!conf.paymentInstructions || (purpose === 'promotion' && !conf.promotionDurations.includes(Number(duration)))}>Submit for verification</button></form>}</Load>; }
+}) {
+    const state = useLoad('services', actions.revision);
+    // Opened from a listing: promote it. Opened from Quota & Services: extra listings, with the chosen pack filled in.
+    const [purpose, setPurpose] = useState(item.id ? 'promotion' : 'slots');
+    const [quantity, setQuantity] = useState(Math.min(100, Math.max(1, Math.round(Number(item.quantity)) || 1)));
+    const [duration, setDuration] = useState('1');
+    const [reference, setReference] = useState('');
+    const [busy, setBusy] = useState(false);
+    const conf = state.data?.settings;
+    const prices = conf ? [conf.promotion24h, conf.promotion3d, conf.promotion7d] : [];
+    const durations: number[] = conf?.promotionDurations || [];
+    const amount = conf ? (purpose === 'slots' ? quantity * conf.extraListingPrice : prices[durations.indexOf(Number(duration))] || 0) : 0;
+    const days = (d: number) => d === 1 ? '24 hours' : d + ' days';
+    const setSlots = (n: number) => setQuantity(Math.min(100, Math.max(1, Math.round(n) || 1)));
+    const ready = !!conf?.paymentInstructions && (purpose === 'slots' || durations.includes(Number(duration)));
+    return <Load state={state}>{conf && (
+        <form className="pay-form" onSubmit={async e => {
+            e.preventDefault(); setBusy(true);
+            const saved = await actions.perform('payments', 'POST', { purpose, quantity, duration: Number(duration), listingId: item.id || '', reference });
+            setBusy(false); if (saved) done();
+        }}>
+            {!!item.id && (
+                <div className="pay-tabs" role="tablist" aria-label="Service">
+                    <button type="button" role="tab" aria-selected={purpose === 'promotion'} className={purpose === 'promotion' ? 'active' : ''} onClick={() => setPurpose('promotion')}>Feature this listing</button>
+                    <button type="button" role="tab" aria-selected={purpose === 'slots'} className={purpose === 'slots' ? 'active' : ''} onClick={() => setPurpose('slots')}>Extra listing slots</button>
+                </div>
+            )}
+
+            <section className="pay-card">
+                <div className="pay-card-head"><span className="pay-step">1</span><div>
+                    <h3>{purpose === 'slots' ? 'How many extra listings?' : 'How long should it be featured?'}</h3>
+                    <p>{purpose === 'slots' ? money(conf.extraListingPrice) + ' per listing. They are added to your allowance once the payment is verified.' : String(item.title || 'Your listing') + ' is shown ahead of other products for the time you choose.'}</p>
+                </div></div>
+                {purpose === 'slots' ? (
+                    <div className="pay-qty">
+                        <div className="pay-stepper">
+                            <button type="button" aria-label="One fewer" disabled={quantity <= 1} onClick={() => setSlots(quantity - 1)}>−</button>
+                            <input type="number" inputMode="numeric" aria-label="Number of extra listings" min={1} max={100} required value={quantity} onChange={e => setSlots(Number(e.target.value))} />
+                            <button type="button" aria-label="One more" disabled={quantity >= 100} onClick={() => setSlots(quantity + 1)}>+</button>
+                        </div>
+                        <div className="pay-quick" role="group" aria-label="Quick choices">
+                            {[5, 10, 20].map(n => <button type="button" key={n} className={quantity === n ? 'selected' : ''} onClick={() => setSlots(n)}>+{n}</button>)}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="pay-durations" role="radiogroup" aria-label="Promotion duration">
+                        {durations.map((d, i) => (
+                            <button type="button" key={d} role="radio" aria-checked={String(d) === duration} className={String(d) === duration ? 'selected' : ''} onClick={() => setDuration(String(d))}>
+                                <strong>{days(d)}</strong><span>{money(prices[i] || 0)}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <div className="pay-amount">
+                <div><span>Amount to pay</span><small>{purpose === 'slots' ? quantity + (quantity === 1 ? ' listing' : ' listings') + ' × ' + money(conf.extraListingPrice) : 'Featured for ' + days(Number(duration))}</small></div>
+                <strong>{money(amount)}</strong>
+            </div>
+
+            <section className="pay-card">
+                <div className="pay-card-head"><span className="pay-step">2</span><div>
+                    <h3>Pay, then send us the reference</h3>
+                    <p>Payment is made outside Picking Price. Our team checks the transfer before your service starts.</p>
+                </div></div>
+                <div className={'pay-instructions' + (conf.paymentInstructions ? '' : ' missing')}>
+                    <span className="pay-instructions-label">{conf.paymentInstructions ? 'Where to pay' : 'Payment details not added yet'}</span>
+                    {conf.paymentInstructions || 'The payment details have not been set up yet, so requests cannot be submitted right now. Please contact support.'}
+                </div>
+                <label className="pay-field">Transaction / reference number
+                    <input type="text" required minLength={4} maxLength={120} placeholder="e.g. the TID from your transfer receipt" value={reference} onChange={e => setReference(e.target.value)} />
+                </label>
+            </section>
+
+            <button className="pay-submit" disabled={!ready || busy}>{busy ? 'Submitting…' : 'Submit for verification'}</button>
+        </form>
+    )}</Load>;
+}

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Actions, useLoad } from './ui';
+import { toast } from 'sonner';
+import { Actions, Item, api, useLoad } from './ui';
 import { sampleRequests } from '../samples';
 
 // SVG Icons mapped explicitly to avoid lucide-react resolution issues
@@ -136,25 +137,29 @@ const CONDITIONS = [
   { id: 'gently-worn', label: 'Gently Worn', desc: 'Clean, zero sequin loss or fabric pulls' }
 ];
 
-export function PostRequest({ actions }: { actions: Actions }) {
+export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item | null }) {
+  // Opened from a saved draft: every field starts with what was saved.
+  const saved = (draft?.data || {}) as Record<string, any>;
+  const [draftId, setDraftId] = useState(String(draft?.id || ''));
+  const [savingDraft, setSavingDraft] = useState(false);
   const popularReqState = useLoad('requests?size=4', actions.revision);
   const popularRequests = (popularReqState.data?.items || [])
     .map((item: any) => item.title)
     .filter((title: string) => title && title !== 'ddsdfs' && !title.toLowerCase().includes('test'));
 
-  const [title, setTitle] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [selectedCat, setSelectedCat] = useState('');
-  const [selectedSize, setSelectedSize] = useState('');
-  const [selectedCondition, setSelectedCondition] = useState('');
-  const [budget, setBudget] = useState('');
-  const [negotiable, setNegotiable] = useState(true);
-  const [notes, setNotes] = useState('');
-  const [handover, setHandover] = useState('in-person');
+  const [title, setTitle] = useState(String(saved.title || ''));
+  const [quantity, setQuantity] = useState(Number(saved.quantity) || 1);
+  const [selectedCat, setSelectedCat] = useState(String(saved.subcategory || ''));
+  const [selectedSize, setSelectedSize] = useState(String(saved.size || ''));
+  const [selectedCondition, setSelectedCondition] = useState(String(saved.condition || ''));
+  const [budget, setBudget] = useState(String(saved.budget || ''));
+  const [negotiable, setNegotiable] = useState(saved.negotiable !== false);
+  const [notes, setNotes] = useState(String(saved.notes || ''));
+  const [handover, setHandover] = useState(String(saved.handover || 'in-person'));
   const [step, setStep] = useState(1);
   
-  const [domain, setDomain] = useState('Accessories');
-  const [images, setImages] = useState<string[]>([]);
+  const [domain, setDomain] = useState(String(saved.domain || 'Accessories'));
+  const [images, setImages] = useState<string[]>(Array.isArray(saved.images) ? saved.images : []);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayCats = subCategories[domain] || subCategories['Clothes'];
@@ -181,6 +186,22 @@ export function PostRequest({ actions }: { actions: Actions }) {
 
   const handleDeleteImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Keeps the form as it is now in the member's drafts (Buyer Dashboard > Draft Requests).
+  const handleSaveDraft = async () => {
+    if (!actions.user) { actions.open('login'); return; }
+    if (!title.trim() && !notes.trim() && !budget && images.length === 0) { toast.error('Add a title, a budget or a note before saving a draft.'); return; }
+    setSavingDraft(true);
+    try {
+      const r = await api('drafts', 'POST', { id: draftId || undefined, data: { title, quantity, domain, subcategory: selectedCat, size: selectedSize, condition: selectedCondition, budget, negotiable, notes, handover, images } });
+      setDraftId(String(r.id));
+      actions.refresh?.();
+      toast.success(draftId ? 'Draft updated' : 'Draft saved', { description: 'You will find it under Draft Requests in your Buyer Dashboard.', action: { label: 'View drafts', onClick: () => actions.open('drafts') } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'The draft could not be saved.');
+    }
+    setSavingDraft(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,7 +239,9 @@ export function PostRequest({ actions }: { actions: Actions }) {
     setBusy(false);
     
     if (result) {
-        alert('Request Posted Successfully! Sellers will now be able to bid on this request.');
+        // A request posted from a draft no longer needs the draft.
+        if (draftId) { try { await api('drafts/' + encodeURIComponent(draftId), 'DELETE'); } catch { } }
+        toast.success('Request posted', { description: 'Sellers can now send you offers.' });
         actions.go('Requests');
     }
   };
@@ -237,6 +260,10 @@ export function PostRequest({ actions }: { actions: Actions }) {
         .pr-footer-btns { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
         .pr-btn-draft { background: white; border: 1px solid #cbd5e1; color: #475569; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 100px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
         .pr-btn-draft:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .pr-btn-draft:disabled { opacity: .6; cursor: not-allowed; }
+        .pr-footer-left { display: flex; align-items: center; gap: 16px; }
+        .pr-btn-draft-link { background: none; border: 0; color: #0f766e; font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 4px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+        .pr-btn-draft-link:disabled { opacity: .6; cursor: not-allowed; }
         .pr-btn-submit { background: #ea580c; color: white; padding: 14px 32px; border-radius: 100px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3); transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
         .pr-btn-submit:hover { background: #c2410c; box-shadow: 0 6px 16px rgba(234, 88, 12, 0.4); transform: translateY(-1px); }
         .pr-btn-submit:disabled { background: #f97316; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -251,6 +278,7 @@ export function PostRequest({ actions }: { actions: Actions }) {
           .pr-handover { flex-direction: column; }
           .pr-footer-btns { flex-direction: column; gap: 16px; }
           .pr-footer-btns button { width: 100%; }
+          .pr-footer-left { width: 100%; flex-direction: column; gap: 8px; }
           .pr-header-btns { display: none; }
           .pr-header .pl-breadcrumb { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap; white-space: nowrap; }
           .pr-header .pl-breadcrumb::-webkit-scrollbar { display: none; }
@@ -259,7 +287,7 @@ export function PostRequest({ actions }: { actions: Actions }) {
           .pr-title-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
         }
         @media (max-width: 480px) {
-          .pr-subcats { grid-template-columns: 1fr; }
+          .pr-subcats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
         }
       `}</style>
       <div className="pr-header" style={{ background: 'white', padding: '16px 5%', borderBottom: '1px solid #f1f5f9' }}>
@@ -527,14 +555,17 @@ export function PostRequest({ actions }: { actions: Actions }) {
             <div className="pr-footer-btns">
               {step === 1 ? (
                 <>
-                  <button type="button" className="pr-btn-draft">Save Draft for Later</button>
+                  <button type="button" className="pr-btn-draft" id="pr-save-draft" disabled={savingDraft} onClick={handleSaveDraft}>{savingDraft ? 'Saving…' : draftId ? 'Update Draft' : 'Save Draft for Later'}</button>
                   <button type="button" onClick={() => setStep(2)} className="pr-btn-submit">
                     Next: Fitting & Handoff
                   </button>
                 </>
               ) : (
                 <>
-                  <button type="button" onClick={() => setStep(1)} className="pr-btn-draft">Back</button>
+                  <div className="pr-footer-left">
+                    <button type="button" onClick={() => setStep(1)} className="pr-btn-draft">Back</button>
+                    <button type="button" className="pr-btn-draft-link" disabled={savingDraft} onClick={handleSaveDraft}>{savingDraft ? 'Saving…' : draftId ? 'Update draft' : 'Save draft'}</button>
+                  </div>
                   <button type="submit" disabled={busy} className="pr-btn-submit">
                     {busy ? 'Processing...' : 'Submit Request'}
                   </button>

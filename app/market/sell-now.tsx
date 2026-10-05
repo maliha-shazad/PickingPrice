@@ -481,8 +481,6 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                         {busy ? 'Publishing...' : <><Zap size={18} /> Publish Listing Free</>}
                     </button>
                 </div>
-                {/* Spacer for fixed bottom bar */}
-                <div style={{height: '80px'}}></div>
             </form>
         </div>
     );

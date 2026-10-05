@@ -37,6 +37,20 @@ try{
  r=await fetch(config.origin+'/api/market/listings/'+created.id);equal((await r.json() as {delivery:string[]}).delivery,['In-Store Pickup','Nationwide Delivery']);
  r=await fetch(config.origin+'/api/market/listings');equal(((await r.json()) as {items:{id:string;delivery:string[]}[]}).items.find(i=>i.id===created.id)!.delivery,['In-Store Pickup','Nationwide Delivery']);
  r=await fetch(config.origin+'/api/market/admin/users',{headers:{Cookie:cookie}});equal(r.status,403);
+ // Request drafts (Post a Request > Save Draft for Later): saved per member, updated in place, deleted on request.
+ const read=(path:string,c='')=>fetch(config.origin+path,{headers:{Cookie:c}});
+ const del=(path:string,c=cookie)=>fetch(config.origin+path,{method:'DELETE',headers:{Origin:config.origin,Cookie:c}});
+ r=await send('/api/market/drafts',{data:{}},cookie);equal(r.status,400);
+ r=await send('/api/market/drafts',{data:{title:'HTTP draft',budget:'1500',quantity:2,domain:'Books',images:['/api/files/not-mine']}},cookie);equal(r.status,400);
+ r=await send('/api/market/drafts',{data:{title:'HTTP draft',budget:'1,500 Rs',quantity:2,domain:'Books'}},cookie);equal(r.status,200);const draft=await r.json() as {id:string};
+ r=await read('/api/market/drafts',cookie);const drafts=await r.json() as {total:number;items:{id:string;title:string;data:{budget:string;quantity:number;negotiable:boolean}}[]};equal(drafts.total,1);equal(drafts.items[0].title,'HTTP draft');equal(drafts.items[0].data.budget,'1500');equal(drafts.items[0].data.quantity,2);equal(drafts.items[0].data.negotiable,true);
+ r=await send('/api/market/drafts',{id:draft.id,data:{title:'HTTP draft, edited',notes:'Any colour.'}},cookie);equal(r.status,200);equal((await r.json() as {id:string}).id,draft.id);
+ r=await read('/api/market/drafts',cookie);equal(((await r.json()) as {items:{title:string}[]}).items.map(i=>i.title),['HTTP draft, edited']);
+ r=await read('/api/market/drafts');equal(r.status,401);
+ r=await send('/api/market/drafts',{id:'no-such-draft',data:{title:'x'}},cookie);equal(r.status,404);
+ r=await del('/api/market/drafts/'+draft.id);equal(r.status,200);r=await read('/api/market/drafts',cookie);equal(((await r.json()) as {total:number}).total,0);
+ // The counts behind the header badges are real numbers on PostgreSQL too (it returns COUNT as text).
+ r=await read('/api/market/bootstrap',cookie);const boot=await r.json() as {unread:unknown;openRequests:unknown};equal(typeof boot.unread,'number');equal(typeof boot.openRequests,'number');
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII=','base64');
  const upload=(bytes:Buffer,c=cookie)=>fetch(config.origin+'/api/files',{method:'POST',headers:{Origin:config.origin,Cookie:c,'Content-Type':'image/png'},body:new Uint8Array(bytes).buffer});
  r=await upload(png,'');equal(r.status,401);r=await upload(Buffer.from('<svg onload="alert(1)"></svg>'));equal(r.status,400);

@@ -245,10 +245,9 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Reviews Section — full width below both columns */}
-      <div className="pp-reviews-section" style={{ marginTop: '40px' }}>
+      {/* Reviews: under the photos on desktop, after the details on phones (see .pp-prod-grid in styles.css) */}
+      <div className="pp-reviews-section">
         <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#111827' }}>Seller Reviews</h3>
         <Load state={sellerState}>
           {sellerData && sellerData.reviews && sellerData.reviews.items.length > 0 ? (
@@ -274,6 +273,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
         </Load>
 
         <ReviewForm item={item} actions={actions} />
+      </div>
       </div>
     </div>
 

@@ -3,11 +3,13 @@ import { useRef, useState } from 'react';
 import { UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Actions, Item, Photo } from './ui';
+import { ACCOUNT_TYPES } from './enable-selling';
 
 /** Quick profile edit opened from the pencil on either dashboard. Styled by the dashboard's own .bd-* rules. */
 export function ProfileDialog({ profile, actions, onClose }: { profile: Item; actions: Actions; onClose: () => void }) {
     const [name, setName] = useState(String(profile.name || actions.user?.name || ''));
     const [location, setLocation] = useState(String(profile.location || ''));
+    const [role, setRole] = useState(String(profile.role || actions.user?.role || 'buyer'));
     const [avatar, setAvatar] = useState(String(profile.avatar || ''));
     const [uploading, setUploading] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -36,7 +38,7 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
         const saved = await actions.perform('profile', 'PATCH', {
             name: name.trim(), location: location.trim(), avatar,
             bio: profile.bio || '', phone: profile.phone || '', whatsapp: profile.whatsapp || '',
-            meetup_spot: profile.meetup_spot || '', role: profile.role,
+            meetup_spot: profile.meetup_spot || '', role,
         });
         setBusy(false);
         if (saved) onClose();
@@ -68,6 +70,13 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
                     <div className="bd-form-group">
                         <label htmlFor="bd-profile-location">Location</label>
                         <input id="bd-profile-location" type="text" className="bd-input" maxLength={80} value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Lahore, Gulberg" />
+                    </div>
+                    <div className="bd-form-group">
+                        <label htmlFor="bd-profile-role">Account type</label>
+                        <select id="bd-profile-role" className="bd-input pp-select" value={role} onChange={e => setRole(e.target.value)}>
+                            {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                        <small className="bd-field-hint">{ACCOUNT_TYPES.find(t => t.value === role)?.text}{role === 'buyer' ? ' Sell Now stays locked.' : ''}</small>
                     </div>
                     {!!actions.user?.email && (
                         <div className="bd-form-group">

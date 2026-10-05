@@ -1,7 +1,9 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search } from 'lucide-react';
-import { Actions, Item, useLoad, Load, date } from './ui';
+import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search, Package } from 'lucide-react';
+import { Actions, Item, useLoad, Load, date, money } from './ui';
+
+const contextLabel = (about: Item | null, type: string) => { const k = String(about?.kind || type); return k === 'listing' ? 'Product' : k === 'request' ? 'Buyer request' : k === 'offer' ? 'Offer' : 'Chat'; };
 
 export function Messages({ actions }: { actions: Actions }) {
     const [page, setPage] = useState(1);
@@ -54,14 +56,16 @@ export function Messages({ actions }: { actions: Actions }) {
                                     onClick={() => setCurrent(c.id)}
                                 >
                                     <div className="msg-conv-avatar">
-                                        {(c.other_name || 'U').charAt(0).toUpperCase()}
+                                        {(c.context as Item | null)?.image
+                                            ? <img src={String((c.context as Item).image)} alt="" />
+                                            : String(c.other_name || 'U').charAt(0).toUpperCase()}
                                     </div>
                                     <div className="msg-conv-info">
                                         <div className="msg-conv-name-row">
                                             <strong className="msg-conv-name">{c.other_name || 'User'}</strong>
                                             <span className="msg-conv-time">{date(c.updated)}</span>
                                         </div>
-                                        <p className="msg-conv-preview">{c.title || 'Conversation'}</p>
+                                        <p className="msg-conv-preview"><span className="msg-conv-kind">{contextLabel(c.context as Item | null, String(c.context_type || ''))}</span>{String(c.title || 'Conversation')}</p>
                                     </div>
                                 </button>
                             ))}
@@ -108,7 +112,9 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
     const conv = state.data?.conversation;
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Scroll the message list itself, not the page: the page jumping down hid the chat's header.
+        const list = messagesEndRef.current?.closest('.msg-messages-wrap');
+        if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
     }, [messages.length]);
 
     const handleSend = async (e: React.FormEvent) => {
@@ -123,9 +129,9 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
         }
     };
 
-    const otherName = conv?.first_user === actions.user?.id
-        ? conv?.second_user_name || 'User'
-        : conv?.first_user_name || 'User';
+    const otherName = String(conv?.other_name || 'Member');
+    const about = (conv?.context || null) as Item | null;
+    const kind = contextLabel(about, String(conv?.context_type || ''));
 
     return (
         <div className="msg-chat-panel">
@@ -135,16 +141,31 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
                     <ArrowLeft size={18} />
                 </button>
                 <div className="msg-chat-header-avatar">
-                    {(conv?.title || otherName || 'U').charAt(0).toUpperCase()}
+                    {conv?.other_avatar ? <img src={String(conv.other_avatar)} alt="" /> : otherName.charAt(0).toUpperCase()}
                 </div>
                 <div className="msg-chat-header-info">
-                    <strong>{conv?.title || 'Conversation'}</strong>
-                    <span>Active</span>
+                    <strong>{otherName}</strong>
+                    <span>{conv ? 'Chat about this ' + kind.toLowerCase() : ''}</span>
                 </div>
                 <button className="msg-refresh-btn" onClick={state.retry} title="Refresh">
                     <RefreshCcw size={16} />
                 </button>
             </div>
+
+            {/* What this chat is about: shown to both people */}
+            {conv && (
+                <div className="msg-context" data-kind={String(about?.kind || conv.context_type || '')}>
+                    <div className="msg-context-thumb">{about?.image ? <img src={String(about.image)} alt="" /> : <Package size={18} />}</div>
+                    <div className="msg-context-info">
+                        <span className="msg-context-kind">{kind}</span>
+                        <strong>{String(about?.title || conv.title || 'Conversation')}</strong>
+                        {about && <small>{about.kind === 'request' ? 'Budget ' : about.kind === 'offer' ? 'Offer ' : ''}{money(Number(about.price))}{about.condition ? ' · ' + String(about.condition) : ''}{about.location ? ' · ' + String(about.location) : ''}</small>}
+                    </div>
+                    {about && about.available
+                        ? <button type="button" className="msg-context-view" onClick={() => actions.open(about.kind === 'listing' ? 'listing' : 'request', { id: about.id })}>View</button>
+                        : <span className="msg-context-gone">No longer available</span>}
+                </div>
+            )}
 
             {/* Messages */}
             <div className="msg-messages-wrap">

@@ -143,12 +143,16 @@ export type LegalKind = 'privacy' | 'terms';
 export const legalTitle = (kind: LegalKind) => (kind === 'privacy' ? 'Privacy Policy' : 'Terms of Service') + ' — Picking Price';
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** The page's markup, to go inside an element with class pp-legal-page. */
-export function legalHtml(kind: LegalKind) {
-    const privacy = kind === 'privacy', sections = privacy ? PRIVACY : TERMS;
-    const body = sections.map((s, i) => '<section><h2>' + (i + 1) + '. ' + esc(s.heading) + '</h2>' + s.body.map(b => Array.isArray(b)
+/** The numbered sections alone, for showing the same text inside a popup. */
+export function legalBody(kind: LegalKind) {
+    return (kind === 'privacy' ? PRIVACY : TERMS).map((s, i) => '<section><h2>' + (i + 1) + '. ' + esc(s.heading) + '</h2>' + s.body.map(b => Array.isArray(b)
         ? '<ul>' + b.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul>'
         : '<p>' + esc(b) + '</p>').join('') + '</section>').join('');
+}
+
+/** The page's markup, to go inside an element with class pp-legal-page. */
+export function legalHtml(kind: LegalKind) {
+    const privacy = kind === 'privacy', body = legalBody(kind);
     return '<header class="pp-legal-top"><a href="/" aria-label="Picking Price home"><img src="/new-logo.png" alt="Picking Price"/></a><nav>'
         + '<a href="/privacy"' + (privacy ? ' class="active"' : '') + '>Privacy Policy</a><a href="/terms"' + (privacy ? '' : ' class="active"') + '>Terms of Service</a></nav></header>'
         + '<main class="pp-legal-card"><h1>' + (privacy ? 'Privacy Policy' : 'Terms of Service') + '</h1><p class="pp-legal-updated">Last updated: ' + UPDATED + '</p>'

@@ -54,6 +54,9 @@ export async function initialize(db: Database) {
     }
     // Delivery and pickup options the seller offers, stored as a JSON list.
     try { await run(db, "ALTER TABLE listings ADD COLUMN delivery TEXT NOT NULL DEFAULT '[]'"); } catch {}
+    // Buyer requests saved as drafts from the Post a Request page (the form's fields as JSON).
+    await run(db, "CREATE TABLE IF NOT EXISTS request_drafts (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', data TEXT NOT NULL, updated TEXT NOT NULL)");
+    await run(db, 'CREATE INDEX IF NOT EXISTS request_drafts_owner ON request_drafts (owner)');
     initialized.add(db);
 }
 export async function expireForUser(c: Context) {
@@ -67,5 +70,5 @@ export async function expireForUser(c: Context) {
         stmt(c.db, "UPDATE promotions SET status='Expired' WHERE owner=? AND status='Active' AND expires<=?", uid, t),
     ]);
 }
-export async function bootstrap(c: Context) { await initialize(c.db); await ensureProfile(c); await expireForUser(c); let avatar = null; if (c.user) { const p = await one(c.db, 'SELECT avatar FROM profiles WHERE id=?', c.user.userId); if (p) avatar = p.avatar; } return { user: c.user ? { id: c.user.userId, name: c.user.displayName, role: c.user.role, provider: c.user.provider, email: c.user.email, avatar } : null, categories: (await rows(c.db, 'SELECT * FROM categories WHERE active=1 ORDER BY name')).map(r => ({ ...r, subcategories: JSON.parse(r.subcategories) })), settings: await configuration(c.db), unread: c.user ? (await one(c.db, 'SELECT COUNT(*) n FROM notifications WHERE owner=? AND read=0', c.user.userId))!.n : 0, legacyRemaining: !!await one(c.db, "SELECT id FROM records WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key='legacy:'||records.id) LIMIT 1") }; }
+export async function bootstrap(c: Context) { await initialize(c.db); await ensureProfile(c); await expireForUser(c); let avatar = null; if (c.user) { const p = await one(c.db, 'SELECT avatar FROM profiles WHERE id=?', c.user.userId); if (p) avatar = p.avatar; } return { user: c.user ? { id: c.user.userId, name: c.user.displayName, role: c.user.role, provider: c.user.provider, email: c.user.email, avatar } : null, categories: (await rows(c.db, 'SELECT * FROM categories WHERE active=1 ORDER BY name')).map(r => ({ ...r, subcategories: JSON.parse(r.subcategories) })), settings: await configuration(c.db), unread: c.user ? Number((await one(c.db, 'SELECT COUNT(*) n FROM notifications WHERE owner=? AND read=0', c.user.userId))!.n) : 0, openRequests: Number((await one(c.db, "SELECT COUNT(*) n FROM buyer_requests a JOIN profiles p ON p.id=a.owner WHERE a.status IN ('Open','Responses Received') AND a.expiry>? AND p.suspended=0", now()))!.n), legacyRemaining: !!await one(c.db, "SELECT id FROM records WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key='legacy:'||records.id) LIMIT 1") }; }
 export async function pagination(db: Database, sql: string, countSql: string, args: unknown[], page: number, size: number, offset: number, orderArgs: unknown[] = []) { const [items, total] = await Promise.all([rows(db, sql + ' LIMIT ? OFFSET ?', ...args, ...orderArgs, size, offset), one(db, countSql, ...args)]); return { items, total: Number(total?.n || 0), page, size, pages: Math.ceil(Number(total?.n || 0) / size) }; }

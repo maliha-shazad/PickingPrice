@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <div className="hp-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #e6f7f4 0%, #fef5f5 100%)', minHeight: '100vh', padding: '20px' }}>
+        <div className="pp-forgot-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #e6f7f4 0%, #fef5f5 100%)', minHeight: '100vh', padding: '20px' }}>
             <div className="pp-forgot-card" style={{ background: '#fff', borderRadius: '12px', padding: '40px', width: '100%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)', position: 'relative' }}>
                 
                 <a href="/login" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#4a6352', textDecoration: 'none', marginBottom: '24px' }}>

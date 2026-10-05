@@ -6,6 +6,7 @@ import { Bell, Bookmark, MessageCircle, Eye, CheckCircle2, ShieldCheck, Edit2, M
 export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode: (m: 'Buying' | 'Selling') => void }) {
     const me = useLoad('me', actions.revision);
     const requests = useLoad('requests?mine=1', actions.revision);
+    const drafts = useLoad('drafts', actions.revision);
     const favorites = useLoad('listings?saved=1', actions.revision);
     const conversations = useLoad('conversations', actions.revision);
 
@@ -45,7 +46,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                             </button>
                         </div>
                         <div className="bd-profile-info">
-                            <h2>{profile.name || actions.user?.name} {profile.verified && <CheckCircle2 size={16} color="#10b981" />}</h2>
+                            <h2>{profile.name || actions.user?.name} {!!profile.verified && <CheckCircle2 size={16} color="#10b981" />}</h2>
                             <div className="bd-profile-meta">
                                 <span><MapPin size={12}/> {profile.location || 'Lahore, PK'}</span>
                                 <span><Calendar size={12}/> Joined {new Date(profile.created || Date.now()).getFullYear()}</span>
@@ -135,6 +136,40 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                                             <div className="bd-req-actions">
                                                 <button className="bd-btn-primary" onClick={() => actions.open('request-form', req)}>Edit Request</button>
                                                 <button className="bd-btn-secondary" onClick={() => actions.open('request', req)}>Offers</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Load>
+                    </div>
+
+                    {/* Draft requests: saved from the Post a Request page */}
+                    <div className="bd-section bd-glass-panel" id="bd-drafts">
+                        <div className="bd-section-header">
+                            <h3>Draft Requests <span className="bd-badge">{drafts.data?.total || 0} Saved</span></h3>
+                            <button className="bd-view-all" onClick={() => actions.open('request-form')}>New Request</button>
+                        </div>
+                        <Load state={drafts}>
+                            {!(drafts.data?.items || []).length ? (
+                                <div className="bd-empty-state-small">No drafts. Use “Save Draft for Later” on the Post a Request page to keep an unfinished request here.</div>
+                            ) : (
+                                <div className="bd-request-grid">
+                                    {(drafts.data?.items || []).map((d: any) => (
+                                        <div className="bd-req-card bd-draft-card" key={d.id}>
+                                            <div className="bd-req-top">
+                                                <div className="bd-req-cat">{[d.data?.domain, d.data?.subcategory].filter(Boolean).join(' › ') || 'General'}</div>
+                                                <div className="bd-req-status bd-draft-status">Draft</div>
+                                            </div>
+                                            <h4 className="bd-req-title">{d.title || 'Untitled request'}</h4>
+                                            <div className="bd-req-price">{d.data?.budget ? 'Budget: ' + money(Number(d.data.budget)) : 'No budget yet'}</div>
+                                            <div className="bd-req-meta">
+                                                <span>Qty: {d.data?.quantity || 1}</span>
+                                                <span>Saved {new Date(d.updated).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}</span>
+                                            </div>
+                                            <div className="bd-req-actions">
+                                                <button className="bd-btn-primary" onClick={() => actions.open('request-form', { draft: d })}>Continue</button>
+                                                <button className="bd-btn-secondary" onClick={() => actions.open('confirm', { title: 'Delete this draft?', text: '“' + (d.title || 'Untitled request') + '” will be removed. This cannot be undone.', path: 'drafts/' + d.id, method: 'DELETE' })}>Delete</button>
                                             </div>
                                         </div>
                                     ))}
