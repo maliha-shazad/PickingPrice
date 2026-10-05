@@ -5,6 +5,7 @@ import { listCatalogue, detail, saveListing, deleteListing, saveRequest, favorit
 import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification } from './workflows';
 import { services, requestPayment, decidePayment } from './services';
 import { adminData, saveSettings, saveCategory, moderate } from './admin';
+import { issueResetCode } from './password-reset';
 export async function market(c: Context, method: string, path: string[], q: URLSearchParams, body: Record<string, unknown> = {}) {
     if (body === null || typeof body !== 'object' || Array.isArray(body))
         throw new MarketError('Provide a valid form object.');
@@ -79,6 +80,8 @@ export async function market(c: Context, method: string, path: string[], q: URLS
             return saveCategory(c, body);
         if (area === 'admin' && key === 'moderate')
             return moderate(c, body);
+        if (area === 'admin' && key === 'reset-code')
+            return issueResetCode(c, body);
     }
     if (method === 'PATCH') {
         if (area === 'listings' && key)

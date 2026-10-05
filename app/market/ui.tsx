@@ -10,6 +10,7 @@ export type Actions = {
     go: (view: string) => void;
     perform: (path: string, method?: string, body?: Record<string, unknown>) => Promise<Item | null>;
     user: Item | null;
+    location: string;
     revision: number;
     categories: Item[];
     refresh: () => void;
@@ -17,10 +18,15 @@ export type Actions = {
     setSearchQuery: (q: string) => void;
     searchCategory: string;
     setSearchCategory: (c: string) => void;
+    /** Set by the admin panel: records are shown without member actions (contact, offer, report, review). */
+    readOnly?: boolean;
 };
+let apiBase = '/api/market/';
+/** The admin panel points the shared screens at its own, separately authenticated API. */
+export const setApiBase = (base: string) => { apiBase = base; };
 export const money = (n: number) => 'Rs. ' + Number(n).toLocaleString('en-PK');
 export const date = (s: string) => s ? new Date(s).toLocaleDateString('en-PK') : '';
-export async function api(path: string, method = 'GET', body?: Record<string, unknown>) { const r = await fetch('/api/market/' + path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, ...(body ? { body: JSON.stringify(body) } : {}) }); const d: {error?: string} & Record<string, unknown> = await r.json(); if (!r.ok)
+export async function api(path: string, method = 'GET', body?: Record<string, unknown>) { const r = await fetch(apiBase + path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, ...(body ? { body: JSON.stringify(body) } : {}) }); const d: {error?: string} & Record<string, unknown> = await r.json(); if (!r.ok)
     throw Object.assign(new Error(d.error || 'Unable to complete this action.'), { status: r.status }); return d; }
 export function useLoad(path: string | null, revision = 0) {
     const [retry,setRetry]=useState(0);

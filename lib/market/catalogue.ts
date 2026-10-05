@@ -60,16 +60,17 @@ export async function listCatalogue(c: Context, kind: 'listings' | 'requests', q
     let order = 'a.created DESC,a.id DESC';
     const sort = q.get('sort');
     const orderArgs: unknown[] = [];
+    const orderPrefix = promote === '0' ? '' : `${promote} DESC,`;
     if (sort === 'low')
         order = 'a.price ASC,a.created DESC';
     else if (sort === 'high')
         order = 'a.price DESC,a.created DESC';
     else if (sort === 'relevance' && term) {
-        order = promote + " DESC,CASE WHEN LOWER(a.title)=? THEN 0 WHEN LOWER(a.title) LIKE ? THEN 1 ELSE 2 END,a.created DESC";
+        order = orderPrefix + "CASE WHEN LOWER(a.title)=? THEN 0 WHEN LOWER(a.title) LIKE ? THEN 1 ELSE 2 END,a.created DESC";
         orderArgs.push(term, term + '%');
     }
     else if (sort !== 'newest')
-        order = `${promote} DESC,a.created DESC,a.id DESC`;
+        order = `${orderPrefix}a.created DESC,a.id DESC`;
     const join = ` FROM ${table} a JOIN profiles p ON p.id=a.owner`;
     const data = await pagination(c.db, `SELECT a.*,p.name seller,p.verified,${activePromo} featured${join}${where} ORDER BY ${order}`, `SELECT COUNT(*) n${join}${where}`, args, page, size, offset, orderArgs);
     data.items = data.items.map(isListing ? parseImages : r => r);
@@ -91,13 +92,13 @@ export async function saveListing(c: Context, body: unknown, key?: string) {
         const old = await owned(c, 'listings', key);
         if (old.status === 'Deleted')
             throw new MarketError('This listing was removed.');
-        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,images=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, JSON.stringify(d.images), now(), key);
+        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,phone=?,whatsapp=?,meetup_spot=?,images=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify(d.images), now(), key);
         return { id: key };
     }
     const keyNew = id(), token = id(), t = now(), conf = await configuration(c.db);
     const [reservation] = await c.db.batch([
         stmt(c.db, 'UPDATE profiles SET used_slots=used_slots+1,slot_token=? WHERE id=? AND used_slots<?+extra_slots RETURNING id', token, u.userId, conf.freeListings),
-        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,images,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, JSON.stringify(d.images), t, t, u.userId, token),
+        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,phone,whatsapp,meetup_spot,images,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify(d.images), t, t, u.userId, token),
     ]);
     if (!reservation.results?.length) {
         await c.db.batch([notice(c.db, u.userId, 'Listing limit reached', 'Request additional listing slots from Seller services.', 'services', '', `limit:${u.userId}:${t.slice(0, 10)}`)]);

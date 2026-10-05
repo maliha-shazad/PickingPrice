@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money } from './ui';
+import { Actions, Item, Photo, money, useLoad } from './ui';
 import { samples, sampleRequests } from '../samples';
 
 const categories = [
@@ -32,9 +32,7 @@ const featuredSpotlight = {
   sample: true,
 };
 
-const liveRequests = sampleRequests.slice(0, 3);
-const recentDeals = samples.slice(0, 6);
-const freshArrivals = samples.slice(6, 14);
+
 
 function CategoryIcon({ cat, onClick }: { cat: typeof categories[0]; onClick: () => void }) {
   const Icon = cat.icon;
@@ -95,6 +93,19 @@ function RequestCard({ item, onOffer }: { item: Item; onOffer: () => void }) {
 }
 
 export function Homepage({ actions }: { actions: Actions }) {
+  const reqState = useLoad('requests?size=3', actions.revision);
+  const listState = useLoad('listings?size=14', actions.revision);
+
+  const realReqs = reqState.data?.items || [];
+  const realLists = listState.data?.items || [];
+  
+  const hasRealReqs = reqState.data?.total > 0;
+  const hasRealLists = listState.data?.total > 0;
+
+  const liveRequests = hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
+  const recentDeals = hasRealLists ? realLists.slice(0, 6) : samples.slice(0, 6);
+  const freshArrivals = hasRealLists ? realLists.slice(6, 14) : samples.slice(6, 14);
+
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
 
@@ -112,7 +123,7 @@ export function Homepage({ actions }: { actions: Actions }) {
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // search is already live — just keep state
+    setScrollToResults(true);
   };
 
   const scrollDeals = (dir: 'left' | 'right') => {
@@ -130,8 +141,17 @@ export function Homepage({ actions }: { actions: Actions }) {
   const filteredRecentDeals = filterItems(recentDeals);
   const filteredArrivals = filterItems(freshArrivals);
   const isSearching = searchQ.trim().length > 0 || searchCategory !== 'all';
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+  const [scrollToResults, setScrollToResults] = useState(false);
 
-  const HERO_CATS = ['All Categories', 'Clothes', 'Accessories', 'Sneakers', 'Books', 'Electronics', 'Furniture'];
+  useEffect(() => {
+    if (scrollToResults && isSearching && searchResultsRef.current) {
+      searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setScrollToResults(false);
+    }
+  }, [scrollToResults, isSearching]);
+
+  const HERO_CATS = ['All Categories', 'Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
 
   return (
     <div className="hp-root">
@@ -242,7 +262,7 @@ export function Homepage({ actions }: { actions: Actions }) {
 
         {/* ── LIVE SEARCH RESULTS (shown when searching) ── */}
         {isSearching && (
-          <section className="hp-section hp-search-results">
+          <section ref={searchResultsRef} className="hp-section hp-search-results">
             <div className="hp-section-head">
               <div className="hp-section-title-wrap">
                 <Search size={18} className="hp-zap-icon" />
@@ -290,7 +310,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               <span className="hp-live-dot" />
               <h2 className="hp-section-title">Live Buyer Requests</h2>
             </div>
-            <button className="hp-see-all" onClick={() => actions.go('Requests')}>View All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" onClick={() => actions.go('BuyerRequests')}>View All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-requests-list">
             {liveRequests.map(req => (
@@ -412,46 +432,6 @@ export function Homepage({ actions }: { actions: Actions }) {
 
       </div>
 
-      {/* FOOTER */}
-      <footer className="hp-footer">
-        <div className="hp-footer-inner">
-          <div className="hp-footer-brand">
-            <span className="hp-footer-logo"><Tag size={18} /> picking<span>price</span></span>
-            <p>Pakistan&apos;s smartest marketplace for buying and selling new &amp; pre-loved items.</p>
-            <div className="hp-footer-social">
-              <button aria-label="Facebook">f</button>
-              <button aria-label="Instagram">in</button>
-              <button aria-label="Twitter">tw</button>
-              <button aria-label="YouTube">yt</button>
-            </div>
-          </div>
-          <div className="hp-footer-col">
-            <h4>Marketplace</h4>
-            <button onClick={() => actions.go('Explore')}>Browse Listings</button>
-            <button onClick={() => actions.go('Requests')}>Buyer Requests</button>
-            <button onClick={() => actions.open('listing-form')}>Sell an Item</button>
-            <button onClick={() => actions.open('request-form')}>Post a Request</button>
-          </div>
-          <div className="hp-footer-col">
-            <h4>Support</h4>
-            <button onClick={() => actions.open('safety')}>Safety Tips</button>
-            <button onClick={() => actions.open('safety')}>Community Guidelines</button>
-            <button onClick={() => actions.open('safety')}>Report a Concern</button>
-            <button onClick={() => actions.open('safety')}>Help Center</button>
-          </div>
-          <div className="hp-footer-col">
-            <h4>Company</h4>
-            <button>About Us</button>
-            <button>Blog</button>
-            <button>Partner Program</button>
-            <button>Careers</button>
-          </div>
-        </div>
-        <div className="hp-footer-bottom">
-          <span>© 2026 Picking Price. All rights reserved.</span>
-          <span>Product payment, delivery and refunds are agreed directly between buyer and seller.</span>
-        </div>
-      </footer>
     </div>
   );
 }

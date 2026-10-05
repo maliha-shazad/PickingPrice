@@ -1,26 +1,239 @@
 'use client';
-import { useState } from 'react';
-import { Actions, Item, useLoad, Load, Pager, Empty, date } from './ui';
-export function Messages({ actions, selected }: {
-    actions: Actions;
-    selected?: string;
-}) { const [page, setPage] = useState(1), [current, setCurrent] = useState(selected || ''); const state = useLoad('conversations?page=' + page + '&size=12', actions.revision); return <section className="messages-page"><h1>Conversations</h1><p>Discuss details, condition, payment and collection directly.</p><div className="messages-layout"><aside><Load state={state}>{state.data?.items.map((c: Item) => <button className={'conversation-link ' + (current === c.id ? 'selected' : '')} key={c.id} onClick={() => setCurrent(c.id)}><strong>{c.other_name}</strong><span>{c.title}</span><small>{date(c.updated)}</small></button>)}{state.data?.items.length === 0 && <Empty title="No conversations yet" text="Contact a seller from a listing or respond to a request."/>}<Pager page={page} total={state.data?.total || 0} onChange={setPage}/></Load></aside><div>{current ? <Conversation key={current} actions={actions} id={current}/> : <Empty title="Choose a conversation"/>}</div></div></section>; }
-export function Conversation({ actions, id }: {
-    actions: Actions;
-    id: string;
-}) { const [page, setPage] = useState(1), [body, setBody] = useState(''), [busy, setBusy] = useState(false); const state = useLoad('messages/' + encodeURIComponent(id) + '?page=' + page + '&size=30', actions.revision); return <div className="conversation"><Load state={state}>{state.data && <><h3>{state.data.conversation.title}</h3><button className="text-link" onClick={state.retry}>Refresh messages</button><div className="message-list">{[...state.data.items].reverse().map((m: Item) => <div className={'message ' + (m.owner === actions.user?.id ? 'mine' : '')} key={m.id}><strong>{m.sender}</strong><p>{m.body}</p><small>{new Date(m.created).toLocaleString()}</small><button className="text-link" onClick={() => actions.open('report', { type: 'message', id: m.id })}>Report</button></div>)}</div><Pager page={page} total={state.data.total} size={30} onChange={setPage}/></>}</Load><form className="message-composer" onSubmit={async (e) => { e.preventDefault(); setBusy(true); const r = await actions.perform('messages/' + encodeURIComponent(id), 'POST', { body }); setBusy(false); if (r) {
-    setBody('');
-    setPage(1);
-} }}><textarea aria-label="Message" required maxLength={2000} value={body} onChange={e => setBody(e.target.value)} placeholder="Write a message…"/><button className="btn dark" disabled={busy}>{busy ? 'Sending…' : 'Send'}</button></form></div>; }
-export function Notifications({ actions }: {
-    actions: Actions;
-}) { const [page, setPage] = useState(1); const state = useLoad('notifications?page=' + page, actions.revision); const follow = (n: Item) => { actions.perform('notifications/' + n.id, 'PATCH', {}); if (n.link_type === 'listing')
-    actions.open('listing', { id: n.link_id });
-else if (n.link_type === 'request')
-    actions.open('request', { id: n.link_id });
-else if (n.link_type === 'conversation')
-    actions.open('conversation', { id: n.link_id });
-else if (n.link_type === 'profile')
-    actions.open('profile', { id: n.link_id });
-else if (n.link_type === 'services')
-    actions.go('Services'); }; return <section><div className="section-head"><h1>Notifications</h1><button className="btn" onClick={() => actions.perform('notifications/all', 'PATCH', {})}>Mark all as read</button></div><Load state={state}>{state.data?.items.map((n: Item) => <article className={'notification ' + (!n.read ? 'unread' : '')} key={n.id}><button onClick={() => follow(n)}><strong>{n.title}</strong><p>{n.body}</p><small>{date(n.created)}</small></button>{!n.read && <button className="text-link" onClick={() => actions.perform('notifications/' + n.id, 'PATCH', {})}>Mark read</button>}</article>)}{state.data?.items.length === 0 && <Empty title="You’re all caught up"/>}<Pager page={page} total={state.data?.total || 0} onChange={setPage}/></Load></section>; }
+import { useState, useRef, useEffect } from 'react';
+import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search } from 'lucide-react';
+import { Actions, Item, useLoad, Load, date } from './ui';
+
+export function Messages({ actions }: { actions: Actions }) {
+    const [page, setPage] = useState(1);
+    const [current, setCurrent] = useState('');
+    const [searchQ, setSearchQ] = useState('');
+    const state = useLoad('conversations?page=' + page + '&size=20', actions.revision);
+    const convos: Item[] = state.data?.items || [];
+    const total = state.data?.total || 0;
+
+    const filtered = searchQ.trim()
+        ? convos.filter((c: Item) =>
+            (c.other_name || '').toLowerCase().includes(searchQ.toLowerCase()) ||
+            (c.title || '').toLowerCase().includes(searchQ.toLowerCase()))
+        : convos;
+
+    return (
+        <section className="msg-page">
+            <div className="msg-layout">
+                {/* Sidebar — conversation list */}
+                <aside className={`msg-sidebar${current ? ' msg-sidebar-hidden-mobile' : ''}`}>
+                    <div className="msg-sidebar-header">
+                        <h2 className="msg-sidebar-title"><MessageCircle size={18} /> Messages</h2>
+                        <span className="msg-sidebar-count">{total}</span>
+                    </div>
+
+                    <div className="msg-search-wrap">
+                        <Search size={14} className="msg-search-icon" />
+                        <input
+                            type="text"
+                            className="msg-search-input"
+                            placeholder="Search conversations..."
+                            value={searchQ}
+                            onChange={e => setSearchQ(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="msg-conv-list">
+                        <Load state={state}>
+                            {filtered.length === 0 && (
+                                <div className="msg-empty-sidebar">
+                                    <MessageCircle size={32} style={{ opacity: 0.2 }} />
+                                    <p>No conversations yet</p>
+                                    <span>Contact a seller from a listing to start chatting.</span>
+                                </div>
+                            )}
+                            {filtered.map((c: Item) => (
+                                <button
+                                    key={c.id}
+                                    className={`msg-conv-item${current === c.id ? ' active' : ''}`}
+                                    onClick={() => setCurrent(c.id)}
+                                >
+                                    <div className="msg-conv-avatar">
+                                        {(c.other_name || 'U').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="msg-conv-info">
+                                        <div className="msg-conv-name-row">
+                                            <strong className="msg-conv-name">{c.other_name || 'User'}</strong>
+                                            <span className="msg-conv-time">{date(c.updated)}</span>
+                                        </div>
+                                        <p className="msg-conv-preview">{c.title || 'Conversation'}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </Load>
+
+                        {total > 20 && (
+                            <div className="msg-load-more">
+                                <button onClick={() => setPage(p => p + 1)}>Load more</button>
+                            </div>
+                        )}
+                    </div>
+                </aside>
+
+                {/* Chat area */}
+                <div className={`msg-chat-area${current ? ' msg-chat-visible-mobile' : ''}`}>
+                    {current ? (
+                        <ChatPanel
+                            key={current}
+                            actions={actions}
+                            id={current}
+                            onBack={() => setCurrent('')}
+                        />
+                    ) : (
+                        <div className="msg-empty-chat">
+                            <MessageCircle size={48} style={{ opacity: 0.15 }} />
+                            <h3>Select a conversation</h3>
+                            <p>Choose from your existing conversations or start a new one from a product listing.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBack: () => void }) {
+    const [page, setPage] = useState(1);
+    const [body, setBody] = useState('');
+    const [busy, setBusy] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const state = useLoad('messages/' + encodeURIComponent(id) + '?page=' + page + '&size=50', actions.revision);
+    const messages: Item[] = state.data?.items || [];
+    const conv = state.data?.conversation;
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages.length]);
+
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!body.trim()) return;
+        setBusy(true);
+        const r = await actions.perform('messages/' + encodeURIComponent(id), 'POST', { body: body.trim() });
+        setBusy(false);
+        if (r) {
+            setBody('');
+            setPage(1);
+        }
+    };
+
+    const otherName = conv?.first_user === actions.user?.id
+        ? conv?.second_user_name || 'User'
+        : conv?.first_user_name || 'User';
+
+    return (
+        <div className="msg-chat-panel">
+            {/* Chat header */}
+            <div className="msg-chat-header">
+                <button className="msg-back-btn" onClick={onBack}>
+                    <ArrowLeft size={18} />
+                </button>
+                <div className="msg-chat-header-avatar">
+                    {(conv?.title || otherName || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="msg-chat-header-info">
+                    <strong>{conv?.title || 'Conversation'}</strong>
+                    <span>Active</span>
+                </div>
+                <button className="msg-refresh-btn" onClick={state.retry} title="Refresh">
+                    <RefreshCcw size={16} />
+                </button>
+            </div>
+
+            {/* Messages */}
+            <div className="msg-messages-wrap">
+                <Load state={state}>
+                    {messages.length === 0 && (
+                        <div className="msg-no-messages">
+                            <p>No messages yet. Say hello!</p>
+                        </div>
+                    )}
+                    <div className="msg-messages-list">
+                        {[...messages].reverse().map((m: Item) => (
+                            <div
+                                key={m.id}
+                                className={`msg-bubble-wrap${m.owner === actions.user?.id ? ' mine' : ''}`}
+                            >
+                                <div className="msg-bubble">
+                                    <div className="msg-bubble-header">
+                                        <strong>{m.sender}</strong>
+                                        <small>{new Date(m.created).toLocaleString('en-PK', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</small>
+                                    </div>
+                                    <p className="msg-bubble-body">{m.body}</p>
+                                </div>
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                </Load>
+            </div>
+
+            {/* Composer */}
+            <form className="msg-composer" onSubmit={handleSend}>
+                <input
+                    type="text"
+                    className="msg-composer-input"
+                    placeholder="Type a message..."
+                    value={body}
+                    onChange={e => setBody(e.target.value)}
+                    maxLength={2000}
+                    required
+                />
+                <button type="submit" className="msg-send-btn" disabled={busy || !body.trim()}>
+                    <Send size={16} />
+                </button>
+            </form>
+        </div>
+    );
+}
+
+export function Conversation({ actions, id }: { actions: Actions; id: string }) {
+    return <ChatPanel actions={actions} id={id} onBack={() => {}} />;
+}
+
+export function Notifications({ actions }: { actions: Actions }) {
+    const [page, setPage] = useState(1);
+    const state = useLoad('notifications?page=' + page, actions.revision);
+
+    const follow = (n: Item) => {
+        actions.perform('notifications/' + n.id, 'PATCH', {});
+        if (n.link_type === 'listing') actions.open('listing', { id: n.link_id });
+        else if (n.link_type === 'request') actions.open('request', { id: n.link_id });
+        else if (n.link_type === 'conversation') actions.open('conversation', { id: n.link_id });
+        else if (n.link_type === 'profile') actions.open('profile', { id: n.link_id });
+        else if (n.link_type === 'services') actions.go('Services');
+    };
+
+    return (
+        <section>
+            <div className="section-head">
+                <h1>Notifications</h1>
+                <button className="btn" onClick={() => actions.perform('notifications/all', 'PATCH', {})}>Mark all as read</button>
+            </div>
+            <Load state={state}>
+                {state.data?.items?.map((n: Item) => (
+                    <article className={'notification ' + (!n.read ? 'unread' : '')} key={n.id}>
+                        <button onClick={() => follow(n)}>
+                            <strong>{n.title}</strong>
+                            <p>{n.body}</p>
+                            <small>{date(n.created)}</small>
+                        </button>
+                        {!n.read && <button className="text-link" onClick={() => actions.perform('notifications/' + n.id, 'PATCH', {})}>Mark read</button>}
+                    </article>
+                ))}
+                {state.data?.items?.length === 0 && (
+                    <div className="empty">
+                        <h3>You&apos;re all caught up</h3>
+                        <p>No new notifications.</p>
+                    </div>
+                )}
+            </Load>
+        </section>
+    );
+}

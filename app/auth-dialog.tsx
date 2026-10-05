@@ -52,7 +52,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
         <div className="pp-auth-modal">
             <div className="pp-auth-header">
                 <div className="pp-auth-logo-img">
-                    <img src="/logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} />
+                    <img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} />
                 </div>
                 <h2 className="pp-auth-title">{tab === 'signup' ? 'Create an Account' : 'Welcome Back'}</h2>
             </div>
@@ -85,29 +85,29 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                                 </div>
                             </div>
                             <div className="pp-auth-field">
-                                <label>Phone Number <span className="req">*</span></label>
+                                <div className="pp-auth-label-row">
+                                    <label>Phone Number</label>
+                                    <span className="pp-auth-optional">Optional</span>
+                                </div>
                                 <div className="pp-auth-input-wrap">
                                     <div className="pp-auth-phone-prefix">
                                         <span className="pk-badge">[PK]</span> +92
                                     </div>
-                                    <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone Number" style={{ paddingLeft: '85px' }} />
+                                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone Number" style={{ paddingLeft: '85px' }} />
                                 </div>
                             </div>
                             <div className="pp-auth-field">
-                                <div className="pp-auth-label-row">
-                                    <label>Email Address</label>
-                                    <span className="pp-auth-optional">Optional</span>
-                                </div>
+                                <label>Email Address <span className="req">*</span></label>
                                 <div className="pp-auth-input-wrap">
                                     <Mail size={16} className="pp-auth-input-icon" />
-                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+                                    <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
                                 </div>
                             </div>
                             <div className="pp-auth-field">
                                 <label>Password <span className="req">*</span></label>
                                 <div className="pp-auth-input-wrap">
                                     <Lock size={16} className="pp-auth-input-icon" />
-                                    <input required type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+                                    <input required type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 12 characters" minLength={12} maxLength={128} />
                                     <button type="button" className="pp-auth-eye-btn" onClick={() => setShow(!show)}>
                                         {show ? <EyeOff size={16} /> : <Eye size={16} />}
                                     </button>

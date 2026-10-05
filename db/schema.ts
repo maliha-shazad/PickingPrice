@@ -31,6 +31,7 @@ import { integer } from 'drizzle-orm/sqlite-core';
 export const profiles = sqliteTable('profiles', {
  id:text('id').primaryKey(), name:text('name').notNull(), role:text('role').notNull().default('buyer'),
  location:text('location').notNull().default(''), bio:text('bio').notNull().default(''), avatar:text('avatar').notNull().default(''),
+ phone:text('phone').notNull().default(''), whatsapp:text('whatsapp').notNull().default(''), meetupSpot:text('meetup_spot').notNull().default(''),
  verified:integer('verified').notNull().default(0), suspended:integer('suspended').notNull().default(0),
  extraSlots:integer('extra_slots').notNull().default(0),usedSlots:integer('used_slots').notNull().default(0),slotToken:text('slot_token').notNull().default(''),
  created:text('created').notNull(),
@@ -39,7 +40,7 @@ export const categories = sqliteTable('categories',{id:text('id').primaryKey(),n
 export const listings = sqliteTable('listings',{
  id:text('id').primaryKey(),owner:text('owner').notNull(),title:text('title').notNull(),description:text('description').notNull(),
  category:text('category').notNull(),subcategory:text('subcategory').notNull().default(''),brand:text('brand').notNull().default(''),
- price:integer('price').notNull(),quantity:integer('quantity').notNull(),condition:text('condition').notNull(),location:text('location').notNull(),images:text('images').notNull().default('[]'),status:text('status').notNull().default('Active'),deleteToken:text('delete_token').notNull().default(''),created:text('created').notNull(),updated:text('updated').notNull(),
+ price:integer('price').notNull(),quantity:integer('quantity').notNull(),condition:text('condition').notNull(),location:text('location').notNull(),phone:text('phone').notNull().default(''),whatsapp:text('whatsapp').notNull().default(''),meetupSpot:text('meetup_spot').notNull().default(''),images:text('images').notNull().default('[]'),status:text('status').notNull().default('Active'),deleteToken:text('delete_token').notNull().default(''),created:text('created').notNull(),updated:text('updated').notNull(),
 },t=>[index('listings_public').on(t.status,t.created),index('listings_owner').on(t.owner,t.status),index('listings_category').on(t.category,t.price)]);
 export const requests = sqliteTable('buyer_requests',{
  id:text('id').primaryKey(),owner:text('owner').notNull(),title:text('title').notNull(),description:text('description').notNull(),category:text('category').notNull(),price:integer('price').notNull(),quantity:integer('quantity').notNull(),condition:text('condition').notNull(),location:text('location').notNull(),image:text('image').notNull().default(''),expiry:text('expiry').notNull(),status:text('status').notNull().default('Open'),selectedOffer:text('selected_offer'),created:text('created').notNull(),updated:text('updated').notNull(),

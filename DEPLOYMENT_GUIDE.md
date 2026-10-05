@@ -78,7 +78,7 @@ Passwords inside a connection URL must be URL-encoded. For example, a literal `@
 
 **Remote PostgreSQL TLS caveat:** the admin creation script does not read `PGSSL`, although the main server does. For a remote database, use the provider's verified-TLS connection URL for both commands, such as its documented `sslmode=verify-full` configuration, with the correct CA trust. Avoid mixing conflicting URL SSL options with `PGSSL`; URL SSL parameters can override the pool SSL object. Never fix certificate errors by disabling certificate verification. Local loopback PostgreSQL can use the simple URL shown above when configured that way.
 
-`OWNER_EMAIL` is a hosted-workspace setting, not the portable edition's way to create an administrator. Email password-reset and verification delivery are not implemented; setting email-service keys alone does not enable them.
+The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. `OWNER_EMAIL` is no longer used. Email password-reset and verification delivery are not implemented; setting email-service keys alone does not enable them.
 
 ## 4. Windows 11 local installation
 
@@ -143,7 +143,7 @@ try {
 }
 ```
 
-`-MaskInput` requires PowerShell 7. If using Windows PowerShell 5.1, use a secure-input method or install PowerShell 7; do not put the password into a saved command script. The admin script applies migrations and creates one administrator. It refuses to take over an existing account with the same email.
+`-MaskInput` requires PowerShell 7. If using Windows PowerShell 5.1, use a secure-input method or install PowerShell 7; do not put the password into a saved command script. The admin script applies migrations and creates the single administrator. If an administrator already exists it changes nothing.
 
 ### Step 5 — Start and verify
 
@@ -151,7 +151,7 @@ try {
 node --env-file=C:/PickingPriceData/picking-price.env --import tsx server/index.ts
 ```
 
-Open **http://localhost:3000**. Keep the terminal open; Ctrl+C stops the server. Log in with the administrator account, then complete Section 9.
+Open **http://localhost:3000**. Keep the terminal open; Ctrl+C stops the server. Open **http://localhost:3000/admin** and sign in with the administrator account, then complete Section 9.
 
 Check the API in another PowerShell terminal:
 
@@ -359,9 +359,24 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only on the server, then resta
 
 Test with an allowed Google account, sign out and sign in again. Existing email/password accounts are intentionally not auto-linked to Google by matching email; use a fresh test identity to verify new Google registration. LAN-IP HTTP deployment is not the recommended Google development setup; use localhost or an appropriate HTTPS test hostname.
 
+## Railway
+
+Railway runs this same portable edition from the repository's `Dockerfile`; nothing needs to be typed into Railway's build or start command boxes.
+
+1. In Railway choose **New Project → Deploy from GitHub repo** and pick this repository.
+2. In the same project choose **New → Database → PostgreSQL**.
+3. Open the app service → **Variables** and add:
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (use the reference picker so it points at the database service)
+   - `ADMIN_SETUP_CODE` = a private phrase of your own, 16 characters or more
+4. App service → **Settings → Networking → Generate Domain**. The app reads the domain Railway assigns, so `APP_ORIGIN` is only needed for a custom domain (set it to the exact `https://…` address, no trailing slash).
+5. App service → **Volumes**: add a volume mounted at `/data`. Uploaded photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
+6. After the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again afterwards and can be removed from Variables.
+
+The database starts empty: accounts and listings from a local or hosted copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) and the Google sign-in variables from Section 7.
+
 ## 8. First administrator configuration
 
-After signing in:
+After signing in at `/admin` (the password can be changed there with **Change password**):
 
 1. Review categories and subcategories.
 2. Check the free listing allowance (default 25) and extra-slot price (default Rs. 50).
@@ -456,7 +471,7 @@ Never edit an already-applied migration to change the schema. Use a new migratio
 | Photos above a smaller size fail | Check proxy/provider body-size limit as well as the application's 5 MB limit |
 | Google button disabled | Both Google environment variables must be present; restart the service |
 | Google `redirect_uri_mismatch` | Register the exact callback, including scheme, hostname, port and path |
-| Administrator email already exists | Script intentionally refuses takeover; use a new admin email or an authorized recovery procedure |
+| An administrator already exists | The script changes nothing; sign in at `/admin` and use **Change password** |
 | cPanel 503 / Passenger startup timeout | Inspect app logs for runtime, module, database or migration failures; request host assistance |
 | Multiple workers fail during upgrade | Coordinate migrations through one process before starting concurrent workers |
 

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, ShoppingBag, Heart, MessageCircle } from 'lucide-react';
+import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, ShoppingBag, Heart, MessageCircle, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Toaster, toast } from 'sonner';
@@ -10,15 +10,21 @@ import { Catalogue } from './catalogue';
 import { Dashboard, SellerServices } from './dashboard';
 import { ListingDetail, RequestDetail, ProfileDetail } from './details';
 import { ItemForm, OfferForm, ReportForm, PaymentForm } from './forms';
-import { Admin, CategoryForm, ModerateForm, PaymentReview } from './admin';
 import { Messages, Conversation, Notifications } from './communication';
 import { Homepage } from './homepage';
 import { ProductPage } from './product-page';
+import { PreLoved } from './preloved';
+import { BrandNew } from './brandnew';
+import { PostRequest } from './post-request';
+import { BuyerDashboard } from './buyer-dashboard';
+import { MyRequests } from './my-requests';
+import { SellNow } from './sell-now';
+import { AllCategories } from './all-categories';
 
-const protectedViews = ['Saved', 'Messages', 'Notifications', 'Dashboard', 'Services', 'Admin'];
+const protectedViews = ['Saved', 'Messages', 'Notifications', 'Dashboard', 'Services', 'PostRequest', 'SellNow'];
 
 const LOCATIONS = ['Peshawar', 'Lahore', 'Islamabad', 'Karachi', 'Rawalpindi', 'Faisalabad', 'Multan', 'Abbottabad', 'Quetta'];
-const CATEGORY_NAV = ['New Products', 'Pre-Loved', 'Clothes', 'Sneakers', 'Books', 'Accessories'];
+const CATEGORY_NAV = ['Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
 
 export default function Workspace() {
     const [view, setView] = useState('Explore');
@@ -94,7 +100,7 @@ export default function Workspace() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Handle shared product links
+    // Handle shared product links and view hash
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const productId = params.get('product');
@@ -110,6 +116,13 @@ export default function Workspace() {
                     }
                 })
                 .catch(() => {});
+        } else if (window.location.pathname === '/request-form') {
+            setView('PostRequest');
+        } else if (window.location.hash) {
+            const hash = window.location.hash.replace('#', '');
+            const mappedView = [ 'Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'PostRequest', 'BuyerRequests' ]
+                .find(v => v.toLowerCase() === hash.toLowerCase());
+            if (mappedView) setView(mappedView);
         }
     }, []);
 
@@ -127,7 +140,24 @@ export default function Workspace() {
             return;
         }
 
-        if (type === 'login' || (!user && ['listing-form', 'request-form', 'offer-form', 'payment', 'report', 'conversation'].includes(type))) {
+        if (type === 'request-form' && !item?.id) {
+            setView('PostRequest');
+            setModal(null);
+            window.history.pushState({}, '', '/request-form');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        if (type === 'listing-form') {
+            setActiveProduct(item);
+            setView('SellNow');
+            setModal(null);
+            window.history.pushState({}, '', '/sell-now');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        if (type === 'login' || (!user && ['listing-form', 'offer-form', 'payment', 'report', 'conversation'].includes(type))) {
             window.location.href = '/login';
             return;
         }
@@ -141,7 +171,7 @@ export default function Workspace() {
         }
         setView(next);
         setModal(null);
-        window.history.pushState({}, '', '/');
+        window.history.pushState({}, '', next === 'Explore' ? '/' : '#' + next.toLowerCase());
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -149,7 +179,9 @@ export default function Workspace() {
         try {
             const d = await api(path, method, body);
             refresh();
-            toast.success('Saved successfully');
+            const isFav = path.startsWith('favorites/');
+            const msg = isFav ? (body?.saved ? 'Saved successfully' : 'Removed successfully') : method === 'DELETE' ? 'Removed successfully' : 'Saved successfully';
+            toast.success(msg);
             return d;
         } catch (e: unknown) {
             const err = e as { message?: string; status?: number };
@@ -159,7 +191,7 @@ export default function Workspace() {
         }
     };
 
-    const actions: Actions = { open, go, perform, user, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, searchCategory, setSearchCategory };
+    const actions: Actions = { open, go, perform, user, location, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, searchCategory, setSearchCategory };
 
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
@@ -208,8 +240,7 @@ export default function Workspace() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        go('Explore');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (view !== 'Explore') go('Explore');
     };
 
     const handleModeToggle = () => {
@@ -223,8 +254,7 @@ export default function Workspace() {
         'request-form': modal?.item.id ? 'Edit request' : 'Post a request',
         'offer-form': 'Your offer', 'payment': 'Seller service request',
         'report': 'Report a concern', 'conversation': 'Conversation',
-        'category-form': 'Category settings', 'moderate': 'Moderation action',
-        'payment-review': 'Verify manual payment', 'inspection': 'Record details'
+        'safety': 'Community & Safety'
     };
     const item = modal?.item || {};
     const close = () => setModal(null);
@@ -240,7 +270,7 @@ export default function Workspace() {
 
                     {/* Logo */}
                     <button className="pp-logo" onClick={() => go('Explore')} aria-label="Picking Price home" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-                        <img src="/logo.png" alt="Picking Price" style={{ height: '36px', width: 'auto', display: 'block' }} />
+                        <img src="/new-logo.png" alt="Picking Price" style={{ height: '36px', width: 'auto', display: 'block' }} />
                     </button>
 
                     {/* Search Bar */}
@@ -253,7 +283,7 @@ export default function Workspace() {
                                 type="search"
                                 placeholder="Search products or active buyer requests..."
                                 value={searchQ}
-                                onChange={e => { setSearchQ(e.target.value); if (view !== 'Explore') go('Explore'); }}
+                                onChange={e => setSearchQ(e.target.value)}
                                 aria-label="Search products or buyer requests"
                             />
                         </div>
@@ -324,9 +354,6 @@ export default function Workspace() {
 
                         {/* Auth / Account actions */}
                         <div className="pp-header-auth">
-                            <button id="header-wishlist-btn" className="pp-icon-btn pp-relative" aria-label="Wishlist" onClick={() => go('Saved')}>
-                                <Heart size={20} />
-                            </button>
                             {!user ? (
                                 <>
                                     <button id="header-login-btn" className="pp-login-btn" onClick={() => window.location.href = '/login'}>Login</button>
@@ -334,8 +361,15 @@ export default function Workspace() {
                                 </>
                             ) : (
                                 <>
-                                    <button id="header-account-btn" className="pp-account-btn" onClick={() => go('Dashboard')}>
-                                        {user.name}
+                                    <button id="header-account-btn" className="pp-account-btn" onClick={() => go('Dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {user.avatar ? (
+                                            <img src={user.avatar} alt={user.name} style={{ width: '28px', height: '28px', borderRadius: '8px', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                                <User size={16} />
+                                            </div>
+                                        )}
+                                        <span className="pp-account-name">{user.name}</span>
                                     </button>
                                     <button id="header-logout-btn" className="pp-icon-btn" aria-label="Sign out" onClick={logout}>
                                         <LogOut size={16} />
@@ -372,28 +406,34 @@ export default function Workspace() {
                         {!!boot.data?.unread && <span className="pp-nav-badge">{boot.data.unread}</span>}
                     </button>
 
-                    {/* Category quick links */}
-                    {CATEGORY_NAV.map(cat => (
-                        <button
-                            key={cat}
-                            id={`nav-cat-${cat.toLowerCase().replace(/\s+/g, '-')}-btn`}
-                            className="pp-cat-nav-item"
-                            onClick={() => go('Explore')}
-                        >
-                            {cat}
-                        </button>
-                    ))}
+                    {/* Brand New */}
+                    <button
+                        id="nav-brandnew-btn"
+                        className={`pp-cat-nav-item${view === 'BrandNew' ? ' active' : ''}`}
+                        onClick={() => go('BrandNew')}
+                    >
+                        <Tag size={14} /> New Products
+                    </button>
+
+                    {/* Pre-Loved */}
+                    <button
+                        id="nav-preloved-btn"
+                        className={`pp-cat-nav-item${view === 'PreLoved' ? ' active' : ''}`}
+                        onClick={() => go('PreLoved')}
+                    >
+                        <Heart size={14} /> Pre-Loved
+                    </button>
 
                     {/* All Categories */}
                     <button
                         id="nav-all-categories-btn"
                         className="pp-cat-nav-item pp-cat-all"
-                        onClick={() => go('Explore')}
+                        onClick={() => go('AllCategories')}
                     >
                         <Grid3x3 size={14} /> All Categories
                     </button>
 
-                    {/* Spacer + right-side nav items (only shown when logged in) */}
+                    {/* Right-side nav items (only shown when logged in) */}
                     {user && (
                         <div className="pp-nav-right">
                             <button
@@ -401,7 +441,7 @@ export default function Workspace() {
                                 className={`pp-cat-nav-item${view === 'Saved' ? ' active' : ''}`}
                                 onClick={() => go('Saved')}
                             >
-                                <Heart size={14} /> Saved
+                                <Heart size={14} /> Wishlist
                             </button>
                             <button
                                 id="nav-messages-btn"
@@ -410,15 +450,6 @@ export default function Workspace() {
                             >
                                 <MessageCircle size={14} /> Messages
                             </button>
-                            {user.role === 'admin' && (
-                                <button
-                                    id="nav-admin-btn"
-                                    className={`pp-cat-nav-item${view === 'Admin' ? ' active' : ''}`}
-                                    onClick={() => go('Admin')}
-                                >
-                                    Admin
-                                </button>
-                            )}
                         </div>
                     )}
                 </div>
@@ -426,41 +457,95 @@ export default function Workspace() {
 
             {/* ── PAGE CONTENT ── */}
             {view === 'Explore' && <Homepage actions={actions} />}
-            <main className={`market-main${view === 'Explore' ? ' hidden' : ''}`}>
+            {view === 'PreLoved' && <PreLoved actions={actions} />}
+            {view === 'BrandNew' && <BrandNew actions={actions} />}
+            {view === 'PostRequest' && <PostRequest actions={actions} />}
+            {view === 'BuyerRequests' && <MyRequests actions={actions} />}
+            {view === 'AllCategories' && <AllCategories actions={actions} />}
+            <main className={`market-main${(view === 'Explore' || view === 'PreLoved' || view === 'BrandNew' || view === 'PostRequest' || view === 'BuyerRequests' || view === 'SellNow' || view === 'AllCategories') ? ' hidden' : ''}`}>
                 <Load state={{ ...boot, loading: boot.loading && !boot.data }}>
                     {view === 'Requests' && <Catalogue kind="requests" actions={actions} />}
                     {view === 'Product' && activeProduct && <ProductPage item={activeProduct} actions={actions} />}
                     {view === 'Saved' && <Catalogue saved actions={actions} />}
-                    {view === 'Dashboard' && user && <Dashboard actions={actions} />}
+                    {view === 'Dashboard' && user && (mode === 'Buying' ? <BuyerDashboard actions={actions} setMode={setMode} /> : <Dashboard actions={actions} setMode={setMode} />)}
                     {view === 'Messages' && user && <Messages actions={actions} />}
                     {view === 'Notifications' && user && <Notifications actions={actions} />}
                     {view === 'Services' && user && <SellerServices actions={actions} />}
-                    {view === 'Admin' && user?.role === 'admin' && <Admin actions={actions} />}
                 </Load>
             </main>
+            {view === 'SellNow' && <SellNow actions={actions} initialItem={activeProduct} />}
 
-            {/* Footer (for non-Explore views) */}
-            {view !== 'Explore' && (
-                <footer>
-                    <span className="brand">picking<span>price</span></span>
-                    <p>Product payment, delivery and refunds are agreed directly between buyer and seller.</p>
-                    <button onClick={() => open('safety')}>Community &amp; safety</button>
-                    {workspaceEnabled && (
-                        <button onClick={async () => { await fetch('/api/auth/workspace', { method: 'POST' }); setView('Dashboard'); refresh(); }}>
-                            Use workspace account
-                        </button>
-                    )}
-                </footer>
-            )}
+            {/* Global Footer */}
+            <footer className="hp-footer">
+                <div className="hp-footer-inner">
+                    <div className="hp-footer-brand">
+                        <img src="/footer-logo.png" alt="Picking Price" style={{ width: '200px', height: 'auto', display: 'block', mixBlendMode: 'screen', marginBottom: '12px' }} />
+                        <p>Pakistan's trusted marketplace for new and pre-loved products. Buy smart, sell easy, or post a request and let sellers find you.</p>
+                        <div className="hp-footer-social">
+                            <button aria-label="Facebook">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                            </button>
+                            <button aria-label="Instagram">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                            </button>
+                            <button aria-label="Twitter">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+                            </button>
+                            <button aria-label="YouTube">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div className="hp-footer-col">
+                        <h4>Marketplace</h4>
+                        <button onClick={() => go('Explore')}>Browse Products</button>
+                        <button onClick={() => go('Explore')}>Categories</button>
+                        <button onClick={() => go('Requests')}>Buyer Requests</button>
+                        <button onClick={() => open('listing-form')}>Sell a Product</button>
+                        <button onClick={() => open('request-form')}>Post a Request</button>
+                    </div>
+                    <div className="hp-footer-col">
+                        <h4>My Account</h4>
+                        <button onClick={() => go('Dashboard')}>Dashboard</button>
+                        <button onClick={() => go('Saved')}>Wishlist</button>
+                        <button onClick={() => go('Messages')}>Messages</button>
+                        <button onClick={() => window.location.href = '/login'}>Login</button>
+                        <button onClick={() => window.location.href = '/signup'}>Register</button>
+                    </div>
+                    <div className="hp-footer-col">
+                        <h4>Support</h4>
+                        <button onClick={() => open('safety')}>Help Center</button>
+                        <button onClick={() => open('safety')}>Safety Tips</button>
+                        <button onClick={() => open('safety')}>Contact Us</button>
+                        <button onClick={() => open('report')}>Report a Problem</button>
+                    </div>
+                    <div className="hp-footer-col">
+                        <h4>Company</h4>
+                        <button onClick={() => open('safety')}>About Us</button>
+                        <button onClick={() => open('safety')}>Careers</button>
+                        <button onClick={() => open('safety')}>Privacy Policy</button>
+                        <button onClick={() => open('safety')}>Terms of Service</button>
+                        {workspaceEnabled && (
+                            <button onClick={async () => { await fetch('/api/auth/workspace', { method: 'POST' }); setView('Dashboard'); refresh(); }}>
+                                Use workspace account
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <div className="hp-footer-bottom">
+                    <span>© 2026 PickingPrice. All rights reserved.</span>
+                    <span>Buy Smart. Sell Easy. Find What You Need.</span>
+                </div>
+            </footer>
 
             {/* ── MODALS ── */}
             <Dialog open={!!modal && modal.type !== 'confirm'} onOpenChange={o => !o && close()}>
-                <DialogContent className={'market-modal ' + (['request', 'profile', 'inspection'].includes(modal?.type || '') ? 'wide-modal' : '')}>
-                    <DialogTitle>{title[modal?.type || ''] || 'Community & safety'}</DialogTitle>
+                <DialogContent className={'market-modal ' + (['request', 'profile'].includes(modal?.type || '') ? 'wide-modal' : '')}>
+                    <DialogTitle className={modal?.type === 'request' ? 'sr-only' : ''}>
+                        {modal?.type === 'request' ? 'Request Details' : title[modal?.type || ''] || 'Community & safety'}
+                    </DialogTitle>
                     <DialogDescription>
-                        {modal?.type === 'payment-review'
-                            ? 'Verify the external transfer before activating this service.'
-                            : 'Picking Price connects buyers and sellers directly.'}
+                        {modal?.type === 'request' ? '' : 'Picking Price connects buyers and sellers directly.'}
                     </DialogDescription>
                     {/* Listing modal removed, now rendered as a page */}
                     {modal?.type === 'request' && <RequestDetail item={item} actions={actions} />}
@@ -471,16 +556,6 @@ export default function Workspace() {
                     {modal?.type === 'payment' && <PaymentForm item={item} actions={actions} done={close} />}
                     {modal?.type === 'report' && <ReportForm item={item} actions={actions} done={close} />}
                     {modal?.type === 'conversation' && <Conversation actions={actions} id={item.id} />}
-                    {modal?.type === 'category-form' && <CategoryForm item={item} actions={actions} done={close} />}
-                    {modal?.type === 'moderate' && <ModerateForm item={item} actions={actions} done={close} />}
-                    {modal?.type === 'payment-review' && <PaymentReview item={item} actions={actions} done={close} />}
-                    {modal?.type === 'inspection' && (
-                        <div className="inspection">
-                            {Object.entries(item).map(([k, v]) => (
-                                <div key={k}><strong>{k.replaceAll('_', ' ')}</strong><pre>{typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v ?? '')}</pre></div>
-                            ))}
-                        </div>
-                    )}
                     {modal?.type === 'safety' && (
                         <>
                             <p>Describe items honestly and use clear, accurate photos. Keep conversations respectful. Inspect products and agree on payment and collection directly.</p>

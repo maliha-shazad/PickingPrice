@@ -1,6 +1,6 @@
 import { Context, Database, MarketError, Row, User, id, now, Statement } from './types';
-export const defaults = { freeListings: 25, extraListingPrice: 50, promotion24h: 150, promotion3d: 350, promotion7d: 700, paymentInstructions: '', promotionDurations: [1, 3, 7], promotionPlacement: 'featured-first' };
-export const initialCategories = [['Fashion', ['Clothing', 'Knitwear', 'Jackets']], ['Shoes', ['Sneakers', 'Heels', 'Sandals']], ['Bags', ['Handbags', 'Backpacks', 'Work bags']], ['Books', ['Fiction', 'Non-fiction', 'Textbooks']], ['Jewelry', ['Earrings', 'Necklaces', 'Rings']], ['Accessories', ['Watches', 'Sunglasses', 'Other']]] as const;
+export const defaults = { freeListings: 10, extraListingPrice: 50, promotion24h: 150, promotion3d: 350, promotion7d: 700, paymentInstructions: '', promotionDurations: [1, 3, 7], promotionPlacement: 'featured-first' };
+export const initialCategories = [['Clothes', []], ['Electronics', []], ['Furniture', []], ['Sports', []], ['Books', []], ['Cameras', []], ['Automobiles', []], ['Kitchen', []], ['Jewelry', []], ['Kids', []], ['Art', []], ['Accessories', []]] as const;
 export const one = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args).first<Row>();
 export const rows = async (db: Database, sql: string, ...args: unknown[]) => (await db.prepare(sql).bind(...args).all<Row>()).results;
 export const run = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args).run();
@@ -17,7 +17,7 @@ export async function owned(c: Context, table: string, key: string) { const u = 
 export const notice = (db: Database, owner: string, title: string, body: string, type = '', target = '', key = id()) => stmt(db, 'INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) VALUES (?,?,?,?,?,?,0,?) ON CONFLICT(id) DO NOTHING', key, owner, title, body, type, target, now());
 export const log = (c: Context, action: string, target: string) => stmt(c.db, 'INSERT INTO admin_audit (id,owner,action,target,created) VALUES (?,?,?,?,?)', id(), authenticated(c).userId, action, target, now());
 export async function configuration(db: Database) { const row = await one(db, "SELECT value FROM settings WHERE key='market'"); return { ...defaults, ...(row ? JSON.parse(row.value) : {}) }; }
-export async function ensureProfile(c: Context) { if (!c.user)
+export async function ensureProfile(c: Context) { if (!c.user || c.user.provider === 'admin-panel') // the panel administrator is not a marketplace member
     return; const u = c.user; await run(c.db, 'INSERT INTO profiles (id,name,role,created) VALUES (?,?,?,?) ON CONFLICT(id) DO NOTHING', u.userId, u.displayName, u.role === 'admin' ? 'both' : u.role, now()); const p = await one(c.db, 'SELECT * FROM profiles WHERE id=?', u.userId); if (p?.suspended && u.role !== 'admin')
     throw new MarketError('Your account is suspended. Contact the marketplace administrator.', 403); if (u.role !== 'admin')
     u.role = p!.role; u.displayName = p!.name; }
@@ -29,8 +29,30 @@ export async function uploadCheck(c: Context, urls: string[]) { for (const url o
     if (!file || (file.owner !== authenticated(c).userId && c.user?.role !== 'admin'))
         throw new MarketError('Use photos uploaded to your own account.');
 } }
-export async function initialize(db: Database) { if (await one(db, "SELECT value FROM settings WHERE key='initialized'"))
-    return; await db.batch([...initialCategories.map(([name, subs]) => stmt(db, 'INSERT INTO categories (id,name,subcategories,active) VALUES (?,?,?,1) ON CONFLICT DO NOTHING', name.toLowerCase(), name, JSON.stringify(subs))), stmt(db, "INSERT INTO settings (key,value) VALUES ('market',?) ON CONFLICT(key) DO NOTHING", JSON.stringify(defaults)), stmt(db, "INSERT INTO settings (key,value) VALUES ('initialized','1') ON CONFLICT(key) DO NOTHING")]); }
+const initialized = new WeakSet<Database>();
+export async function initialize(db: Database) {
+    if (initialized.has(db))
+        return;
+    await db.batch([stmt(db, "INSERT INTO settings (key,value) VALUES ('market',?) ON CONFLICT(key) DO NOTHING", JSON.stringify(defaults)), stmt(db, "INSERT INTO settings (key,value) VALUES ('initialized','1') ON CONFLICT(key) DO NOTHING")]);
+    // One-time move to the current category list and free-listing default. It must not repeat,
+    // or it would undo the categories and limits the administrator sets afterwards.
+    if (!await one(db, "SELECT value FROM settings WHERE key='catalogue:v2'")) {
+        await db.batch([stmt(db, 'UPDATE categories SET active=0'), ...initialCategories.map(([name, subs]) => stmt(db, 'INSERT INTO categories (id,name,subcategories,active) VALUES (?,?,?,1) ON CONFLICT(id) DO UPDATE SET name=excluded.name, subcategories=excluded.subcategories, active=1', name.toLowerCase(), name, JSON.stringify(subs))), stmt(db, "INSERT INTO settings (key,value) VALUES ('catalogue:v2','1') ON CONFLICT(key) DO NOTHING")]);
+        const row = await one(db, "SELECT value FROM settings WHERE key='market'");
+        const parsed = row ? JSON.parse(row.value) : null;
+        if (parsed && [25, 2, 100].includes(parsed.freeListings)) {
+            parsed.freeListings = 10;
+            await run(db, "UPDATE settings SET value=? WHERE key='market'", JSON.stringify(parsed));
+        }
+    }
+    // Add contact columns to profiles and listings if missing
+    for (const col of ['phone', 'whatsapp', 'meetup_spot']) {
+        try { await run(db, `ALTER TABLE profiles ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`); } catch {}
+        if (col !== 'meetup_spot') { try { await run(db, `ALTER TABLE listings ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`); } catch {} }
+        else { try { await run(db, `ALTER TABLE listings ADD COLUMN meetup_spot TEXT NOT NULL DEFAULT ''`); } catch {} }
+    }
+    initialized.add(db);
+}
 export async function expireForUser(c: Context) {
     if (!c.user)
         return;
@@ -42,5 +64,5 @@ export async function expireForUser(c: Context) {
         stmt(c.db, "UPDATE promotions SET status='Expired' WHERE owner=? AND status='Active' AND expires<=?", uid, t),
     ]);
 }
-export async function bootstrap(c: Context) { await initialize(c.db); await ensureProfile(c); await expireForUser(c); return { user: c.user ? { id: c.user.userId, name: c.user.displayName, role: c.user.role, provider: c.user.provider } : null, categories: (await rows(c.db, 'SELECT * FROM categories WHERE active=1 ORDER BY name')).map(r => ({ ...r, subcategories: JSON.parse(r.subcategories) })), settings: await configuration(c.db), unread: c.user ? (await one(c.db, 'SELECT COUNT(*) n FROM notifications WHERE owner=? AND read=0', c.user.userId))!.n : 0, legacyRemaining: !!await one(c.db, "SELECT id FROM records WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key='legacy:'||records.id) LIMIT 1") }; }
+export async function bootstrap(c: Context) { await initialize(c.db); await ensureProfile(c); await expireForUser(c); let avatar = null; if (c.user) { const p = await one(c.db, 'SELECT avatar FROM profiles WHERE id=?', c.user.userId); if (p) avatar = p.avatar; } return { user: c.user ? { id: c.user.userId, name: c.user.displayName, role: c.user.role, provider: c.user.provider, email: c.user.email, avatar } : null, categories: (await rows(c.db, 'SELECT * FROM categories WHERE active=1 ORDER BY name')).map(r => ({ ...r, subcategories: JSON.parse(r.subcategories) })), settings: await configuration(c.db), unread: c.user ? (await one(c.db, 'SELECT COUNT(*) n FROM notifications WHERE owner=? AND read=0', c.user.userId))!.n : 0, legacyRemaining: !!await one(c.db, "SELECT id FROM records WHERE NOT EXISTS (SELECT 1 FROM settings WHERE key='legacy:'||records.id) LIMIT 1") }; }
 export async function pagination(db: Database, sql: string, countSql: string, args: unknown[], page: number, size: number, offset: number, orderArgs: unknown[] = []) { const [items, total] = await Promise.all([rows(db, sql + ' LIMIT ? OFFSET ?', ...args, ...orderArgs, size, offset), one(db, countSql, ...args)]); return { items, total: Number(total?.n || 0), page, size, pages: Math.ceil(Number(total?.n || 0) / size) }; }

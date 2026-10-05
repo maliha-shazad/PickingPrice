@@ -7,10 +7,13 @@ import { Database, MarketError, User, Context, now, id } from '../lib/market/typ
 import { one, run, stmt, ensureProfile, initialize } from '../lib/market/core';
 import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
+import { redeemResetCode } from '../lib/market/password-reset';
+import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '../lib/market/admin-auth';
 export type Config = {
     origin: string;
     uploadsDir: string;
     publicDir: string;
+    adminSetupCode?: string;
     googleClientId?: string;
     googleClientSecret?: string;
     resendKey?: string;
@@ -34,7 +37,7 @@ export function createApp(db: Database, config: Config) {
     app.use('/api/files', express.raw({ type: () => true, limit: '5mb' }));
     app.use(express.json({ limit: '24kb' }));
     async function user(req: Request): Promise<User | null> { const t = cookie(req, sessionName); if (!t)
-        return null; const r = await one(db, 'SELECT a.id,a.email,a.name,a.role,a.google_sub FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires>?', digest(t), now()); return r ? { userId: r.id, email: r.email, displayName: r.name, role: r.role, provider: r.google_sub ? 'google' : 'email' } : null; }
+        return null; const r = await one(db, 'SELECT a.id,a.email,a.name,a.role,a.google_sub FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires>?', digest(t), now()); return r ? { userId: r.id, email: r.email, displayName: r.name, role: r.role === 'admin' ? 'both' : r.role, provider: r.google_sub ? 'google' : 'email' } : null; } // administrator rights exist only in the separate /admin panel
     async function context(req: Request) { const c: Context = { db, user: await user(req) }; await initialize(db); await ensureProfile(c); return c; }
     async function session(res: Response, account: string) { const profile = await one(db, 'SELECT suspended FROM profiles WHERE id=?', account); if (profile?.suspended) throw new MarketError('Your account is suspended.', 403); const t = token(); await run(db, 'INSERT INTO sessions (token_hash,account_id,expires) VALUES (?,?,?)', digest(t), account, new Date(Date.now() + 7 * 86400000).toISOString()); setCookie(res, sessionName, t, 7 * 86400); }
     async function limit(req: Request, email: string) { for (const [key, max] of [[digest('ip:' + (req.ip || 'unknown')), 30], [digest('email:' + email), 8]] as const) {
@@ -43,9 +46,10 @@ export function createApp(db: Database, config: Config) {
         if (Number(r!.count) > max)
             throw new MarketError('Too many attempts. Try again in 15 minutes.', 429);
     } }
-    const credentials = (body: Record<string, unknown>) => { const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '', password = typeof body.password === 'string' ? body.password : ''; if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254)
-        throw new MarketError('Enter a valid email address.'); if (password.length < 12 || password.length > 128)
-        throw new MarketError('Use a password between 12 and 128 characters.'); return { email, password }; };
+    // Same rules as the hosted edition, so an account behaves identically on either.
+    const credentials = (body: Record<string, unknown> = {}) => { const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '', password = typeof body.password === 'string' ? body.password : ''; if (email.length > 254 || (!/^\S+@\S+\.\S+$/.test(email) && !/^\+?\d{7,15}$/.test(email.replace(/[\s-]/g, ''))))
+        throw new MarketError('Enter a valid email address or phone number.'); if (password.length < 8 || password.length > 128)
+        throw new MarketError('Use a password between 8 and 128 characters.'); return { email, password }; };
     app.get('/api/auth/options', (_req, res) => res.json({ email: true, google: googleReady(), recovery: false, workspace: false }));
     app.post('/api/auth/signup', async (req, res) => { const { email, password } = credentials(req.body); const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''; if (name.length < 2 || name.length > 80)
         throw new MarketError('Enter a name between 2 and 80 characters.'); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created) VALUES (?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now()); if (!inserted)
@@ -55,6 +59,7 @@ export function createApp(db: Database, config: Config) {
         throw new MarketError('Your account is suspended.', 403); await session(res, a!.id); res.json({ ok: true }); });
     app.post('/api/auth/logout', async (req, res) => { const t = cookie(req, sessionName); if (t)
         await run(db, 'DELETE FROM sessions WHERE token_hash=?', digest(t)); setCookie(res, sessionName, '', 0); res.json({ ok: true }); });
+    app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); await session(res, await redeemResetCode(db, email, req.body.code, password)); res.json({ ok: true }); });
     app.post('/api/auth/workspace', (_req, res) => res.status(400).json({ error: 'Workspace accounts are available only on the hosted Sites edition.' }));
     app.get('/api/auth/google', async (_req, res) => { if (!googleReady())
         return res.redirect('/?auth_error=google_not_configured'); const state = token(), verifier = token(); await run(db, 'INSERT INTO oauth_states (state_hash,verifier,expires) VALUES (?,?,?)', digest(state), verifier, new Date(Date.now() + 600000).toISOString()); setCookie(res, oauthName, state, 600); const url = new URL('https://accounts.google.com/o/oauth2/v2/auth'); url.search = new URLSearchParams({ client_id: config.googleClientId!, redirect_uri: config.origin + '/api/auth/google/callback', response_type: 'code', scope: 'openid email profile', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString(); res.redirect(url.toString()); });
@@ -99,6 +104,15 @@ export function createApp(db: Database, config: Config) {
     app.get('/api/files/:id', async (req, res) => { const key = String(req.params.id); if (!/^[a-zA-Z0-9-]{1,80}$/.test(key))
         throw new MarketError('Photo not found.', 404); const file = await one(db, 'SELECT mime FROM uploads WHERE id=?', key); if (!file)
         throw new MarketError('Photo not found.', 404); res.set('Content-Type', file.mime); res.set('Cache-Control', 'public,max-age=86400'); res.send(await readFile(resolve(config.uploadsDir, key))); });
+    const adminName = secure ? '__Host-pp_admin' : 'pp_admin';
+    const adminCookie = (res: Response, value: string, age: number) => res.append('Set-Cookie', `${adminName}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
+    const ip = (req: Request) => req.ip || 'unknown';
+    app.get('/api/admin/session', async (req, res) => { res.json(await adminStatus(db, cookie(req, adminName), config.adminSetupCode)); });
+    app.post('/api/admin/login', async (req, res) => { adminCookie(res, await adminLogin(db, req.body, ip(req)), adminSessionSeconds); res.json({ ok: true }); });
+    app.post('/api/admin/setup', async (req, res) => { adminCookie(res, await adminSetup(db, req.body, config.adminSetupCode, ip(req)), adminSessionSeconds); res.json({ ok: true }); });
+    app.post('/api/admin/logout', async (req, res) => { await adminLogout(db, cookie(req, adminName)); adminCookie(res, '', 0); res.json({ ok: true }); });
+    app.post('/api/admin/password', async (req, res) => { res.json(await adminChangePassword(db, cookie(req, adminName), req.body, ip(req))); });
+    app.use('/api/admin/market', async (req, res) => { const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); res.json(await adminMarket(db, cookie(req, adminName), req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {})); });
     app.use('/api/market', async (req, res) => { const c = await context(req); const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); const result = await market(c, req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {}); res.json(result); });
     app.use(express.static(config.publicDir, { index: false }));
     app.get('/{*path}', (_req, res) => res.sendFile(resolve(config.publicDir, 'index.html')));

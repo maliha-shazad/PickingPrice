@@ -6,6 +6,7 @@ import '../market/styles.css';
 export default function ForgotPasswordPage() {
     const [step, setStep] = useState(1);
     const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
     const [show, setShow] = useState(false);
@@ -48,7 +49,7 @@ export default function ForgotPasswordPage() {
             const r = await fetch('/api/auth/reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, code, password })
             });
             const d: { error?: string } = await r.json();
             if (!r.ok) throw Error(d.error || 'Please try again.');
@@ -88,6 +89,9 @@ export default function ForgotPasswordPage() {
                                 <input required type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter email or phone" />
                             </div>
                         </div>
+                        <p style={{ fontSize: '13px', color: '#4a6352', lineHeight: 1.6, margin: 0 }}>
+                            To reset your password you need a one-time <strong>reset code</strong> from Picking Price support. Contact support, confirm your identity, and enter the code they give you on the next step.
+                        </p>
                         {error && <div className="pp-auth-error">{error}</div>}
                         <button type="submit" className="pp-auth-submit-btn" style={{ borderRadius: '24px' }}>
                             Continue
@@ -95,6 +99,14 @@ export default function ForgotPasswordPage() {
                     </form>
                 ) : (
                     <form className="pp-auth-form" onSubmit={submitStep2}>
+                        <div className="pp-auth-field">
+                            <label htmlFor="reset-code">Reset Code <span className="req">*</span></label>
+                            <div className="pp-auth-input-wrap">
+                                <Key size={16} className="pp-auth-input-icon" />
+                                <input id="reset-code" required type="text" autoComplete="one-time-code" value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="XXXXX-XXXXX" maxLength={16} style={{ letterSpacing: '1px' }} />
+                            </div>
+                            <span style={{ fontSize: '11.5px', color: '#8fa395' }}>From Picking Price support. Valid for 60 minutes, one use only.</span>
+                        </div>
                         <div className="pp-auth-field">
                             <div className="pp-auth-label-row">
                                 <label>New Password <span className="req">*</span></label>

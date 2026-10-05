@@ -16,13 +16,14 @@ export async function getMarketUser():Promise<AccountUser|null> {
   const token = jar.get(sessionCookie)?.value;
   if(token){
     const row = await database().prepare('SELECT a.id,a.email,a.name,a.google_sub,a.role FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires>?').bind(digest(token),new Date().toISOString()).first<{id:string;email:string;name:string;google_sub:string|null;role:string}>();
-    if(row)return {userId:row.id,displayName:row.name,email:row.email,provider:row.google_sub?'google':'email',role:row.role};
+    // Marketplace sign-ins never carry administrator rights; those exist only in the separate /admin panel.
+    if(row)return {userId:row.id,displayName:row.name,email:row.email,provider:row.google_sub?'google':'email',role:row.role==='admin'?'both':row.role};
     return null;
   }
   // Explicit application sign-out suppresses the underlying workspace identity.
   if(jar.get('__Host-pp_signed_out')?.value === '1')return null;
   const workspace = await getChatGPTUser();
-  return workspace ? {...workspace,provider:'workspace',role:bindings().OWNER_EMAIL&&workspace.email.toLowerCase()===bindings().OWNER_EMAIL!.toLowerCase()?'admin':'both'} : null;
+  return workspace ? {...workspace,provider:'workspace',role:'both'} : null;
 }
 export async function sessionResponse(accountId:string, redirect=false) {
   const profile = await database().prepare('SELECT suspended FROM profiles WHERE id=?').bind(accountId).first<{suspended:number}>();
