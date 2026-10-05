@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Check, User, MapPin, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Check, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 /** Where to send someone after they sign in: the page they were heading to (`?next=`), or home. Only paths on this site are accepted. */
@@ -22,7 +22,6 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
     const [confirm, setConfirm] = useState('');
     const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
     const [remember, setRemember] = useState(false);
-    const [hub, setHub] = useState('');
 
     useEffect(() => {
         fetch('/api/auth/options')
@@ -34,6 +33,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
     async function submit(e: React.FormEvent) {
         e.preventDefault();
         setError('');
+        if (tab === 'signup' && password !== confirm) { setError('The two passwords do not match.'); return; }
         setBusy(true);
         try {
             const r = await fetch('/api/auth/' + tab, {
@@ -113,7 +113,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                                 <label>Password <span className="req">*</span></label>
                                 <div className="pp-auth-input-wrap">
                                     <Lock size={16} className="pp-auth-input-icon" />
-                                    <input required type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 12 characters" minLength={12} maxLength={128} />
+                                    <input required type={show ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" autoComplete="new-password" minLength={8} maxLength={128} />
                                     <button type="button" className="pp-auth-eye-btn" onClick={() => setShow(!show)}>
                                         {show ? <EyeOff size={16} /> : <Eye size={16} />}
                                     </button>
@@ -124,11 +124,13 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                                 </div>
                             </div>
                             <div className="pp-auth-field">
-                                <label>Primary Trading Hub <span className="req">*</span></label>
+                                <div className="pp-auth-label-row">
+                                    <label>Confirm Password <span className="req">*</span></label>
+                                    {confirm.length > 0 && confirm === password && <span className="strength-good" style={{ fontSize: '12px' }}>Passwords match</span>}
+                                </div>
                                 <div className="pp-auth-input-wrap">
-                                    <MapPin size={16} className="pp-auth-input-icon" />
-                                    <input required type="text" value={hub} onChange={e => setHub(e.target.value)} placeholder="Trading Hub" style={{ paddingRight: '36px' }} />
-                                    <ChevronDown size={16} className="pp-auth-dropdown-icon" />
+                                    <Lock size={16} className="pp-auth-input-icon" />
+                                    <input required type={show ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat your password" autoComplete="new-password" maxLength={128} />
                                 </div>
                             </div>
                         </>
@@ -187,14 +189,14 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                             <p>New to Picking Price?</p>
                             <h3>Create an Account</h3>
                         </div>
-                        <button type="button" className="pp-auth-switch-btn" onClick={() => { setTab('signup'); setError(''); setPassword(''); }}>
+                        <button type="button" className="pp-auth-switch-btn" onClick={() => { setTab('signup'); setError(''); setPassword(''); setConfirm(''); }}>
                             Signup
                             <UserPlus size={15} />
                         </button>
                     </div>
                 ) : (
                     <div className="pp-auth-switch-text">
-                        Already have an Account? <button type="button" onClick={() => { setTab('login'); setError(''); setPassword(''); }}>Log In <ArrowRight size={14}/></button>
+                        Already have an Account? <button type="button" onClick={() => { setTab('login'); setError(''); setPassword(''); setConfirm(''); }}>Log In <ArrowRight size={14}/></button>
                     </div>
                 )}
 

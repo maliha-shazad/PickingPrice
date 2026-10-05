@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="hp-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #e6f7f4 0%, #fef5f5 100%)', minHeight: '100vh', padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: '12px', padding: '40px', width: '100%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)', position: 'relative' }}>
+            <div className="pp-forgot-card" style={{ background: '#fff', borderRadius: '12px', padding: '40px', width: '100%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)', position: 'relative' }}>
                 
                 <a href="/login" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#4a6352', textDecoration: 'none', marginBottom: '24px' }}>
                     <ArrowLeft size={16} /> Back to Log In
@@ -168,7 +168,7 @@ export default function ForgotPasswordPage() {
                         </button>
 
                         <div style={{ textAlign: 'center', fontSize: '13px', color: '#6b8272', marginTop: '24px' }}>
-                            Remembered your password? <a href="/login" style={{ color: '#1c694a', fontWeight: 700, textDecoration: 'none' }}>Back to Log In &gt;</a>
+                            Remembered your password? <a href="/login" style={{ color: '#1c694a', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>Back to Log In &gt;</a>
                         </div>
                     </form>
                 )}

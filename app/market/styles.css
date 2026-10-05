@@ -2352,3 +2352,99 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pl-card-actions{grid-template-columns:1fr;gap:6px}
   .pl-btn-inspect,.pl-btn-chat{padding:7px 4px;font-size:11.5px}
 }
+
+/* Filter sidebars keep scrolling inside themselves but do not draw a scrollbar. */
+.pl-sidebar{scrollbar-width:none}
+.pl-sidebar::-webkit-scrollbar{display:none}
+
+/* Login and sign-up on phones: Buyer Account / Seller Account stay on one line each. */
+@media(max-width:600px){
+  .pp-auth-page-container{padding:24px 14px}
+  .pp-auth-modal{padding:28px 18px}
+  .pp-auth-role-tabs{gap:8px;margin-bottom:22px}
+  .pp-auth-role-tab{padding:11px 6px;gap:6px;font-size:13px;white-space:nowrap}
+}
+
+/* ── Phones: short labels, buttons, tabs and headings stay on one line ── */
+@media(max-width:600px){
+  /* Dashboards (their own style blocks load later, hence the extra class in each selector) */
+  .bd-container .bd-mode-toggle button{padding:8px 12px;font-size:13px;gap:6px;white-space:nowrap}
+  .bd-container .bd-banner-content h3{font-size:19px;white-space:nowrap}
+  .bd-container .bd-banner-btn{font-size:13px;padding:12px 14px;white-space:nowrap}
+  .bd-container .bd-section-header h3{font-size:16px;white-space:nowrap}
+  .bd-container .bd-empty-state button{font-size:13px;white-space:nowrap}
+  .sd-add-header h4{font-size:15px !important;white-space:nowrap}
+  /* Home */
+  .hp-scroll-btn{display:none}
+  .hp-section-title{font-size:18px;white-space:nowrap}
+  .hp-search-results .hp-section-title{white-space:normal}
+  /* Product list pages */
+  .pl-breadcrumb{font-size:12px;white-space:nowrap;min-width:0;max-width:100%;overflow:hidden}
+  .pl-breadcrumb button{font-size:12px;flex-shrink:0}
+  .pl-breadcrumb svg{flex-shrink:0}
+  .pl-bread-active{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .pl-brand-switch{font-size:0}
+  .pl-switch-btn{font-size:12px;white-space:nowrap}
+  .pl-pagination{gap:8px}
+  .pl-page-btn{padding:7px 10px;font-size:12px;white-space:nowrap}
+  .pl-page-num{width:30px;height:30px;font-size:12px}
+  .pl-card-ref{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pl-feed-title{font-size:15px !important}
+  .bn-hero-badge{font-size:8.5px;letter-spacing:0;padding:4px 8px;white-space:nowrap}
+  .bn-hero-right{flex-wrap:nowrap;width:100%}
+  .bn-hero-card{width:100%}
+  .bn-hero-card h4{white-space:nowrap}
+  .bn-cta-title{font-size:18px}
+  .bn-cta-btn-primary{font-size:13px;white-space:nowrap}
+  /* Product page */
+  .verification-head strong{font-size:13px;white-space:nowrap}
+  .badge-pass{white-space:nowrap;flex-shrink:0}
+  /* Sell Now */
+  .sn-form .sn-section{padding:18px 16px}
+  .sn-form .sn-section-head h2{font-size:15px;white-space:nowrap}
+  /* Post Request */
+  .pr-field-label{font-size:13.5px;white-space:nowrap}
+  .pr-field-tag{font-size:10px !important;white-space:nowrap}
+  /* Forgot password */
+  .pp-forgot-card{padding:28px 20px !important}
+}
+@media(max-width:400px){
+  .sn-form .sn-section-head h2{font-size:13.5px}
+  .bd-container .bd-banner-content h3{font-size:17px}
+  .hp-section-title{font-size:17px}
+}
+
+/* Dashboards stack into one column on small screens (see the 1024px rule above). The stacked
+   content must take the screen's width; left to size itself it grew as wide as its tab row and
+   was cut off at the right edge. */
+@media(max-width:1024px){
+  .bd-container .bd-layout{align-items:stretch}
+  .bd-container .bd-main-content,.bd-container .bd-sidebar{width:100%;min-width:0}
+}
+/* Phones: these labels shrink to fit their card instead of being cut short. */
+@media(max-width:600px){
+  .pl-card-ref svg{display:none}
+  .bn-grid .pl-card-cat{font-size:8px;letter-spacing:0}
+}
+@media(max-width:400px){
+  .pl-breadcrumb,.pl-breadcrumb button{font-size:11px}
+  .pl-breadcrumb{gap:4px}
+}
+
+/* Phones: these headings and labels scale with the screen's width so each stays on one line. */
+@media(max-width:600px){
+  .hp-hero-title{font-size:min(22px,calc((100vw - 34px)/18.4))}
+  .hp-cant-find{padding:22px 16px}
+  .hp-cant-find-left h2{font-size:min(22px,calc((100vw - 66px)/15.6));white-space:nowrap}
+  .pl-cta-banner{padding:20px 16px}
+  .pl-cta-title{font-size:min(20px,calc((100vw - 88px)/21.2));white-space:nowrap}
+  .pl-card-ref{font-size:min(9.5px,2vw)}
+  .filters-grid [data-slot=select-trigger]{font-size:min(14px,3.3vw);padding-left:10px;padding-right:10px}
+  .sd-add-header{flex-wrap:wrap;gap:2px 10px}
+  .sd-add-header p{white-space:nowrap}
+  /* The label and its tag share a row when there is room; the tag drops below it when there is not. */
+  .pr-field-head{flex-wrap:wrap;gap:2px 8px}
+  .pr-field-tag{margin-left:auto}
+  /* Too long for one line at a readable size: break them into two even lines. */
+  .pl-feed-title,.bn-cta-title{text-wrap:balance}
+}

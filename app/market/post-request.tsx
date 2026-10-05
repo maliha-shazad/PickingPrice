@@ -302,9 +302,9 @@ export function PostRequest({ actions }: { actions: Actions }) {
             {step === 1 && (
               <>
                 <div className="pr-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <label style={{ fontWeight: 600, color: '#0f172a' }}>What specific piece are you hunting for?</label>
-                <span style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Active Demand Tag</span>
+              <div className="pr-field-head" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <label className="pr-field-label" style={{ fontWeight: 600, color: '#0f172a' }}>What specific piece are you hunting for?</label>
+                <span className="pr-field-tag" style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Active Demand Tag</span>
               </div>
               <input
                 type="text"
