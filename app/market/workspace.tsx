@@ -318,7 +318,7 @@ export default function Workspace() {
         'listing': 'Product details', 'request': 'Buyer request', 'profile': 'Member profile',
         'listing-form': modal?.item.id ? 'Edit listing' : 'Create a listing',
         'request-form': modal?.item.id ? 'Edit request' : 'Post a request',
-        'offer-form': 'Your offer', 'payment': modal?.item.id ? 'Promote your listing' : 'Request extra listings', 'enable-selling': 'Selling is not switched on', 'enable-buying': 'Buying is not switched on',
+        'offer-form': 'Your offer', 'payment': modal?.item.defer ? 'Spotlight Boost' : modal?.item.id ? 'Promote your listing' : 'Request extra listings', 'enable-selling': 'Selling is not switched on', 'enable-buying': 'Buying is not switched on',
         'report': 'Report a concern', 'conversation': 'Conversation',
         'safety': infoTitle.safety, 'info': infoTitle[modal?.item.topic as InfoTopic] || 'Picking Price'
     };

@@ -25,7 +25,7 @@ When your account can do both, use the **Buying / Selling** switch in the header
    | Fair | Visible wear, works as it should | Pre-Loved |
    | Used | Heavy wear, may need a small repair | Pre-Loved |
 
-5. Enter the price in rupees and the quantity you have.
+5. Enter the price in rupees and the quantity you have. Fields marked with a red star are required; the page tells you which one is missing when you publish.
 6. Write a description: age, what is included, any faults.
 7. Enter your location, and optionally a phone number, a WhatsApp number and a preferred meet-up spot.
 8. Tick the delivery and pickup options you offer.
@@ -67,6 +67,8 @@ A promoted product carries a **Featured** badge and is shown before ordinary pro
 2. Choose one of the three lengths on offer (by default 24 hours, 3 days or 7 days) and see the price.
 3. Pay using the instructions shown, enter the payment reference and submit.
 4. When the administrator approves the payment the promotion starts. It ends by itself, and you are notified when it does.
+
+You can also ask for a promotion while you create the listing: on the Sell Now page choose **Spotlight Boost**, pick the length, pay, enter the payment reference and press **Publish & Request Spotlight**. The product is published straight away as a normal listing, and it becomes featured when the administrator approves the payment. If the payment is rejected the product simply stays a normal listing.
 
 ## 6. Answer buyer requests
 

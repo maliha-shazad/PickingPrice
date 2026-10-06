@@ -1,6 +1,6 @@
 'use client';
-import { useState, useRef } from 'react';
-import { Actions, Item, money, useLoad, Load, Photo, Status, DELIVERY_OPTIONS } from './ui';
+import { useState, useRef, useEffect } from 'react';
+import { Actions, Item, money, useLoad, Load, Photo, Status, DELIVERY_OPTIONS, api } from './ui';
 import { ShieldCheck, CheckCircle2, UploadCloud, Image as ImageIcon, Video, Star, Zap, Lock, RefreshCw, X, Plus, Package, MessageSquare, Info, ChevronRight, Headphones, Smartphone, Laptop, Watch, Shirt, Home, Gamepad, Book, Camera, Car, Coffee, Gem, Baby, Palette, Briefcase, Phone, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,11 +32,11 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         id: initialItem?.id || '',
         title: initialItem?.title || '',
         description: initialItem?.description || '',
-        category: initialItem?.category || actions.categories[0]?.name || 'Electronics',
+        category: initialItem?.category || actions.categories[0]?.name || '',
         subcategory: initialItem?.subcategory || '',
         brand: initialItem?.brand || '',
         price: initialItem?.price || '',
-        condition: initialItem?.condition || 'Like New',
+        condition: initialItem?.condition || 'New',
         location: initialItem?.location || '',
         phone: initialItem?.phone || '',
         whatsapp: '',
@@ -52,6 +52,19 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
     const [allowOffers, setAllowOffers] = useState(initialItem?.id ? !!initialItem.negotiable : true);
     const [exchange, setExchange] = useState(!!initialItem?.exchange);
     const [profileLoaded, setProfileLoaded] = useState(false);
+    // A Spotlight (featured) request chosen on this page; it is sent for approval right after the listing is published.
+    const [boost, setBoost] = useState<{ duration: number; reference: string; amount: number } | null>(null);
+    const [invalid, setInvalid] = useState('');
+    const promo = services.data?.settings;
+    const promoPrices: number[] = promo ? [promo.promotion24h, promo.promotion3d, promo.promotion7d] : [];
+    const days = (d: number) => d === 1 ? '24 hours' : d + ' days';
+
+    // A new listing starts on the first category in the list (the list arrives a moment after the page).
+    const categoryPicked = useRef(false);
+    useEffect(() => {
+        if (initialItem?.id || categoryPicked.current || !actions.categories.length) return;
+        setF(prev => ({ ...prev, category: actions.categories[0].name, subcategory: '' }));
+    }, [actions.categories.length]);
 
     // Auto-fill contact details from profile once loaded
     if (me.data && !profileLoaded && !initialItem?.id) {
@@ -64,14 +77,14 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         setProfileLoaded(true);
     }
 
-    const set = (k: string, v: any) => setF({ ...f, [k]: v });
+    const set = (k: string, v: any) => { setF({ ...f, [k]: v }); if (invalid === k) setInvalid(''); };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
         const newImages = [...(f.images || [])];
         for (let i = 0; i < e.target.files.length; i++) {
-            if (newImages.length >= 10) break;
+            if (newImages.length >= 6) break;
             const file = e.target.files[i];
             try {
                 const r = await fetch('/api/files', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
@@ -87,8 +100,33 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         set('images', (f.images || []).filter((_: string, i: number) => i !== index));
     };
 
+    // The first thing that still has to be filled in, with the field it belongs to.
+    const missing = (): [string, string] | null => {
+        if (!(f.images || []).length) return ['images', 'Add at least one photo of the item.'];
+        if (String(f.title || '').trim().length < 3) return ['title', 'Enter an item title of at least 3 characters.'];
+        if (!f.category) return ['category', 'Choose a category.'];
+        if (!f.condition) return ['condition', 'Choose the condition of the item.'];
+        const price = Number(f.price);
+        if (!Number.isInteger(price) || price < 1) return ['price', 'Enter your asking price in rupees (whole number, at least Rs. 1).'];
+        const quantity = Number(f.quantity);
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) return ['quantity', 'Enter how many you have (1 or more).'];
+        if (String(f.description || '').trim().length < 10) return ['description', 'Describe the item in at least 10 characters.'];
+        if (String(f.location || '').trim().length < 2) return ['location', 'Enter the city where the item is.'];
+        if (f.phone && !/^\+?[0-9][0-9\s-]{6,18}$/.test(String(f.phone).trim())) return ['phone', 'Enter a valid phone number, or leave it empty.'];
+        return null;
+    };
+
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const problem = missing();
+        if (problem) {
+            setInvalid(problem[0]);
+            toast.error(problem[1]);
+            const el = document.querySelector('[data-field="' + problem[0] + '"]') as HTMLElement | null;
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            (el?.matches('input,textarea') ? el : el?.querySelector('input,textarea') as HTMLElement | null)?.focus({ preventScroll: true });
+            return;
+        }
         setBusy(true);
 
         const payload = { ...f };
@@ -104,7 +142,17 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         const result = await actions.perform('listings' + (f.id ? '/' + f.id : ''), f.id ? 'PATCH' : 'POST', payload);
         setBusy(false);
         if (result) {
-            toast.success(f.id ? 'Listing updated successfully!' : 'Listing published successfully!');
+            let featured = '';
+            if (boost && !f.id) {
+                // The product is live already; it becomes featured only when the admin approves this payment.
+                try {
+                    await api('payments', 'POST', { purpose: 'promotion', quantity: 1, duration: boost.duration, listingId: result.id, reference: boost.reference });
+                    featured = 'sent';
+                } catch (err) { featured = err instanceof Error ? err.message : 'failed'; }
+            }
+            if (featured === 'sent') toast.success('Listing published', { description: 'Your Spotlight request was sent for approval. The product is featured once the payment is confirmed.' });
+            else if (featured) toast.warning('Listing published, but the Spotlight request was not sent', { description: featured + ' You can request it again with Promote in your Seller Dashboard.' });
+            else toast.success(f.id ? 'Listing updated successfully!' : 'Listing published successfully!');
             actions.go('Dashboard');
         }
     };
@@ -225,7 +273,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 }
             `}} />
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} noValidate>
                 <div className="sn-header">
                     <div>
                         <h1>List an Item for Sale</h1>
@@ -242,7 +290,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                             {Math.max(0, me.data.settings.freeListings + me.data.profile.extra_slots - me.data.counts.listings)} SLOTS LEFT
                                         </span>
                                     </div>
-                                    <span>{me.data.counts.listings} of {me.data.settings.freeListings + me.data.profile.extra_slots} used this calendar month</span>
+                                    <span id="sn-quota-line">{me.data.counts.listings} of {me.data.settings.freeListings + me.data.profile.extra_slots} listings used ({me.data.settings.freeListings} free{me.data.profile.extra_slots > 0 ? ' + ' + me.data.profile.extra_slots + ' extra' : ''})</span>
                                 </div>
                                 <button type="button" className="sn-buy-btn" onClick={() => actions.open('payment')}>Buy extra listing slots: Rs. {me.data.settings.extraListingPrice}</button>
                             </div>
@@ -259,9 +307,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-section-head">
                                 <h2><div className="step-num">1</div> High-Res Photos & Inspection Video</h2>
                             </div>
-                            <p style={{fontSize:'13px', color:'#64748b'}}>Recommended: 4 photos. Minimum requirement: 1 HD photo. Upload up to 10 photos.</p>
+                            <p style={{fontSize:'13px', color:'#64748b'}}>At least 1 photo is required. Recommended: 4 photos. You can upload up to 6.</p>
 
-                            <div className="sn-upload-grid">
+                            <div className={'sn-upload-grid' + (invalid === 'images' ? ' sn-invalid-box' : '')} data-field="images">
                                 {f.images?.map((url: string, i: number) => (
                                     <div className="sn-img-preview" key={i}>
                                         <img src={url} alt="Uploaded" />
@@ -269,7 +317,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                         <button type="button" className="sn-remove-img" onClick={() => removeImage(i)}><X size={12} /></button>
                                     </div>
                                 ))}
-                                {(f.images || []).length < 10 && (
+                                {(f.images || []).length < 6 && (
                                     <label className="sn-upload-box">
                                         <input type="file" multiple accept="image/*" className="hidden" onChange={handleUpload} style={{display:'none'}} />
                                         {uploading ? <RefreshCw size={24} className="animate-spin" /> : <UploadCloud size={24} />}
@@ -286,27 +334,33 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             </div>
 
                             <div className="sn-field">
-                                <label>Item Title</label>
-                                <input className="sn-input" required value={f.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Sony WH-1000XM4 Wireless (Silver) - Complete Box" />
+                                <label>Item Title <span className="sn-req">*</span></label>
+                                <input className={'sn-input' + (invalid === 'title' ? ' sn-invalid' : '')} data-field="title" required minLength={3} maxLength={120} value={f.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Sony WH-1000XM4 Wireless (Silver) - Complete Box" />
                             </div>
 
-                            <label style={{fontSize:'13px', fontWeight:700, color:'#334155', display:'block', marginBottom:'8px'}}>Select Category</label>
-                            <div className="sn-cat-grid">
+                            <label style={{fontSize:'13px', fontWeight:700, color:'#334155', display:'block', marginBottom:'8px'}}>Select Category <span className="sn-req">*</span></label>
+                            <div className="sn-cat-grid" data-field="category">
                                 {actions.categories.map(c => (
                                     <button
                                         type="button"
                                         key={c.name}
                                         className={`sn-cat-btn ${f.category === c.name ? 'active' : ''}`}
-                                        onClick={() => setF({ ...f, category: c.name, subcategory: '' })}
+                                        onClick={() => { categoryPicked.current = true; setF({ ...f, category: c.name, subcategory: '' }); }}
                                     >
                                         {getCatIcon(c.name)} {c.name}
                                     </button>
                                 ))}
                             </div>
 
-                            <div className="sn-field">
-                                <label>Brand / Manufacturer</label>
-                                <input className="sn-input" value={f.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. Sony, Samsung, Nike" />
+                            <div className="sn-row">
+                                <div className="sn-field">
+                                    <label>Brand / Manufacturer</label>
+                                    <input className="sn-input" maxLength={80} value={f.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. Sony, Samsung, Nike" />
+                                </div>
+                                <div className="sn-field">
+                                    <label>Quantity Available <span className="sn-req">*</span></label>
+                                    <input id="sn-quantity" className={'sn-input' + (invalid === 'quantity' ? ' sn-invalid' : '')} data-field="quantity" type="number" min={1} max={10000} required value={f.quantity} onChange={e => set('quantity', e.target.value)} placeholder="e.g. 1" />
+                                </div>
                             </div>
                         </div>
 
@@ -319,7 +373,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                 <strong>New</strong> items appear in "New Products". <strong>Like New, Good, Fair, Used</strong> items appear in "Pre-Loved".
                             </p>
 
-                            <div className="sn-cond-grid">
+                            <div className="sn-cond-grid" data-field="condition">
                                 {[
                                     { v: 'New', t: 'Brand New Factory Pack', d: 'Unopened, original seal, never turned on.' },
                                     { v: 'Like New', t: 'Like New (Mint Condition)', d: 'Flawless exterior, complete original accessories.' },
@@ -346,10 +400,10 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-price-wrap">
                                 <div className="sn-price-row">
                                     <div>
-                                        <label style={{display:'block', fontSize:'12px', fontWeight:700, color:'#64748b', marginBottom:'4px'}}>Your Asking Price</label>
+                                        <label style={{display:'block', fontSize:'12px', fontWeight:700, color:'#64748b', marginBottom:'4px'}}>Your Asking Price <span className="sn-req">*</span></label>
                                         <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                             <span style={{fontSize:'18px', fontWeight:800}}>Rs.</span>
-                                            <input type="number" required className="sn-price-input" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0" />
+                                            <input type="number" required min={1} data-field="price" className={'sn-price-input' + (invalid === 'price' ? ' sn-invalid' : '')} value={f.price} onChange={e => set('price', e.target.value)} placeholder="e.g. 4500" />
                                         </div>
                                     </div>
                                     <div className="sn-offer-box">
@@ -374,11 +428,11 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                         {/* Step 5: Description */}
                         <div className="sn-section">
                             <div className="sn-section-head">
-                                <h2><div className="step-num">5</div> Detailed Description & History</h2>
+                                <h2><div className="step-num">5</div> Detailed Description & History <span className="sn-req">*</span></h2>
                             </div>
                             <textarea
-                                className="sn-input sn-textarea"
-                                required minLength={10}
+                                className={'sn-input sn-textarea' + (invalid === 'description' ? ' sn-invalid' : '')} data-field="description"
+                                required minLength={10} maxLength={3000}
                                 value={f.description}
                                 onChange={e => set('description', e.target.value)}
                                 placeholder="E.g. Purchased original from Sony Center in early 2023. Flawless cosmetic condition with absolutely zero tears or cracking on the earcups or headband cushion..."
@@ -395,8 +449,8 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             </p>
                             <div className="sn-row">
                                 <div className="sn-field">
-                                    <label>City</label>
-                                    <input className="sn-input" required value={f.location} onChange={e => set('location', e.target.value)} placeholder="e.g. Lahore" />
+                                    <label>City <span className="sn-req">*</span></label>
+                                    <input className={'sn-input' + (invalid === 'location' ? ' sn-invalid' : '')} data-field="location" required minLength={2} maxLength={80} value={f.location} onChange={e => set('location', e.target.value)} placeholder="e.g. Lahore" />
                                 </div>
                                 <div className="sn-field">
                                     <label>Preferred Meetup Spot</label>
@@ -421,7 +475,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-row">
                                 <div className="sn-field">
                                     <label>Phone Number</label>
-                                    <input className="sn-input" type="tel" value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="e.g. 03001234567" />
+                                    <input className={'sn-input' + (invalid === 'phone' ? ' sn-invalid' : '')} data-field="phone" type="tel" maxLength={20} value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="e.g. 03001234567" />
                                     <span className="sn-contact-hint">Shown to buyers on product page</span>
                                 </div>
                             </div>
@@ -459,19 +513,22 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-boost-header">
                                 <Zap size={16} /> SELL IT FASTER (OPTIONAL BOOSTERS)
                             </div>
-                            <div className="sn-boost-option">
+                            <div className={'sn-boost-option' + (!boost ? ' selected' : '')} id="sn-boost-standard" onClick={() => setBoost(null)}>
                                 <div className="sn-boost-info">
                                     <strong>Standard (Free) Listing</strong>
-                                    <span>Includes in free limit • Active 30 days</span>
+                                    <span>Uses one listing slot • Stays listed until you remove it</span>
                                 </div>
-                                <input type="radio" name="boost" defaultChecked style={{accentColor:'#059669'}} />
+                                <input type="radio" name="boost" checked={!boost} onChange={() => setBoost(null)} style={{accentColor:'#059669'}} />
                             </div>
-                            <div className="sn-boost-option" onClick={() => actions.open('payment')}>
+                            {/* New listing: the choice is kept here and sent for approval once the listing exists.
+                                Existing listing: the usual promote form, which sends the request straight away. */}
+                            <div className={'sn-boost-option' + (boost ? ' selected' : '')} id="sn-boost-spotlight"
+                                onClick={() => f.id ? actions.open('payment', { id: f.id, title: f.title }) : actions.open('payment', { defer: true, title: f.title, duration: boost?.duration, reference: boost?.reference, onPick: setBoost })}>
                                 <div className="sn-boost-info">
-                                    <strong><Star size={14} color="#e8621a" /> Spotlight Boost (7 Days)</strong>
-                                    <span>Pinned in top 10 search & frontpage</span>
+                                    <strong><Star size={14} color="#e8621a" /> Spotlight Boost{boost ? ' (' + days(boost.duration) + ')' : ' (Featured)'}</strong>
+                                    <span>{boost ? 'Sent for approval when you publish • Ref: ' + boost.reference + ' • Tap to change' : 'Shown first with a Featured badge once the payment is approved'}</span>
                                 </div>
-                                <span className="sn-boost-price">+ Rs. 500</span>
+                                <span className="sn-boost-price">{boost ? '+ ' + money(boost.amount) : promoPrices.length ? 'from ' + money(Math.min(...promoPrices)) : ''}</span>
                             </div>
                         </div>
 
@@ -482,7 +539,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 <div className="sn-submit-bar">
                     <button type="button" className="sn-cancel-btn" onClick={() => window.history.back()}>Cancel & Discard</button>
                     <button type="submit" className="sn-publish-btn" disabled={busy}>
-                        {busy ? 'Publishing...' : <><Zap size={18} /> Publish Listing Free</>}
+                        {busy ? 'Publishing...' : f.id ? <><Zap size={18} /> Save Changes</> : boost ? <><Zap size={18} /> Publish & Request Spotlight</> : <><Zap size={18} /> Publish Listing Free</>}
                     </button>
                 </div>
             </form>

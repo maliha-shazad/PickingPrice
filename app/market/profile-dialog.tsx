@@ -65,7 +65,7 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
                     </div>
                     <div className="bd-form-group">
                         <label htmlFor="bd-profile-name">Name</label>
-                        <input id="bd-profile-name" type="text" className="bd-input" required minLength={2} maxLength={80} value={name} onChange={e => setName(e.target.value)} />
+                        <input id="bd-profile-name" type="text" className="bd-input" required minLength={2} maxLength={80} placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} />
                     </div>
                     <div className="bd-form-group">
                         <label htmlFor="bd-profile-location">Location</label>

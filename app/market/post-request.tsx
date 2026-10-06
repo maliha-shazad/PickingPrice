@@ -210,10 +210,22 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
     setSavingDraft(false);
   };
 
+  // What step 1 still needs, checked before moving on and again before posting.
+  const firstStepProblem = () => {
+    if (title.trim().length < 3) return ['#pr-title', 'Enter what you are looking for (at least 3 characters).'];
+    if (!selectedCondition) return ['#pr-condition', 'Choose the condition you accept.'];
+    return null;
+  };
+  const complain = (problem: string[]) => {
+    toast.error(problem[1]);
+    setTimeout(() => { const el = document.querySelector(problem[0]) as HTMLElement | null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (el?.matches('input,textarea')) el.focus({ preventScroll: true }); }, 60);
+  };
+  const goToStep2 = () => { const problem = firstStepProblem(); if (problem) return complain(problem); setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) {
-      setStep(2);
+      goToStep2();
       return;
     }
     if (!actions.user) {
@@ -221,21 +233,23 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         return;
     }
     
-    if (place.trim().length < 2) { toast.error('Enter the city or area where you need the item.'); return; }
+    const early = firstStepProblem();
+    if (early) { setStep(1); return complain(early); }
+    const amount = Number(budget);
+    if (!Number.isInteger(amount) || amount < 1) return complain(['#pr-budget', 'Enter your budget in rupees (whole number, at least Rs. 1).']);
+    if (place.trim().length < 2) return complain(['#pr-location', 'Enter the city or area where you need the item.']);
     if (!expiry || expiry < dayFromNow(1) || expiry > dayFromNow(365)) { toast.error('Choose an expiry date between tomorrow and one year from now.'); return; }
     setBusy(true);
     const apiCondition = CONDITIONS.find(c => c.id === selectedCondition)?.api || 'Good';
 
-    let apiDesc = notes;
-    if (!apiDesc || apiDesc.length < 10) {
-      apiDesc = (apiDesc + ' Looking for this item in good condition.').trim();
-    }
+    // The notes are optional; without them the description is simply what the buyer is looking for.
+    const apiDesc = notes.trim().length >= 10 ? notes.trim() : ('Looking for: ' + title.trim() + (notes.trim() ? '. ' + notes.trim() : ''));
 
     const result = await actions.perform('requests', 'POST', {
-        title: title || 'New Request',
+        title: title.trim(),
         description: apiDesc,
         category: domain,
-        price: Number(budget) || 0,
+        price: amount,
         location: place.trim(),
         condition: apiCondition,
         quantity: quantity || 1,
@@ -323,7 +337,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                   <span style={{ width: '18px', height: '18px', background: step === 1 ? '#0f766e' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>1</span> Style Brief
                 </div>
                 <div
-                  onClick={() => setStep(2)}
+                  onClick={goToStep2}
                   style={{ cursor: 'pointer', background: step === 2 ? 'white' : 'transparent', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: step === 2 ? 600 : 500, color: step === 2 ? '#0f766e' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: step === 2 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                 >
                   <span style={{ width: '18px', height: '18px', background: step === 2 ? '#0f766e' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>2</span> Fitting & Handoff
@@ -331,17 +345,19 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               </div>
             </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
             {step === 1 && (
               <>
                 <div className="pr-section">
               <div className="pr-field-head" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <label className="pr-field-label" style={{ fontWeight: 600, color: '#0f172a' }}>What specific piece are you hunting for?</label>
+                <label className="pr-field-label" htmlFor="pr-title" style={{ fontWeight: 600, color: '#0f172a' }}>What specific piece are you hunting for? <span className="pr-req">*</span></label>
                 <span className="pr-field-tag" style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Active Demand Tag</span>
               </div>
               <input
+                id="pr-title"
                 type="text"
+                required minLength={3} maxLength={120}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g., iPhone 15 Pro Max 256GB"
@@ -441,7 +457,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
 
               <div className="pr-section" style={{ flex: 1, background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <label style={{ fontWeight: 600, color: '#0f172a' }}>Item State</label>
+                  <label id="pr-condition" style={{ fontWeight: 600, color: '#0f172a' }}>Item State <span className="pr-req">*</span></label>
                   <span style={{ fontSize: '11px', color: '#0f766e' }}>Condition you accept</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -470,13 +486,13 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               <>
             <div className="pr-section" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <label style={{ fontWeight: 600, color: '#0f172a' }}>Target Budget & Willingness</label>
+                <label htmlFor="pr-budget" style={{ fontWeight: 600, color: '#0f172a' }}>Target Budget & Willingness <span className="pr-req">*</span></label>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>The most you want to pay</span>
               </div>
               <div className="pr-budget">
                 <div className="pr-budget-input">
                   <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600, marginRight: '12px' }}>PKR</span>
-                  <input type="text" value={budget} onChange={e => setBudget(e.target.value)} style={{ border: 'none', background: 'none', outline: 'none', fontSize: '18px', fontWeight: 700, color: '#0f172a', width: '100%' }} />
+                  <input id="pr-budget" type="text" inputMode="numeric" required maxLength={10} placeholder="e.g. 5000" value={budget} onChange={e => setBudget(e.target.value.replace(/[^0-9]/g, ''))} style={{ border: 'none', background: 'none', outline: 'none', fontSize: '18px', fontWeight: 700, color: '#0f172a', width: '100%' }} />
                 </div>
                 <div style={{ background: '#eff6ff', padding: '12px 16px', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'center', flex: 1 }}>
                   <input type="checkbox" checked={negotiable} onChange={e => setNegotiable(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#ea580c' }} />
@@ -494,6 +510,9 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Optional details</span>
               </div>
               <textarea 
+                id="pr-notes"
+                maxLength={3000}
+                placeholder="e.g. Colour, size, model year, what must be included, anything you do not want"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 style={{ width: '100%', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', color: '#334155', minHeight: '100px', outline: 'none', lineHeight: 1.5 }}
@@ -529,7 +548,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
 
             <div className="pr-section" id="pr-where-when" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <label style={{ fontWeight: 600, color: '#0f172a' }}>Location & Expiry</label>
+                <label style={{ fontWeight: 600, color: '#0f172a' }}>Location & Expiry <span className="pr-req">*</span></label>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Required</span>
               </div>
               <div className="pr-where-when">
@@ -580,7 +599,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               {step === 1 ? (
                 <>
                   <button type="button" className="pr-btn-draft" id="pr-save-draft" disabled={savingDraft} onClick={handleSaveDraft}>{savingDraft ? 'Saving…' : draftId ? 'Update Draft' : 'Save Draft for Later'}</button>
-                  <button type="button" onClick={() => setStep(2)} className="pr-btn-submit">
+                  <button type="button" onClick={goToStep2} className="pr-btn-submit">
                     Next: Fitting & Handoff
                   </button>
                 </>

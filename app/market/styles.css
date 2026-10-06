@@ -3016,3 +3016,12 @@ div.pf-avatar svg{width:22px;height:22px}
 
 /* Product page: why a sample product has no review form */
 .pp-sample-note{margin:16px 0 0;padding:12px 14px;background:#f5f8f2;border:1px dashed #d5ddcd;border-radius:10px;font-size:13px;line-height:1.5;color:#6a8a6a}
+
+/* Required-field marks and the field a form is asking for */
+.sn-req,.pr-req{color:#dc2626;font-weight:700;margin-left:2px}
+.sn-page-wrap .sn-invalid,.sn-page-wrap .sn-price-input.sn-invalid{border-color:#dc2626 !important;box-shadow:0 0 0 3px rgba(220,38,38,.14)}
+.sn-page-wrap .sn-invalid-box{outline:2px dashed #dc2626;outline-offset:6px;border-radius:12px}
+/* Sell Now boosters: the chosen option */
+.sn-page-wrap .sn-boost-option.selected{border-color:#059669;background:#f0fdf4}
+.sn-page-wrap .sn-boost-option .sn-boost-info span{overflow-wrap:anywhere}
+.sn-page-wrap .sn-boost-price{white-space:nowrap;margin-left:10px}

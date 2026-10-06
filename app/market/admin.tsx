@@ -227,20 +227,20 @@ function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) {
                 
                 <div className="bd-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     {[['freeListings', 'Free slots per user'], ['extraListingPrice', 'Price per extra slot (Rs.)']].map(([k, l]) => (
-                        <TextField key={k} label={l} type="number" min={k === 'freeListings' ? 0 : 1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
+                        <TextField key={k} label={l} type="number" placeholder={k === 'freeListings' ? 'e.g. 10' : 'e.g. 50'} min={k === 'freeListings' ? 0 : 1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
                     ))}
                 </div>
 
                 <div className="bd-settings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     {(['promotion24h', 'promotion3d', 'promotion7d'] as const).map((k, i) => (
-                        <TextField key={k} label={'Promotion ' + (i + 1) + ' price (Rs.)'} type="number" min={1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
+                        <TextField key={k} label={'Promotion ' + (i + 1) + ' price (Rs.)'} type="number" placeholder="e.g. 150" min={1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
                     ))}
                 </div>
 
                 {/* How long each of the three promotions runs. 1 day is shown to sellers as "24 hours". */}
                 <div className="bd-settings-grid" id="adm-promo-lengths" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     {[0, 1, 2].map(i => (
-                        <TextField key={i} label={'Promotion ' + (i + 1) + ' length (days)'} type="number" min={1} value={(f.promotionDurations || [1, 3, 7])[i]} onChange={v => { const next = [...(f.promotionDurations || [1, 3, 7])]; next[i] = v; setF({ ...f, promotionDurations: next }); }}/>
+                        <TextField key={i} label={'Promotion ' + (i + 1) + ' length (days)'} type="number" placeholder="e.g. 3" min={1} value={(f.promotionDurations || [1, 3, 7])[i]} onChange={v => { const next = [...(f.promotionDurations || [1, 3, 7])]; next[i] = v; setF({ ...f, promotionDurations: next }); }}/>
                     ))}
                 </div>
 
@@ -292,8 +292,8 @@ export function CategoryForm({ item, actions, done }: { item: Item; actions: Act
     const [name, setName] = useState(item.name || ''), [subs, setSubs] = useState((item.subcategories || []).join(', ')), [active, setActive] = useState(item.active !== 0); 
     return (
         <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('admin/categories', 'POST', { id: item.id, name, subcategories: subs.split(',').map((s: string) => s.trim()).filter(Boolean), active })) done(); }}>
-            <TextField label="Category Name" value={name} onChange={setName}/>
-            <TextField label="Subcategories (comma-separated)" value={subs} required={false} maxLength={1000} onChange={setSubs}/>
+            <TextField label="Category Name" placeholder="e.g. Mobile Phones" maxLength={80} value={name} onChange={setName}/>
+            <TextField label="Subcategories (comma-separated)" placeholder="e.g. Android, iPhone, Accessories" value={subs} required={false} maxLength={1000} onChange={setSubs}/>
             <label style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: 600 }}>
                 <Switch checked={active} onCheckedChange={setActive}/> Active Status
             </label>
@@ -326,7 +326,7 @@ export function ModerateForm({ item, actions, done }: { item: Item; actions: Act
             <Choice label="Action to take" value={action} onChange={setAction} options={options[item.type]}/>
             <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 Reason / Note (Sent to member)
-                <textarea style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', minHeight: '100px', width: '100%', boxSizing: 'border-box' }} required minLength={5} maxLength={1000} value={reason} onChange={e => setReason(e.target.value)}/>
+                <textarea style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', minHeight: '100px', width: '100%', boxSizing: 'border-box' }} required minLength={5} maxLength={1000} placeholder="Explain the reason; the member will read this" value={reason} onChange={e => setReason(e.target.value)}/>
             </label>
             <button style={{ padding: '12px 24px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Apply Action</button>
         </form>
@@ -364,7 +364,7 @@ export function PaymentReview({ item, actions, done }: { item: Item; actions: Ac
             <Choice label="Decision" value={status} onChange={setStatus} options={['Approved', 'Rejected']}/>
             <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 Review Note (Optional unless rejected)
-                <textarea style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', minHeight: '80px', width: '100%', boxSizing: 'border-box' }} required={status === 'Rejected'} minLength={status === 'Rejected' ? 5 : 0} maxLength={1000} value={note} onChange={e => setNote(e.target.value)}/>
+                <textarea style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', minHeight: '80px', width: '100%', boxSizing: 'border-box' }} required={status === 'Rejected'} minLength={status === 'Rejected' ? 5 : 0} maxLength={1000} placeholder={status === 'Rejected' ? 'Why the payment is rejected (the seller will read this)' : 'Optional note for the seller'} value={note} onChange={e => setNote(e.target.value)}/>
             </label>
             {status === 'Approved' && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: 600 }}>
