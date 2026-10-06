@@ -1,0 +1,11 @@
+# Settings for the local Workers edition (`npm start`).
+# Copy this file to `.dev.vars` in the same folder and change the value.
+
+# Needed once, to create the administrator at /admin. 16 characters or more.
+ADMIN_SETUP_CODE=choose-a-private-phrase
+
+# Optional: Google sign-in and notification emails.
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# RESEND_API_KEY=
+# EMAIL_FROM=

@@ -232,10 +232,25 @@ function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) {
                 </div>
 
                 <div className="bd-settings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                    {[['promotion24h', 'Promo 24h (Rs.)'], ['promotion3d', 'Promo 3d (Rs.)'], ['promotion7d', 'Promo 7d (Rs.)']].map(([k, l]) => (
-                        <TextField key={k} label={l} type="number" min={1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
+                    {(['promotion24h', 'promotion3d', 'promotion7d'] as const).map((k, i) => (
+                        <TextField key={k} label={'Promotion ' + (i + 1) + ' price (Rs.)'} type="number" min={1} value={f[k]} onChange={v => setF({ ...f, [k]: v })}/>
                     ))}
                 </div>
+
+                {/* How long each of the three promotions runs. 1 day is shown to sellers as "24 hours". */}
+                <div className="bd-settings-grid" id="adm-promo-lengths" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    {[0, 1, 2].map(i => (
+                        <TextField key={i} label={'Promotion ' + (i + 1) + ' length (days)'} type="number" min={1} value={(f.promotionDurations || [1, 3, 7])[i]} onChange={v => { const next = [...(f.promotionDurations || [1, 3, 7])]; next[i] = v; setF({ ...f, promotionDurations: next }); }}/>
+                    ))}
+                </div>
+
+                <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155' }}>
+                    Where promoted products appear
+                    <select id="adm-promo-placement" className="pp-select" style={{ padding: '10px 36px 10px 12px', borderRadius: '8px', fontSize: '14px' }} value={f.promotionPlacement || 'featured-first'} onChange={e => setF({ ...f, promotionPlacement: e.target.value })}>
+                        <option value="featured-first">First in the lists, with a Featured badge</option>
+                        <option value="badge-only">In normal order, with a Featured badge only</option>
+                    </select>
+                </label>
 
                 <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155' }}>
                     Payment Instructions (Bank / Wallets)

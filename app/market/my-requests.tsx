@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Actions, money, date, Item, useLoad, Status, Load } from './ui';
+import { Actions, money, date, Item, useLoadAll, Status, Load } from './ui';
 import { Search, MapPin, Clock, ArrowUpRight, Plus } from 'lucide-react';
 import { sampleRequests } from '../samples';
 
 export function MyRequests({ actions }: { actions: Actions }) {
-    const state = useLoad('requests?size=30', actions.revision);
+    const state = useLoadAll('requests', actions.revision);
     const realRequests = state.data?.items || [];
     
     // Global rule: if real data exists, hide dummies

@@ -8,7 +8,7 @@ const wranglerRequire=createRequire(require.resolve('wrangler/package.json'));
 const {Miniflare}=wranglerRequire('miniflare');
 const files=(await readdir('dist/server',{recursive:true})).filter(f=>f.endsWith('.js')||f.endsWith('.mjs'));files.sort((a,b)=>a==='index.js'?-1:b==='index.js'?1:a.localeCompare(b));
 const mf=new Miniflare({modules:files.map(f=>({type:'ESModule',path:resolve('dist/server',f)})),modulesRoot:resolve('dist/server'),compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BUCKET'],cf:false});
-const origin='https://picking-price.ahsanjaved-it.chatgpt.site';
+const origin='https://web-production-e86b77.up.railway.app';
 const cookieFrom=r=>r.headers.getSetCookie().find(s=>s.startsWith('__Host-pp_session=')).split(';')[0];
 async function call(path,data,cookie='',customOrigin=origin){return mf.dispatchFetch(origin+path,{method:data===undefined?'GET':'POST',headers:{Origin:customOrigin,'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},...(data===undefined?{}:{body:JSON.stringify(data)})});}
 const ok=(message)=>console.log('PASS '+message);
@@ -19,7 +19,7 @@ try{
  }
  const email='test-'+randomBytes(5).toString('hex')+'@example.test',password='safe-test-password-'+randomBytes(12).toString('hex');
  const data={name:'Test Buyer',email,password,role:'buyer'};
- let r=await call('/api/auth/options');assert.deepEqual(await r.json(),{google:false,email:true,recovery:false,workspace:true});ok('auth options expose configured capabilities');
+ let r=await call('/api/auth/options');assert.deepEqual(await r.json(),{google:false,email:true,recovery:false});ok('auth options expose configured capabilities');
  r=await call('/api/auth/signup',data);assert.equal(r.status,200,await r.clone().text());const cookie=cookieFrom(r);ok('email registration');
  assert(r.headers.get('Set-Cookie').includes('HttpOnly'));assert(r.headers.get('Set-Cookie').includes('Secure'));ok('secure cookie attributes');
  r=await call('/api/market',undefined,cookie);assert.equal(r.status,200,await r.clone().text());assert.equal((await r.json()).user.name,'Test Buyer');ok('session identity');

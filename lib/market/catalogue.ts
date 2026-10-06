@@ -30,12 +30,18 @@ export async function listCatalogue(c: Context, kind: 'listings' | 'requests', q
         if (isListing)
             args.push('%' + term + '%');
     }
-    for (const key of ['category', 'condition', 'location']) {
+    for (const key of ['category', 'condition']) {
         const value = q.get(key);
         if (value && value !== 'all') {
             clauses.push(`a.${key}=?`);
             args.push(value);
         }
+    }
+    // Location is typed freely by sellers and buyers ("Peshawar", "University Town, Peshawar"), so match inside it.
+    const place = (q.get('location') || '').trim().slice(0, 80).toLowerCase();
+    if (place && place !== 'all') {
+        clauses.push('LOWER(a.location) LIKE ?');
+        args.push('%' + place + '%');
     }
     if (q.get('type') === 'new')
         clauses.push("a.condition='New'");
@@ -72,7 +78,9 @@ export async function listCatalogue(c: Context, kind: 'listings' | 'requests', q
     else if (sort !== 'newest')
         order = `${orderPrefix}a.created DESC,a.id DESC`;
     const join = ` FROM ${table} a JOIN profiles p ON p.id=a.owner`;
-    const data = await pagination(c.db, `SELECT a.*,p.name seller,p.verified,${activePromo} featured${join}${where} ORDER BY ${order}`, `SELECT COUNT(*) n${join}${where}`, args, page, size, offset, orderArgs);
+    // The seller's average rating and number of visible reviews, for the product cards.
+    const sellerScore = isListing ? ',(SELECT AVG(v.rating) FROM reviews v WHERE v.seller_id=a.owner AND v.hidden=0) seller_rating,(SELECT COUNT(*) FROM reviews v WHERE v.seller_id=a.owner AND v.hidden=0) seller_reviews' : '';
+    const data = await pagination(c.db, `SELECT a.*,p.name seller,p.verified,${activePromo} featured${sellerScore}${join}${where} ORDER BY ${order}`, `SELECT COUNT(*) n${join}${where}`, args, page, size, offset, orderArgs);
     data.items = data.items.map(isListing ? parseImages : r => r);
     return data;
 }
@@ -92,13 +100,13 @@ export async function saveListing(c: Context, body: unknown, key?: string) {
         const old = await owned(c, 'listings', key);
         if (old.status === 'Deleted')
             throw new MarketError('This listing was removed.');
-        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,phone=?,whatsapp=?,meetup_spot=?,delivery=?,images=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), now(), key);
+        await run(c.db, 'UPDATE listings SET title=?,description=?,category=?,subcategory=?,brand=?,price=?,quantity=?,condition=?,location=?,phone=?,whatsapp=?,meetup_spot=?,delivery=?,images=?,negotiable=?,exchange=?,updated=? WHERE id=?', d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), d.negotiable ? 1 : 0, d.exchange ? 1 : 0, now(), key);
         return { id: key };
     }
     const keyNew = id(), token = id(), t = now(), conf = await configuration(c.db);
     const [reservation] = await c.db.batch([
         stmt(c.db, 'UPDATE profiles SET used_slots=used_slots+1,slot_token=? WHERE id=? AND used_slots<?+extra_slots RETURNING id', token, u.userId, conf.freeListings),
-        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,phone,whatsapp,meetup_spot,delivery,images,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), t, t, u.userId, token),
+        stmt(c.db, "INSERT INTO listings (id,owner,title,description,category,subcategory,brand,price,quantity,condition,location,phone,whatsapp,meetup_spot,delivery,images,negotiable,exchange,status,created,updated) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Active',?,? FROM profiles WHERE id=? AND slot_token=?", keyNew, u.userId, d.title, d.description, d.category, d.subcategory, d.brand, d.price, d.quantity, d.condition, d.location, d.phone, d.whatsapp, d.meetup_spot, JSON.stringify([...new Set(d.delivery)]), JSON.stringify(d.images), d.negotiable ? 1 : 0, d.exchange ? 1 : 0, t, t, u.userId, token),
     ]);
     if (!reservation.results?.length) {
         await c.db.batch([notice(c.db, u.userId, 'Listing limit reached', 'Request additional listing slots from Seller services.', 'services', '', `limit:${u.userId}:${t.slice(0, 10)}`)]);

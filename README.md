@@ -1,39 +1,101 @@
 # Picking Price
 
-Fixed-price listings and buyer requests for new and pre-loved products in Pakistan. Includes accounts, roles, uploads, search, wishlists, messages, reviews, profiles, seller offers/selection, quotas, manual service-payment approvals, promotions, notifications and administration. Product payments, delivery, orders, wallets, auctions and AI remain excluded.
+A two-way online marketplace for Pakistan. Sellers post fixed-price listings for new and pre-loved products; buyers either browse those listings or post a request for what they need and let sellers send offers.
 
-## Editions
+Live site: https://web-production-e86b77.up.railway.app
 
-- Hosted Site: React/Vinext, Workers, D1 and R2, with a private Site access policy. The administrator signs in separately at `/admin` (see AUTH_SETUP.md).
-- Portable FYP edition: React, Node.js, Express and PostgreSQL with the same domain services. Uploaded photos use a persistent filesystem directory.
+## What it does
 
-The hosted Site does not run Express/PostgreSQL. PGlite integration tests provide local PostgreSQL coverage; deployment to an external PostgreSQL host has not been performed.
+- **Accounts**: registration and sign-in with email (or phone number) and password, optional Google sign-in, buyer / seller / both roles.
+- **Listings**: title, description, category, brand, price, quantity, condition (New, Like New, Good, Fair, Used), location, up to six photos, delivery and pickup options.
+- **Buyer requests**: what the buyer needs, budget, quantity, acceptable condition, location and an expiry date. Requests can be saved as drafts.
+- **Seller offers**: sellers answer a request with a price and details; the buyer compares offers and selects one.
+- **Search**: keyword search over title, description, category and brand, with category, condition, location and price filters and four sort orders.
+- **Wishlist, chat, reviews, reports**: save products, message the other member about a product, request or offer, review a seller after contact, and report a listing, request, message, review or member.
+- **Listing slots and promotions**: every seller has a free listing allowance; extra slots and featured promotions are requested with a manual payment reference that the administrator approves.
+- **Notifications**: in-app for every important event, and by email when an email key is configured.
+- **Admin panel** at `/admin`: members, listings, requests, payments, reports, promotions, reviews, activity log, categories and settings.
 
-## Portable setup
+Out of scope by design: online product payments, orders, delivery management, wallets and auctions. Buyers and sellers agree the deal between themselves.
 
-Use Node.js 22.13+ and the pnpm version in package.json. Install with the lockfile, then run `pnpm build:postgres`.
+## Guides
 
-Set process environment variables: `DATABASE_URL`, exact browser origin `APP_ORIGIN`, optionally `PORT` (3000), `UPLOADS_DIR` (server/uploads), and `PGSSL=require` for verified PostgreSQL TLS. Run `pnpm start:postgres`. Migrations run before startup. Use HTTPS through one trusted reverse proxy in production and retain both PostgreSQL and uploaded media in durable storage.
+| Document | For |
+|---|---|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Buyers and every new member |
+| [docs/SELLER_GUIDE.md](docs/SELLER_GUIDE.md) | Sellers |
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | The administrator |
+| [docs/API.md](docs/API.md) | Developers: every API endpoint, its inputs and rules |
+| [docs/ANALYSIS_MODELS.md](docs/ANALYSIS_MODELS.md) | Context model, marketplace flows and entity-relationship diagram |
+| [AUTH_SETUP.md](AUTH_SETUP.md) | Accounts, Google sign-in, the administrator account and notification emails |
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Installing on Railway, a local server or cPanel |
 
-To create a new administrator, set DATABASE_URL, ADMIN_EMAIL and a unique ADMIN_PASSWORD of at least 16 characters, then run `pnpm admin:postgres`. It creates the single administrator and changes nothing if one already exists. Remove the password environment variable afterward. The administrator signs in at `/admin`, not through the member login.
+PDF copies of these documents are in `docs/pdf/`, and the diagrams as images in `docs/diagrams/`.
 
-## Owner configuration
+## Project structure
 
-Enter actual payment instructions in the admin panel (`/admin`) → Settings. The default allowance is 25 slots and extra slots cost Rs. 50. Administrators can change limits, prices, three promotion durations, placement and categories. Only approved manual payments activate services.
+| Path | Contents |
+|---|---|
+| `app/market/` | The user interface (React): pages, forms, dashboards, admin panel, styles |
+| `lib/market/` | The marketplace rules shared by both editions: listings, requests, offers, chat, reviews, payments, promotions, admin, email |
+| `server/` | The Express + PostgreSQL server: sign-in, uploads, migrations |
+| `client/` | Entry point of the single-page build served by Express |
+| `app/api/`, `lib/auth/` | The same API on Cloudflare Workers (D1 database, R2 storage), used for local development |
+| `drizzle/` | Database schema migrations |
+| `tests/` | Automated tests |
 
-Google signup requires GOOGLE_CLIENT_ID and secret GOOGLE_CLIENT_SECRET, with the callback APP_ORIGIN/api/auth/google/callback. See AUTH_SETUP.md. No real OAuth credentials are currently configured. Email verification/reset remains an optional unimplemented extension and is not advertised as available.
+The project has two editions that share the same screens and rules:
 
-## Verification
+- **Express + PostgreSQL edition**: React, Node.js, Express and PostgreSQL. This is the edition that is deployed (see `Dockerfile`).
+- **Workers edition**: the same application on the Cloudflare Workers runtime with a local D1 database and R2 bucket. It needs no database server, so it is convenient for development.
 
-- `pnpm exec tsc --noEmit`
-- `pnpm test:market`: shared domain tests against PGlite and D1, including boundaries, permissions and concurrent D1 operations.
-- `pnpm test:password`: password hashing and verification.
-- Build the hosted Worker, then `pnpm test:auth`: Worker routes, sessions, invalid requests and R2 uploads.
-- `pnpm build:postgres` then `pnpm test:http`: real Express HTTP requests with embedded PostgreSQL.
-- `pnpm lint`: strict static checks; known current findings are recorded in REQUIREMENTS_AUDIT.md.
+## Running it locally
 
-All automated tests use disposable local data, not real production accounts or transfers. See REQUIREMENTS_AUDIT.md for evidence and pending acceptance checks.
+There are two ways. Both start from the source folder (without `node_modules`, which is downloaded again).
 
-## Maintenance
+### With Node.js
 
-Domain services are in lib/market; UI in app/market; hosted adapters in app/api; Express/PostgreSQL in server. Applied drizzle migrations are immutable; append new migrations for schema changes. Legacy records are retained, and imports needing review remain available to administrators.
+Requires Node.js 24.18 or newer (https://nodejs.org).
+
+```bash
+npm install
+
+# Workers edition (no database server needed): http://127.0.0.1:8787
+npm run build
+npm start
+
+# Express + PostgreSQL edition: http://localhost:3000
+npm run build:postgres
+DATABASE_URL=postgresql://user:password@127.0.0.1:5432/picking_price npm run start:postgres
+```
+
+Settings are read from environment variables: `DATABASE_URL`, `APP_ORIGIN`, `PORT`, `UPLOADS_DIR`, `ADMIN_SETUP_CODE`, and the optional `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY` and `EMAIL_FROM`. For the Workers edition copy `dev.vars.example` to `.dev.vars` in the project folder and edit it. Never commit real values.
+
+The Workers edition keeps its database and uploaded photos in the `.wrangler` folder. The first `npm start` creates the database tables by itself (`scripts/local-db.mjs`); delete the `.wrangler` folder to start empty again.
+
+### With Docker
+
+Requires Docker Desktop only; Node.js and PostgreSQL run inside the containers.
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:3000 (use exactly this address). The first run builds the image and takes several minutes. The administrator setup code for this local run is in `docker-compose.yml`.
+
+To create the administrator, set `ADMIN_SETUP_CODE` (16 characters or more), open `/admin` and enter the code with the email and password you want. See [AUTH_SETUP.md](AUTH_SETUP.md).
+
+## Tests
+
+| Command | Checks |
+|---|---|
+| `npm run test:market` | The marketplace rules against both PostgreSQL and D1: permissions, limits, search, offers, payments, promotions |
+| `npm run test:http` | The Express server through real HTTP requests on an embedded PostgreSQL database (run `npm run build:postgres` first) |
+| `npm run test:auth` | Sign-up, sign-in, sessions and uploads on the Workers runtime (run `npm run build` first) |
+| `npm run test:password` | Password hashing and verification |
+
+All tests use throwaway local databases; they never touch real accounts.
+
+## First settings after installing
+
+Sign in at `/admin` and open **Settings**: enter the payment instructions sellers should follow (bank or mobile wallet details), and adjust the free listing allowance (default 10), the price of an extra slot (default Rs. 50), and the three promotion lengths and prices if needed. Until payment instructions are saved, sellers cannot submit a slot or promotion request.

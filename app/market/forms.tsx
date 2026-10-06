@@ -64,8 +64,8 @@ export function ReportForm({ item, actions, done }: {
     item: Item;
     actions: Actions;
     done: () => void;
-}) { const [reason, setReason] = useState(''); return <form className="form" onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('reports', 'POST', { targetType: item.type, targetId: item.id, reason }))
-    done(); }}><label className="field">What happened?<textarea required minLength={10} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)}/></label><button className="btn dark">Submit report</button></form>; }
+}) { const [reason, setReason] = useState(''); return <form className="form" onSubmit={async (e) => { e.preventDefault(); if (await actions.perform('reports', 'POST', item.type ? { targetType: item.type, targetId: item.id, reason } : { targetType: 'general', reason }))
+    done(); }}>{!item.type && <p className="report-hint">Tell us what went wrong on Picking Price. To report a product, request, message, review or member, use the Report link shown on it.</p>}<label className="field">What happened?<textarea required minLength={10} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)}/></label><button className="btn dark">Submit report</button></form>; }
 export function PaymentForm({ item, actions, done }: {
     item: Item;
     actions: Actions;
@@ -75,12 +75,14 @@ export function PaymentForm({ item, actions, done }: {
     // Opened from a listing: promote it. Opened from Quota & Services: extra listings, with the chosen pack filled in.
     const [purpose, setPurpose] = useState(item.id ? 'promotion' : 'slots');
     const [quantity, setQuantity] = useState(Math.min(100, Math.max(1, Math.round(Number(item.quantity)) || 1)));
-    const [duration, setDuration] = useState('1');
+    const [picked, setDuration] = useState('');
     const [reference, setReference] = useState('');
     const [busy, setBusy] = useState(false);
     const conf = state.data?.settings;
     const prices = conf ? [conf.promotion24h, conf.promotion3d, conf.promotion7d] : [];
     const durations: number[] = conf?.promotionDurations || [];
+    // The admin can change the three lengths, so begin on the first one on offer.
+    const duration = durations.includes(Number(picked)) ? picked : String(durations[0] ?? 1);
     const amount = conf ? (purpose === 'slots' ? quantity * conf.extraListingPrice : prices[durations.indexOf(Number(duration))] || 0) : 0;
     const days = (d: number) => d === 1 ? '24 hours' : d + ' days';
     const setSlots = (n: number) => setQuantity(Math.min(100, Math.max(1, Math.round(n) || 1)));

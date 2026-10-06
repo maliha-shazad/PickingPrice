@@ -185,6 +185,7 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
                                     <div className="msg-bubble-header">
                                         <strong>{m.sender}</strong>
                                         <small>{new Date(m.created).toLocaleString('en-PK', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</small>
+                                        {m.owner !== actions.user?.id && <button type="button" className="msg-report" title="Report this message" aria-label="Report this message" onClick={() => actions.open('report', { type: 'message', id: m.id })}><Flag size={12} /></button>}
                                     </div>
                                     <p className="msg-bubble-body">{m.body}</p>
                                 </div>

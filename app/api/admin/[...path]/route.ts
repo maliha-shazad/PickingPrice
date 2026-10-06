@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { cookies } from 'next/headers';
 import { MarketError, Database } from '@/lib/market/types';
+import { mailSettings } from '@/lib/auth/server';
+import { setMailer } from '@/lib/market/email';
 import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '@/lib/market/admin-auth';
 export const dynamic = 'force-dynamic';
 const cookieName = '__Host-pp_admin';
@@ -26,8 +28,10 @@ async function handle(req: Request, path: string[]) {
             }
         }
         const [area, ...rest] = path;
-        if (area === 'market')
+        if (area === 'market') {
+            setMailer(mailSettings(req));
             return Response.json(await adminMarket(db, token, req.method, rest, new URL(req.url).searchParams, body), { headers });
+        }
         if (req.method === 'GET' && area === 'session')
             return Response.json(await adminStatus(db, token, setupCode), { headers });
         if (req.method === 'POST' && area === 'login')

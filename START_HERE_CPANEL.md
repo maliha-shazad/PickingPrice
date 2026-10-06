@@ -51,17 +51,14 @@ scripts above. Your hosting provider still needs to validate Passenger support.
 - Application/backend/UI source, lockfile, schema migrations and tests.
 - Sample product images and prebuilt frontend in `server/public/`.
 - `passenger.cjs`, a placeholder configuration template and the full guide.
-- The latest requirements audit, including outstanding lint/acceptance issues.
-- `FILES_SHA256.txt` with checksums for the packaged files (excluding itself).
+- User, seller and administrator guides in `docs/`.
 
 ## Intentionally excluded
 
 Real environment files and credentials, installed dependencies, Git history,
-local caches, hosted deployment binding, uploaded user media and database data.
+local caches, uploaded user media and database data.
 This is a fresh-install package, not a backup or migration of live user data.
-The previous private Site access gate does not transfer to this installation.
 
 No cPanel account was accessed. Build/API checks are local evidence, not a claim
 of successful deployment to your hosting account. Configure real Google keys
-and payment instructions yourself; existing limitations remain in
-`REQUIREMENTS_AUDIT.md`.
+and payment instructions yourself.

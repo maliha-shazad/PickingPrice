@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "dist/**",
     "server/public/**",
-    ".sites-runtime/**",
+    ".pnpm-store/**",
     "next-env.d.ts",
   ]),
   {

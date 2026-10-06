@@ -6,7 +6,15 @@ import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, 
 import { services, requestPayment, decidePayment } from './services';
 import { adminData, saveSettings, saveCategory, deleteCategory, moderate } from './admin';
 import { issueResetCode } from './password-reset';
+import { afterRequest } from './email';
 export async function market(c: Context, method: string, path: string[], q: URLSearchParams, body: Record<string, unknown> = {}) {
+    const result = await route(c, method, path, q, body);
+    // Anything that may have created notifications (every change, and the pages that expire old items) also emails them.
+    if (method !== 'GET' || ['notifications', 'services', 'me'].includes(path[0]))
+        await afterRequest(c.db);
+    return result;
+}
+async function route(c: Context, method: string, path: string[], q: URLSearchParams, body: Record<string, unknown> = {}) {
     if (body === null || typeof body !== 'object' || Array.isArray(body))
         throw new MarketError('Provide a valid form object.');
     await initialize(c.db);

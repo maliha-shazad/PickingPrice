@@ -9,6 +9,7 @@ import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode } from '../lib/market/password-reset';
 import { legalHtml, legalTitle } from '../app/legal-content';
+import { setMailer, defaultSender } from '../lib/market/email';
 import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '../lib/market/admin-auth';
 export type Config = {
     origin: string;
@@ -19,8 +20,11 @@ export type Config = {
     googleClientSecret?: string;
     /** Google Search Console "HTML tag" code, proving to Google that we own this website. */
     googleSiteVerification?: string;
+    /** Resend API key; notification emails are sent only when it is set. */
     resendKey?: string;
     emailFrom?: string;
+    /** Where emails are posted; only tests change it. */
+    emailEndpoint?: string;
 };
 const digest = (v: string) => createHash('sha256').update(v).digest('hex');
 const token = () => randomBytes(32).toString('base64url');
@@ -30,6 +34,7 @@ export function createApp(db: Database, config: Config) {
     app.disable('x-powered-by');
     app.set('trust proxy', 1);
     const secure = config.origin.startsWith('https:');
+    setMailer(config.resendKey ? { key: config.resendKey, from: config.emailFrom || defaultSender, site: config.origin, background: true, endpoint: config.emailEndpoint } : null);
     const sessionName = secure ? '__Host-pp_session' : 'pp_session';
     const oauthName = secure ? '__Host-pp_oauth' : 'pp_oauth';
     const googleReady = () => !!(config.googleClientId && config.googleClientSecret);
@@ -49,11 +54,11 @@ export function createApp(db: Database, config: Config) {
         if (Number(r!.count) > max)
             throw new MarketError('Too many attempts. Try again in 15 minutes.', 429);
     } }
-    // Same rules as the hosted edition, so an account behaves identically on either.
+    // Same rules as the Workers edition, so an account behaves identically on either.
     const credentials = (body: Record<string, unknown> = {}) => { const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '', password = typeof body.password === 'string' ? body.password : ''; if (email.length > 254 || (!/^\S+@\S+\.\S+$/.test(email) && !/^\+?\d{7,15}$/.test(email.replace(/[\s-]/g, ''))))
         throw new MarketError('Enter a valid email address or phone number.'); if (password.length < 8 || password.length > 128)
         throw new MarketError('Use a password between 8 and 128 characters.'); return { email, password }; };
-    app.get('/api/auth/options', (_req, res) => res.json({ email: true, google: googleReady(), recovery: false, workspace: false }));
+    app.get('/api/auth/options', (_req, res) => res.json({ email: true, google: googleReady(), recovery: false }));
     app.post('/api/auth/signup', async (req, res) => { const { email, password } = credentials(req.body); const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''; if (name.length < 2 || name.length > 80)
         throw new MarketError('Enter a name between 2 and 80 characters.'); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created) VALUES (?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now()); if (!inserted)
         throw new MarketError('Unable to register with these details. Try signing in.', 409); await session(res, key); res.json({ ok: true }); });
@@ -63,7 +68,6 @@ export function createApp(db: Database, config: Config) {
     app.post('/api/auth/logout', async (req, res) => { const t = cookie(req, sessionName); if (t)
         await run(db, 'DELETE FROM sessions WHERE token_hash=?', digest(t)); setCookie(res, sessionName, '', 0); res.json({ ok: true }); });
     app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); await session(res, await redeemResetCode(db, email, req.body.code, password)); res.json({ ok: true }); });
-    app.post('/api/auth/workspace', (_req, res) => res.status(400).json({ error: 'Workspace accounts are available only on the hosted Sites edition.' }));
     app.get('/api/auth/google', async (_req, res) => { if (!googleReady())
         return res.redirect('/?auth_error=google_not_configured'); const state = token(), verifier = token(); await run(db, 'INSERT INTO oauth_states (state_hash,verifier,expires) VALUES (?,?,?)', digest(state), verifier, new Date(Date.now() + 600000).toISOString()); setCookie(res, oauthName, state, 600); const url = new URL('https://accounts.google.com/o/oauth2/v2/auth'); url.search = new URLSearchParams({ client_id: config.googleClientId!, redirect_uri: config.origin + '/api/auth/google/callback', response_type: 'code', scope: 'openid email profile', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString(); res.redirect(url.toString()); });
     app.get('/api/auth/google/callback', async (req, res) => { const fail = (code: string) => { setCookie(res, oauthName, '', 0); return res.redirect('/?auth_error=' + code); }; if (!googleReady())

@@ -565,11 +565,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .pp-mobile-link{font-size:11.5px}
   .pp-mobile-tagline{font-size:clamp(7.5px,calc(4.921cqw - 9.9px),11px)}
 }
-/* Under 385px one line would need type smaller than 7.5px, so the tagline takes two lines. */
-@media(max-width:384px){
-  .pp-mobile-tagline{white-space:normal;text-wrap:balance;font-size:9.5px;line-height:1.2;letter-spacing:-.1px}
+/* Phones: on one line the tagline would shrink to about 8px, so it takes two lines at a readable size. */
+@media(max-width:460px){
+  .pp-mobile-tagline{white-space:normal;text-wrap:balance;font-size:11px;line-height:1.2;letter-spacing:-.1px}
 }
-@media(max-width:340px){
+@media(max-width:384px){
+  .pp-mobile-tagline{font-size:10px}
+}
+@media(max-width:350px){
+  .pp-mobile-tagline{font-size:9px}
+}
+@media(max-width:330px){
   .pp-mobile-tagline{font-size:8px}
 }
 /* Narrow phones: Wishlist and Messages keep their icons and drop the words. */
@@ -1059,6 +1065,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   font-size: 14px;
   color: #94a3b8;
   line-height: 1.5;
+  max-width: 460px;
 }
 .bn-hero-right {
   display: grid;
@@ -2926,3 +2933,86 @@ div.pf-avatar svg{width:22px;height:22px}
 .pf .pf-avatar{flex:0 0 88px;width:88px !important;height:88px !important;min-height:0 !important;aspect-ratio:1/1;padding:0}
 .pf div.pf-avatar span{font-size:9.5px;line-height:1}
 @media(max-width:600px){.pf .pf-avatar{flex-basis:80px;width:80px !important;height:80px !important}}
+
+/* Product page: brand and quantity sit beside condition; four boxes wrap to two rows on narrow columns. */
+.pp-condition-badges{flex-wrap:wrap}
+.pp-condition-badges .cond-badge{flex:1 1 calc(50% - 6px);min-width:0}
+.pp-condition-badges .cond-badge strong{overflow-wrap:anywhere}
+.pp-report-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:none;border:0;padding:0;font-size:12.5px;color:#8aa08a;text-decoration:underline;text-underline-offset:2px;cursor:pointer;overflow:visible}
+.pp-report-link:hover{color:#b91c1c}
+
+/* Chat: report a message someone sent you */
+.msg-report{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:none;color:#b6c2b6;cursor:pointer;overflow:visible}
+.msg-report:hover,.msg-report:focus-visible{color:#b91c1c;background:#fee2e2}
+.report-hint{font-size:13px;line-height:1.55;color:#6a8a6a;background:#f5f8f2;border:1px solid #e0e8d8;border-radius:10px;padding:10px 12px;margin:0}
+
+/* Post a Request: where the item is needed and until when the request stays open */
+.pr-where-when{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.pr-where-when label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pr-where-when label span{font-size:12px;font-weight:600;color:#475569}
+.pr-where-when input{height:46px;padding:0 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-size:14px;color:#0f172a;outline:none;width:100%;box-sizing:border-box;font-family:inherit}
+.pr-where-when input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.14);background:#fff}
+@media(max-width:600px){.pr-where-when{grid-template-columns:minmax(0,1fr)}}
+
+/* Home search: sort and filters above the results */
+.hp-search-tools{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:4px 0 14px}
+.hp-search-tools label{display:flex;flex-direction:column;gap:5px;min-width:0}
+.hp-search-tools label>span:first-child{font-size:11.5px;font-weight:700;color:#4f6f57;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.hp-search-tools select,.hp-search-tools input{height:40px;width:100%;box-sizing:border-box;border:1px solid #cfe0c9;border-radius:10px;background-color:#fff;font-size:14px;color:#1e3d2f;padding:0 12px;outline:none;font-family:inherit;min-width:0}
+.hp-search-tools select.pp-select{field-sizing:fixed;padding-right:32px;background-position:right 10px center}
+.hp-search-tools select:focus-visible,.hp-search-tools input:focus{border-color:#2d6a4f;box-shadow:0 0 0 3px rgba(45,106,79,.14)}
+.hp-search-range{display:flex;align-items:center;gap:6px;min-width:0}
+.hp-search-range i{font-style:normal;font-size:12px;color:#7a9a7a}
+.hp-search-range input{flex:1 1 0;padding:0 8px}
+.hp-search-count{font-size:13px;color:#6a8a6a;margin:0 0 12px}
+.hp-search-results .pager{margin-top:18px}
+@media(max-width:1100px){.hp-search-tools{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.hp-search-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.hp-search-tools .hp-search-price{grid-column:1 / -1}}
+@media(max-width:600px){.hp-search-tools{gap:10px}.hp-search-tools select,.hp-search-tools input{font-size:13.5px;padding:0 10px}}
+
+/* Buyer dashboard: My Reviews */
+.bd-review-list{display:flex;flex-direction:column;gap:10px}
+.bd-review{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px}
+.bd-review-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.bd-review-seller{background:none;border:0;padding:0;font-size:14.5px;font-weight:700;color:#0f766e;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-review-seller:hover{text-decoration:underline}
+.bd-review-stars{color:#f59e0b;font-size:14px;letter-spacing:1px;white-space:nowrap}
+.bd-review-stars i{font-style:normal;color:#d7dfd2}
+.bd-review-top small{margin-left:auto;font-size:12px;color:#94a3b8;white-space:nowrap}
+.bd-review p{margin:0;font-size:14px;line-height:1.6;color:#334155;overflow-wrap:anywhere}
+.bd-review-hidden{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:#b45309;background:#fef3c7;border-radius:20px;padding:2px 10px}
+
+/* Sell Now: five condition cards */
+.sn-cond-grid{grid-auto-rows:1fr}
+
+/* Product page: the seller's deal options (open to offers, open to exchange) */
+.pp-deal{background:#fff;border:1px solid #d9e8d4;border-radius:14px;padding:4px 16px;margin:0 0 20px}
+.pp-deal-item{padding:12px 0}
+.pp-deal-item+.pp-deal-item{border-top:1px solid #eef3ea}
+.pp-deal-row{display:flex;align-items:center;gap:12px}
+.pp-deal-icon{flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#e8f5e9;color:#2d6a4f;display:flex;align-items:center;justify-content:center}
+.pp-deal-text{flex:1;min-width:0}
+.pp-deal-text strong{display:block;font-size:14px;color:#1e3d2f}
+.pp-deal-text p{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:#6a8a6a}
+.pp-deal-btn{flex-shrink:0;background:#fff;color:#2d6a4f;border:1.5px solid #2d6a4f;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pp-deal-btn:hover{background:#2d6a4f;color:#fff}
+.pp-deal-form{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.pp-deal-form label{font-size:12.5px;font-weight:600;color:#3c5446}
+.pp-deal-line{display:flex;gap:8px}
+.pp-deal-form input,.pp-deal-form textarea{flex:1;min-width:0;border:1.5px solid #d5ddcd;border-radius:10px;padding:10px 12px;font-size:14.5px;color:#1e3d2f;background:#fff;outline:none;font-family:inherit;box-sizing:border-box;width:100%}
+.pp-deal-form textarea{min-height:76px;resize:vertical}
+.pp-deal-form input:focus,.pp-deal-form textarea:focus{border-color:#2d6a4f;box-shadow:0 0 0 3px rgba(45,106,79,.14)}
+.pp-deal-form button{flex-shrink:0;background:#2d6a4f;color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pp-deal-form>button{align-self:flex-start}
+.pp-deal-form button:disabled{opacity:.6;cursor:default}
+.pp-deal-own{margin:0;padding:10px 0 12px;border-top:1px solid #eef3ea;font-size:12.5px;color:#8aa08a}
+@media(max-width:600px){
+  .pp-deal{padding:2px 12px}
+  .pp-deal-row{flex-wrap:wrap}
+  .pp-deal-text{flex:1 1 calc(100% - 48px)}
+  .pp-deal-btn{flex:1 1 100%;margin-left:48px;text-align:center}
+  .pp-deal-form>button{align-self:stretch}
+}
+
+/* Product page: why a sample product has no review form */
+.pp-sample-note{margin:16px 0 0;padding:12px 14px;background:#f5f8f2;border:1px dashed #d5ddcd;border-radius:10px;font-size:13px;line-height:1.5;color:#6a8a6a}

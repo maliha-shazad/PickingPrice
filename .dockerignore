@@ -3,7 +3,7 @@ node_modules
 .next
 .vinext
 .wrangler
-.sites-runtime
+.pnpm-store
 dist
 server/public
 server/uploads

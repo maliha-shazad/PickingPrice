@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Camera, Package, ArrowRight, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, RefreshCcw, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoad, offersDelivery } from './ui';
+import { Actions, Photo, useLoadAll, offersDelivery, sellerScore } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -11,7 +11,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
-  const [sort, setSort] = useState<string>('Featured + Official Warranty First');
+  const [sort, setSort] = useState<string>('Featured First');
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [selectedArea, setSelectedArea] = useState<string>('');
@@ -32,7 +32,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
     setSelectedCategory('all');
     setMinPrice('');
     setMaxPrice('');
-    setSort('Featured + Official Warranty First');
+    setSort('Featured First');
     setSelectedDelivery([]);
     setSelectedArea('');
   };
@@ -59,7 +59,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
   const toggleBrand = (b: string) => setSelectedBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]);
   const toggleDelivery = (d: string) => setSelectedDelivery(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
 
-  const state = useLoad('listings?size=100', actions.revision);
+  const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
   const hasRealData = state.data?.total > 0;
   const sourceData = hasRealData ? realListings : samples;
@@ -102,6 +102,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
   filtered.sort((a, b) => {
     if (sort === 'Price: Low to High') return a.price - b.price;
     if (sort === 'Price: High to Low') return b.price - a.price;
+    if (sort !== 'Newest' && !!(b as any).featured !== !!(a as any).featured) return (b as any).featured ? 1 : -1;
     return new Date(b.created).getTime() - new Date(a.created).getTime();
   });
 
@@ -128,7 +129,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
           <div className="pl-breadcrumb">
             <button onClick={() => actions.go('Explore')}><Home size={13} style={{marginRight: 4, display: 'inline', verticalAlign: 'text-bottom'}}/> Home</button> <ChevronRight size={13} /> 
             <button onClick={() => actions.go('Explore')}>Marketplace</button> <ChevronRight size={13} /> 
-            <span className="pl-bread-active">Brand New & Sealed Products</span>
+            <span className="pl-bread-active">Brand New Products</span>
           </div>
         </div>
       </div>
@@ -137,25 +138,25 @@ export function BrandNew({ actions }: { actions: Actions }) {
       <div className="bn-hero-wrap">
         <div className="bn-hero">
           <div className="bn-hero-left">
-            <div className="bn-hero-badge">● DIRECT IMPORTERS & 0% TAMPER ASSURANCE</div>
-            <h1 className="bn-hero-title">100% Brand New, Sealed Box<br/>with Official Pakistan<br/>Warranty</h1>
-            <p className="bn-hero-sub">Shop from trusted sellers and get genuine products with sealed packaging,<br/>verified details, and warranty support.</p>
+            <div className="bn-hero-badge">● BRAND NEW PRODUCTS</div>
+            <h1 className="bn-hero-title">Brand New Products<br/>from Sellers<br/>Across Pakistan</h1>
+            <p className="bn-hero-sub">Browse unused items listed by sellers. Check the product, its packing and any warranty with the seller before you pay.</p>
           </div>
           <div className="bn-hero-right">
             <div className="bn-hero-card">
-              <div className="bn-hero-card-icon"><Package size={16} color="#6ee7b7" /> UNTOUCHED</div>
-              <h4>Factory Sealed</h4>
-              <p>Original Holographic tags</p>
+              <div className="bn-hero-card-icon"><Package size={16} color="#6ee7b7" /> UNUSED</div>
+              <h4>New Condition Only</h4>
+              <p>Every item here is listed as New</p>
             </div>
             <div className="bn-hero-card">
-              <div className="bn-hero-card-icon"><FileCheck size={16} color="#6ee7b7" /> AUDITED</div>
-              <h4>Physical Outlets</h4>
-              <p>Gulberg & Packages Mall</p>
+              <div className="bn-hero-card-icon"><FileCheck size={16} color="#6ee7b7" /> DIRECT</div>
+              <h4>Chat with the Seller</h4>
+              <p>Ask your questions before you buy</p>
             </div>
             <div className="bn-hero-card">
-              <div className="bn-hero-card-icon"><ShieldCheck size={16} color="#6ee7b7" /> PROTECTED</div>
-              <h4>Insured Raast/COD</h4>
-              <p>TCS Insured box dispatch</p>
+              <div className="bn-hero-card-icon"><ShieldCheck size={16} color="#6ee7b7" /> SAFE</div>
+              <h4>Inspect First</h4>
+              <p>Meet in a public place</p>
             </div>
           </div>
         </div>
@@ -301,7 +302,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
             <div className="pl-feed-header">
               <div style={{display:'flex', alignItems: 'center', gap: '8px'}}>
                 <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#059669'}}></div>
-                <h2 className="pl-feed-title" style={{fontSize: '18px', margin: 0}}>Showing {filtered.length} Brand New Factory Sealed items in Pakistan</h2>
+                <h2 className="pl-feed-title" style={{fontSize: '18px', margin: 0}}>Showing {filtered.length} Brand New items in Pakistan</h2>
               </div>
               <div className="pl-sort-wrap">
                 <span className="pl-sort-label">Sort by:</span>
@@ -312,7 +313,8 @@ export function BrandNew({ actions }: { actions: Actions }) {
                     value={sort}
                     onChange={(e) => setSort(e.target.value)}
                   >
-                    <option value="Featured + Official Warranty First">Featured + Official Warranty First</option>
+                    <option value="Featured First">Featured First</option>
+                    <option value="Newest">Newest First</option>
                     <option value="Price: Low to High">Price: Low to High</option>
                     <option value="Price: High to Low">Price: High to Low</option>
                   </select>
@@ -354,8 +356,8 @@ export function BrandNew({ actions }: { actions: Actions }) {
                     {/* Members' own listings carry a list of photos; the sample products carry a single image. */}
                     <Photo src={Array.isArray((p as any).images) && (p as any).images.length ? (p as any).images[0] : (p as any).image} alt={p.title} />
                     <div className="bn-card-badges-top">
-                      <span className="bn-badge-dark"><ShieldCheck size={10} /> Factory Sealed Pack</span>
-                      {/* Only a warranty the product really states (it used to alternate two invented ones on every card). */}
+                      <span className="bn-badge-dark"><ShieldCheck size={10} /> Brand New</span>
+                      {/* Only a warranty the product really states. */}
                       {!!(p as any).warranty && <span className="bn-badge-light" style={{color: i % 2 === 0 ? '#059669' : '#ea580c', background: i % 2 === 0 ? '#d1fae5' : '#ffedd5'}}>{String((p as any).warranty)}</span>}
                     </div>
                     <button className="bn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}>
@@ -364,24 +366,23 @@ export function BrandNew({ actions }: { actions: Actions }) {
                   </div>
                   <div className="pl-card-body">
                     <div className="pl-card-catrow">
-                      <span className="pl-card-cat">{p.category.toUpperCase()} • SEALED BOX</span>
+                      <span className="pl-card-cat">{p.category.toUpperCase()} • NEW</span>
                     </div>
                     <h3 className="pl-card-title">{p.title}</h3>
                     <div className="pl-card-price-row">
                       <span className="pl-card-price">Rs. {formatMoney(p.price)}</span>
-                      <span className="pl-card-orig">Rs. {formatMoney(Math.floor(p.price * 1.1))}</span>
                     </div>
-                    <div className="pl-card-ref" style={{ color: '#ea580c', fontWeight: 600 }}>Save Rs. {formatMoney(Math.floor(p.price * 0.1))} + 7% OFF MRP</div>
+                    <div className="pl-card-ref">{(p as any).brand ? 'Brand: ' + (p as any).brand : 'Brand new, unused'}</div>
                     
                     <div className="pl-card-seller">
                       <div className="pl-seller-avatar" style={{ background: '#059669', color: '#fff' }}>{p.seller.charAt(0)}</div>
                       <div className="pl-seller-info">
-                        <span className="pl-seller-name"><ShieldCheck size={12} color="#059669" style={{display:'inline', marginRight: 2}}/> {p.seller}</span>
+                        <span className="pl-seller-name">{!!(p as any).verified && <ShieldCheck size={12} color="#059669" style={{display:'inline', marginRight: 2}}/>} {p.seller}</span>
                         <span className="pl-seller-loc">{p.location}</span>
                       </div>
                       <div className="pl-seller-rating">
                         <Star size={10} fill="#f59e0b" color="#f59e0b" />
-                        <span>4.9 (142)</span>
+                        <span>{sellerScore(p as any)}</span>
                       </div>
                     </div>
                     
@@ -396,15 +397,13 @@ export function BrandNew({ actions }: { actions: Actions }) {
 
             {totalPages > 1 && (
               <div className="pl-pagination" style={{justifyContent: 'space-between', borderTop: 'none', paddingTop: '24px', marginTop: '32px'}}>
-                <div style={{color: '#6b7280', fontSize: '13px'}}>Showing 1 - 8 of 520 verified sealed products</div>
+                <div style={{color: '#6b7280', fontSize: '13px'}}>Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} products</div>
                 <div style={{display: 'flex', gap: '4px'}}>
                   <button className="pl-page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} style={{color: '#cbd5e1'}}>&larr; Previous</button>
                   <div className="pl-page-nums">
-                    <button className="pl-page-num active">1</button>
-                    <button className="pl-page-num">2</button>
-                    <button className="pl-page-num">3</button>
-                    <span style={{color: '#9ca3af', padding: '0 4px'}}>...</span>
-                    <button className="pl-page-num">12</button>
+                    {Array.from({ length: totalPages }).map((_, i) => (
+                      <button key={i} className={`pl-page-num ${currentPage === i + 1 ? 'active' : ''}`} onClick={() => setCurrentPage(i + 1)}>{i + 1}</button>
+                    ))}
                   </div>
                   <button className="pl-page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} style={{color: '#0f172a', background: '#f1f5f9'}}>Next &rarr;</button>
                 </div>
@@ -415,17 +414,17 @@ export function BrandNew({ actions }: { actions: Actions }) {
             <div className="bn-cta-banner">
               <div className="bn-cta-left">
                 <div className="bn-cta-badge">
-                  <BadgeDollarSign size={12} /> REVERSE PRICING ENGINE
+                  <BadgeDollarSign size={12} /> BUYER REQUESTS
                 </div>
-                <h2 className="bn-cta-title" style={{ maxWidth: '420px', lineHeight: 1.2 }}>Looking to Buy at Wholesale or Bulk Target Price?</h2>
-                <p className="bn-cta-desc" style={{ maxWidth: '500px' }}>Post a New Product Target Request. 350+ verified distributors and importers will bid directly with official invoice and sealed packing guarantee.</p>
+                <h2 className="bn-cta-title" style={{ maxWidth: '420px', lineHeight: 1.2 }}>Can't Find the New Product You Want?</h2>
+                <p className="bn-cta-desc" style={{ maxWidth: '500px' }}>Post a request with the product and the price you have in mind. Sellers who have it can send you their offers.</p>
               </div>
               <div className="bn-cta-right">
                 <button className="bn-cta-btn-primary" onClick={() => actions.open('request-form')}>
-                  <FilePlus size={16} /> Post Bulk/Product Request
+                  <FilePlus size={16} /> Post a Request
                 </button>
-                <button className="bn-cta-btn-secondary" onClick={() => window.alert('Reverse bidding allows buyers to post their target prices to verified distributors who bid against each other to fulfill your order.')}>
-                  How Reverse Bidding Works
+                <button className="bn-cta-btn-secondary" onClick={() => actions.open('info', { topic: 'help' })}>
+                  How Requests Work
                 </button>
               </div>
             </div>

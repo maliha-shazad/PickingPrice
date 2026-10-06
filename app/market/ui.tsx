@@ -35,6 +35,8 @@ export const DELIVERY_OPTIONS = ['Same-Day Delivery', 'In-Store Pickup', 'Nation
 /** True when nothing is ticked, or the product offers at least one of the ticked delivery options. */
 export const offersDelivery = (product: Item, ticked: string[]) => ticked.length === 0 || ticked.some(d => Array.isArray(product.delivery) && product.delivery.includes(d));
 export const money = (n: number) => 'Rs. ' + Number(n).toLocaleString('en-PK');
+// A seller's review score on a product card: "4.5 (3)", or "New" before the first review.
+export const sellerScore = (p: Item) => { const n = Number(p.seller_reviews) || 0; return n ? Number(p.seller_rating).toFixed(1) + ' (' + n + ')' : 'New'; };
 export const date = (s: string) => s ? new Date(s).toLocaleDateString('en-PK') : '';
 export async function api(path: string, method = 'GET', body?: Record<string, unknown>) { const r = await fetch(apiBase + path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, ...(body ? { body: JSON.stringify(body) } : {}) }); const d: {error?: string} & Record<string, unknown> = await r.json(); if (!r.ok)
     throw Object.assign(new Error(d.error || 'Unable to complete this action.'), { status: r.status }); return d; }
@@ -44,6 +46,32 @@ export function useLoad(path: string | null, revision = 0) {
     const [result,setResult]=useState<{key:string;path:string|null;data:Item|null;error:string}>({key:'',path:null,data:null,error:''});
     useEffect(()=>{if(!path)return;let live=true;api(path).then(data=>{if(live)setResult({key,path,data,error:''})}).catch((e:unknown)=>{if(live)setResult({key,path,data:null,error:e instanceof Error?e.message:'Unable to load this section.'})});return()=>{live=false}},[path,key]);
     return {data:path&&result.path===path?result.data:null,error:result.key===key?result.error:'',loading:!!path&&result.key!==key,retry:()=>setRetry(v=>v+1)};
+}
+// A whole list rather than its first page. The server hands out at most 60 rows at a time, so this asks for
+// page after page. For the pages that filter and sort everything in the browser.
+export function useLoadAll(path: string | null, revision = 0) {
+    const [retry, setRetry] = useState(0);
+    const key = JSON.stringify([path, revision, retry]);
+    const [result, setResult] = useState<{ key: string; path: string | null; data: Item | null; error: string }>({ key: '', path: null, data: null, error: '' });
+    useEffect(() => {
+        if (!path) return;
+        let live = true;
+        const from = (page: number) => api(path + (path.includes('?') ? '&' : '?') + 'size=60&page=' + page);
+        (async () => {
+            const first = await from(1);
+            const seen = new Map<string, Item>();
+            for (const item of (first.items as Item[]) || []) seen.set(String(item.id), item);
+            const total = Number(first.total) || 0;
+            for (let page = 2; live && (page - 1) * 60 < total && page <= 25; page++) {
+                const more = ((await from(page)).items as Item[]) || [];
+                if (!more.length) break;
+                for (const item of more) seen.set(String(item.id), item);
+            }
+            if (live) setResult({ key, path, data: { ...first, items: [...seen.values()], total }, error: '' });
+        })().catch((e: unknown) => { if (live) setResult({ key, path, data: null, error: e instanceof Error ? e.message : 'Unable to load this section.' }); });
+        return () => { live = false; };
+    }, [path, key]);
+    return { data: path && result.path === path ? result.data : null, error: result.key === key ? result.error : '', loading: !!path && result.key !== key, retry: () => setRetry(v => v + 1) };
 }
 export function Load({ state, children }: {
     state: ReturnType<typeof useLoad>;

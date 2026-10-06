@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers';
-import { getMarketUser } from '@/lib/auth/server';
+import { getMarketUser, mailSettings } from '@/lib/auth/server';
+import { setMailer } from '@/lib/market/email';
 import { market } from '@/lib/market/router';
 import { MarketError, Database } from '@/lib/market/types';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ export async function handle(req: Request, path: string[]) {
                 throw new MarketError('Invalid form.');
             }
         }
+        setMailer(mailSettings(req));
         const data = await market({ db: (env as {DB: Database}).DB, user }, req.method, path, new URL(req.url).searchParams, body);
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
     }

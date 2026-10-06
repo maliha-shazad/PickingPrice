@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoad, Photo, money, DELIVERY_OPTIONS, offersDelivery } from './ui';
+import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -63,7 +63,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
   const currentCity = actions.location && actions.location !== 'all' ? actions.location : 'Lahore';
   const areas = AREAS[currentCity] || ['Center', 'North', 'South', 'East', 'West'];
 
-  const state = useLoad('listings?size=100', actions.revision);
+  const state = useLoadAll('listings', actions.revision);
   const realListings = (state.data?.items || []) as any[];
   const hasRealData = Number(state.data?.total) > 0;
   const sourceData: any[] = hasRealData ? realListings : samples;
@@ -139,7 +139,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
           </div>
           <div className="pl-hero-right">
             <div className="pl-trust-pills">
-              <span className="pl-trust-pill"><ShieldCheck size={14}/> Verified Sellers</span>
+              <span className="pl-trust-pill"><ShieldCheck size={14}/> Inspect Before You Pay</span>
               <span className="pl-trust-pill"><Package size={14}/> {total} Products</span>
             </div>
           </div>
@@ -244,13 +244,6 @@ export function AllCategories({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            <div className="pl-filter-section">
-              <div className="pl-filter-label">Trust Perks</div>
-              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">SECP Verified Sellers</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Rating 4.8 & Above</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">Safe Handover Hubs</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Original Box & Bill</span></label>
-            </div>
           </aside>
 
           <div style={{flex:1}}>

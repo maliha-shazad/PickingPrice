@@ -6,7 +6,7 @@ export const rows = async (db: Database, sql: string, ...args: unknown[]) => (aw
 export const run = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args).run();
 export const stmt = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args);
 const list = (v: unknown) => { if (Array.isArray(v)) return v; try { const parsed = JSON.parse(String(v || '[]')); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-export const parseImages = (r: Row) => ({ ...r, images: typeof r.images === 'string' ? JSON.parse(r.images) : r.images || [], delivery: list(r.delivery), featured: !!r.featured });
+export const parseImages = (r: Row) => ({ ...r, images: typeof r.images === 'string' ? JSON.parse(r.images) : r.images || [], delivery: list(r.delivery), featured: !!r.featured, negotiable: !!r.negotiable, exchange: !!r.exchange });
 export function authenticated(c: Context) { if (!c.user)
     throw new MarketError('Sign in to continue.', 401); return c.user; }
 export function permit(c: Context, role: 'buyer' | 'seller' | 'admin') { const u = authenticated(c); if (u.role !== 'admin' && u.role !== 'both' && u.role !== role)
@@ -54,9 +54,15 @@ export async function initialize(db: Database) {
     }
     // Delivery and pickup options the seller offers, stored as a JSON list.
     try { await run(db, "ALTER TABLE listings ADD COLUMN delivery TEXT NOT NULL DEFAULT '[]'"); } catch {}
+    // The seller's two deal switches: open to price offers, open to an exchange.
+    try { await run(db, 'ALTER TABLE listings ADD COLUMN negotiable INTEGER NOT NULL DEFAULT 0'); } catch {}
+    try { await run(db, 'ALTER TABLE listings ADD COLUMN exchange INTEGER NOT NULL DEFAULT 0'); } catch {}
     // Buyer requests saved as drafts from the Post a Request page (the form's fields as JSON).
     await run(db, "CREATE TABLE IF NOT EXISTS request_drafts (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', data TEXT NOT NULL, updated TEXT NOT NULL)");
     await run(db, 'CREATE INDEX IF NOT EXISTS request_drafts_owner ON request_drafts (owner)');
+    // Which notifications have already been handled by the email sender (see email.ts).
+    await run(db, "CREATE TABLE IF NOT EXISTS notification_emails (id TEXT PRIMARY KEY, owner TEXT NOT NULL, link TEXT NOT NULL DEFAULT '', sent INTEGER NOT NULL DEFAULT 0, created TEXT NOT NULL)");
+    await run(db, 'CREATE INDEX IF NOT EXISTS notification_emails_owner ON notification_emails (owner, link)');
     initialized.add(db);
 }
 export async function expireForUser(c: Context) {

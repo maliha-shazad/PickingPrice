@@ -48,8 +48,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
     const [busy, setBusy] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [allowOffers, setAllowOffers] = useState(true);
-    const [exchange, setExchange] = useState(false);
+    // Saved with the listing: a new one starts open to offers, an edited one keeps what the seller chose.
+    const [allowOffers, setAllowOffers] = useState(initialItem?.id ? !!initialItem.negotiable : true);
+    const [exchange, setExchange] = useState(!!initialItem?.exchange);
     const [profileLoaded, setProfileLoaded] = useState(false);
 
     // Auto-fill contact details from profile once loaded
@@ -97,6 +98,8 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
 
         payload.price = Number(payload.price) || 0;
         payload.quantity = Number(payload.quantity) || 1;
+        payload.negotiable = allowOffers;
+        payload.exchange = exchange;
 
         const result = await actions.perform('listings' + (f.id ? '/' + f.id : ''), f.id ? 'PATCH' : 'POST', payload);
         setBusy(false);
@@ -313,7 +316,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                 <h2><div className="step-num">3</div> Condition & Operational Status</h2>
                             </div>
                             <p style={{fontSize:'12px', color:'#64748b', marginBottom:'16px'}}>
-                                <strong>New</strong> items appear in "New Products". <strong>Like New, Good, Used</strong> items appear in "Pre-Loved".
+                                <strong>New</strong> items appear in "New Products". <strong>Like New, Good, Fair, Used</strong> items appear in "Pre-Loved".
                             </p>
 
                             <div className="sn-cond-grid">
@@ -321,7 +324,8 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     { v: 'New', t: 'Brand New Factory Pack', d: 'Unopened, original seal, never turned on.' },
                                     { v: 'Like New', t: 'Like New (Mint Condition)', d: 'Flawless exterior, complete original accessories.' },
                                     { v: 'Good', t: 'Good / Normal Wear', d: 'Minor superficial marks, fully functional.' },
-                                    { v: 'Used', t: 'Fair / Well Used', d: 'Visible cosmetic wear/dents, battery degraded.' }
+                                    { v: 'Fair', t: 'Fair / Noticeable Wear', d: 'Visible cosmetic wear, works as it should.' },
+                                    { v: 'Used', t: 'Used / Well Used', d: 'Heavy wear or dents, may need minor repair.' }
                                 ].map(c => (
                                     <div key={c.v} className={`sn-cond-card ${f.condition === c.v ? 'active' : ''}`} onClick={() => set('condition', c.v)}>
                                         <span className="sn-cond-tag">{c.v.toUpperCase()}</span>
@@ -351,9 +355,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <div className="sn-offer-box">
                                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'4px'}}>
                                             <strong style={{fontSize:'12px'}}>Allow Offers</strong>
-                                            <input type="checkbox" checked={allowOffers} onChange={e => setAllowOffers(e.target.checked)} style={{accentColor:'#059669'}} />
+                                            <input id="sn-allow-offers" type="checkbox" checked={allowOffers} onChange={e => setAllowOffers(e.target.checked)} style={{accentColor:'#059669'}} />
                                         </div>
-                                        <p style={{margin:0, fontSize:'10px', color:'#64748b'}}>Allow reasonable offers within 5-10% of asking price.</p>
+                                        <p style={{margin:0, fontSize:'10px', color:'#64748b'}}>Buyers can send you a price offer from the product page.</p>
                                     </div>
                                 </div>
                             </div>
@@ -361,9 +365,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-toggle-row">
                                 <div className="sn-toggle-info">
                                     <strong>Open to Barter / Gadget Exchange</strong>
-                                    <span>Allow buyers to propose item + cash adjustments.</span>
+                                    <span>Buyers can propose an item in exchange from the product page.</span>
                                 </div>
-                                <input type="checkbox" checked={exchange} onChange={e => setExchange(e.target.checked)} style={{width:'20px', height:'20px', accentColor:'#059669'}} />
+                                <input id="sn-exchange" type="checkbox" checked={exchange} onChange={e => setExchange(e.target.checked)} style={{width:'20px', height:'20px', accentColor:'#059669'}} />
                             </div>
                         </div>
 

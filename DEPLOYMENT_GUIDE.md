@@ -4,7 +4,7 @@ Prepared for Ahsan Javaid • 27 September 2026
 
 ## 1. Read this first
 
-Use the project's **portable React + Node.js + Express + PostgreSQL edition** for these deployments. The existing hosted Site uses Workers/D1/R2; its compiled Worker archive is not a cPanel installation package.
+Use the project's **portable React + Node.js + Express + PostgreSQL edition** for these deployments. The Cloudflare Workers edition (D1/R2) is used for local development; its compiled Worker archive is not a cPanel installation package.
 
 This guide is based on the current project source, including `server/index.ts`, `server/app.ts`, `server/create-admin.ts`, `server/migrate.ts`, and `package.json`. It is a deployment procedure, not a claim that your cPanel account or local server has already been configured or tested.
 
@@ -15,7 +15,7 @@ This guide is based on the current project source, including `server/index.ts`, 
 | cPanel hosting | Node.js application support, compatible runtime, PostgreSQL access, persistent uploads | Follow the cPanel section; confirm provider support first |
 | PHP/MySQL-only hosting or XAMPP alone | Missing this application's backend stack | Not compatible without a separate Node/PostgreSQL service |
 
-**Important:** Deploying the portable edition does not copy the hosted Site's database, uploaded photos, accounts or private-access gate. A new PostgreSQL database starts separately. Do not assume the new domain is private: restrict access during commissioning if required.
+**Important:** Deploying the portable edition does not copy any other installation's database, uploaded photos or accounts. A new PostgreSQL database starts separately. Do not assume the new domain is private: restrict access during commissioning if required.
 
 ## 2. Obtain the correct project files
 
@@ -37,7 +37,7 @@ Start:         pnpm start:postgres
 Create admin:  pnpm admin:postgres
 ```
 
-Do **not** substitute the default `pnpm build`, `pnpm start`, or `pnpm dev`: those belong to the hosted edition.
+Do **not** substitute the default `pnpm build`, `pnpm start`, or `pnpm dev`: those belong to the Workers edition.
 
 ## 3. Software and configuration
 
@@ -69,6 +69,8 @@ On managed hosting, use the provider's selected Node environment and approved pa
 | `NODE_ENV` | `production` when running the built application |
 | `GOOGLE_CLIENT_ID` | Optional Google web application client ID |
 | `GOOGLE_CLIENT_SECRET` | Optional server-only Google client secret |
+| `RESEND_API_KEY` | Optional. API key from resend.com; when set, every in-app notification is also emailed to the member |
+| `EMAIL_FROM` | Optional sender for those emails, e.g. `Picking Price <notify@yourdomain.com>` on a domain verified in Resend. Without it Resend's test sender is used, which only delivers to the Resend account owner's own address |
 | `PGSSL` | `require` enables verified database TLS in `server/index.ts`; see the TLS caveat below |
 | `NODE_EXTRA_CA_CERTS` | Optional trusted database CA certificate file when required by the provider |
 
@@ -78,7 +80,7 @@ Passwords inside a connection URL must be URL-encoded. For example, a literal `@
 
 **Remote PostgreSQL TLS caveat:** the admin creation script does not read `PGSSL`, although the main server does. For a remote database, use the provider's verified-TLS connection URL for both commands, such as its documented `sslmode=verify-full` configuration, with the correct CA trust. Avoid mixing conflicting URL SSL options with `PGSSL`; URL SSL parameters can override the pool SSL object. Never fix certificate errors by disabling certificate verification. Local loopback PostgreSQL can use the simple URL shown above when configured that way.
 
-The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. `OWNER_EMAIL` is no longer used. Email password-reset and verification delivery are not implemented; setting email-service keys alone does not enable them.
+The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. Notification emails are optional: they are sent only when `RESEND_API_KEY` is set (see the table above). Password reset does not use email; the administrator issues a one-time reset code from the admin panel.
 
 ## 4. Windows 11 local installation
 
@@ -355,7 +357,7 @@ Local:       http://localhost:3000/api/auth/google/callback
 Production:  https://market.example.com/api/auth/google/callback
 ```
 
-Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only on the server, then restart. Ensure `APP_ORIGIN` matches the registered origin. Never reuse the old hosted Site callback for a different domain. This application uses the server-side redirect flow; a JavaScript-origin setting is not a replacement for the callback URI.
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only on the server, then restart. Ensure `APP_ORIGIN` matches the registered origin. Never reuse another domain's callback address. This application uses the server-side redirect flow; a JavaScript-origin setting is not a replacement for the callback URI.
 
 Test with an allowed Google account, sign out and sign in again. Existing email/password accounts are intentionally not auto-linked to Google by matching email; use a fresh test identity to verify new Google registration. LAN-IP HTTP deployment is not the recommended Google development setup; use localhost or an appropriate HTTPS test hostname.
 
@@ -372,7 +374,7 @@ Railway runs this same portable edition from the repository's `Dockerfile`; noth
 5. App service → **Volumes**: add a volume mounted at `/data`. Uploaded photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
 6. After the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again afterwards and can be removed from Variables.
 
-The database starts empty: accounts and listings from a local or hosted copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) and the Google sign-in variables from Section 7.
+The database starts empty: accounts and listings from a local copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) the Google sign-in variables from Section 7, and `RESEND_API_KEY` / `EMAIL_FROM` for notification emails.
 
 ## 8. First administrator configuration
 
@@ -419,7 +421,7 @@ pnpm lint
 
 The market suite also uses a local D1 emulator and may need tooling unavailable on restrictive shared hosting. Run it on a suitable workstation/CI environment. The Express HTTP suite uses an isolated embedded database; it does not prove connectivity to your production PostgreSQL database.
 
-At the last project audit, TypeScript, both builds, 253 domain assertions, 23 Worker checks, 22 Express HTTP assertions and one password test passed. Strict lint still failed (90 errors, 24 warnings). Live Google, external PostgreSQL, and browser/device acceptance were not certified. Resolve or explicitly accept outstanding issues before a public launch; this guide does not change those results.
+Run these suites again after every change and before every release; a passing run on a workstation does not replace the checklist above on the real server.
 
 ## 10. Backups, updates and recovery
 

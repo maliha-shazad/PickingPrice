@@ -107,7 +107,11 @@ export async function getConversation(c: Context, key: string) { const u = authe
 export async function messageList(c: Context, key: string, q: URLSearchParams) { const conv = await getConversation(c, key), { page, size, offset } = pageOf(q); const result = await pagination(c.db, 'SELECT m.*,p.name sender FROM chat_messages m JOIN profiles p ON p.id=m.owner WHERE m.conversation_id=? ORDER BY m.created DESC,m.id DESC', 'SELECT COUNT(*) n FROM chat_messages WHERE conversation_id=?', [key], page, size, offset); const other = await one(c.db, 'SELECT name,avatar FROM profiles WHERE id=?', conv.first_user === c.user!.userId ? conv.second_user : conv.first_user); return { ...result, conversation: { ...conv, other_name: other?.name || 'Member', other_avatar: other?.avatar || '', context: await conversationContext(c, conv) } }; }
 export async function sendMessage(c: Context, key: string, body: Record<string, unknown>) { const u = authenticated(c), conv = await getConversation(c, key), d = validate(messageSchema, body); const recipient = conv.first_user === u.userId ? conv.second_user : conv.first_user; if (!await one(c.db, 'SELECT id FROM profiles WHERE id=? AND suspended=0', recipient))
     throw new MarketError('Recipient unavailable.', 404); const keyNew = id(), t = now(); await c.db.batch([stmt(c.db, 'INSERT INTO chat_messages (id,conversation_id,owner,body,created) VALUES (?,?,?,?,?)', keyNew, key, u.userId, d.body, t), stmt(c.db, 'UPDATE conversations SET updated=? WHERE id=?', t, key), notice(c.db, recipient, 'New message', `${u.displayName}: ${d.body.slice(0, 100)}`, 'conversation', key, 'message:' + keyNew)]); return { id: keyNew }; }
-export async function report(c: Context, body: Record<string, unknown>) { const u = authenticated(c), reason = stringValue(body.reason, 10, 2000), key = stringValue(body.targetId, 1, 400); const tables: Record<string, string> = { listing: 'listings', request: 'buyer_requests', message: 'chat_messages', user: 'profiles', review: 'reviews' }; const table = tables[String(body.targetType)]; if (!table)
+export async function report(c: Context, body: Record<string, unknown>) { const u = authenticated(c), reason = stringValue(body.reason, 10, 2000), key = body.targetType === 'general' ? 'site' : stringValue(body.targetId, 1, 400); const tables: Record<string, string> = { listing: 'listings', request: 'buyer_requests', message: 'chat_messages', user: 'profiles', review: 'reviews' }; if (body.targetType === 'general') {
+    // A problem with the site itself (footer > Report a Problem): nothing to look up.
+    await run(c.db, 'INSERT INTO reports (id,owner,target_type,target_id,reason,status,created) VALUES (?,?,?,?,?,?,?)', id(), u.userId, 'general', 'site', reason, 'Open', now());
+    return { ok: true };
+} const table = tables[String(body.targetType)]; if (!table)
     throw new MarketError('Invalid report target.'); const target = await one(c.db, `SELECT * FROM ${table} WHERE id=?`, key); if (!target)
     throw new MarketError('The reported item does not exist.', 404); if (body.targetType === 'message')
     await getConversation(c, target.conversation_id); await run(c.db, 'INSERT INTO reports (id,owner,target_type,target_id,reason,status,created) VALUES (?,?,?,?,?,?,?)', id(), u.userId, body.targetType, key, reason, 'Open', now()); return { ok: true }; }
@@ -127,6 +131,7 @@ function draftData(body: Record<string, unknown>) {
         title: text(d.title, 120).trim(), quantity: Number.isFinite(quantity) ? Math.min(10000, Math.max(1, quantity)) : 1,
         domain: text(d.domain, 80), subcategory: text(d.subcategory, 80), size: text(d.size, 40), condition: text(d.condition, 40),
         budget: text(String(d.budget ?? ''), 12).replace(/[^0-9]/g, ''), negotiable: d.negotiable !== false, notes: text(d.notes, 3000), handover: text(d.handover, 40),
+        location: text(d.location, 80).trim(), expiry: /^\d{4}-\d{2}-\d{2}$/.test(text(d.expiry, 10)) ? text(d.expiry, 10) : '',
         images: (Array.isArray(d.images) ? d.images : []).filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 300).slice(0, 6),
     };
 }

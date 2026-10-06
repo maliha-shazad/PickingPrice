@@ -1,12 +1,14 @@
 import { env } from 'cloudflare:workers';
 import { cookies } from 'next/headers';
 import { createHash, randomBytes } from 'node:crypto';
-import { getChatGPTUser } from '@/app/chatgpt-auth';
 export const sessionCookie = '__Host-pp_session';
-export const origin = 'https://picking-price.ahsanjaved-it.chatgpt.site';
-export type AccountUser = {userId:string; displayName:string; email:string; provider:'email'|'google'|'workspace'; role:string};
-export const bindings = () => env as unknown as { DB:D1Database; GOOGLE_CLIENT_ID?:string; GOOGLE_CLIENT_SECRET?:string; OWNER_EMAIL?:string; RESEND_API_KEY?:string; EMAIL_FROM?:string };
+// The public address of the site, used for the Google sign-in return address.
+export const origin = 'https://web-production-e86b77.up.railway.app';
+export type AccountUser = {userId:string; displayName:string; email:string; provider:'email'|'google'; role:string};
+export const bindings = () => env as unknown as { DB:D1Database; GOOGLE_CLIENT_ID?:string; GOOGLE_CLIENT_SECRET?:string; RESEND_API_KEY?:string; EMAIL_FROM?:string };
 export const database = () => bindings().DB;
+// Notification emails: sent only when RESEND_API_KEY is set.
+export const mailSettings = (req:Request) => ({ key:bindings().RESEND_API_KEY||'', from:bindings().EMAIL_FROM||'', site:new URL(req.url).origin });
 export const digest = (value:string) => createHash('sha256').update(value).digest('hex');
 export const randomToken = () => randomBytes(32).toString('base64url');
 export const secureCookie = (name:string, value:string, maxAge:number) => `${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
@@ -18,12 +20,8 @@ export async function getMarketUser():Promise<AccountUser|null> {
     const row = await database().prepare('SELECT a.id,a.email,a.name,a.google_sub,a.role FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires>?').bind(digest(token),new Date().toISOString()).first<{id:string;email:string;name:string;google_sub:string|null;role:string}>();
     // Marketplace sign-ins never carry administrator rights; those exist only in the separate /admin panel.
     if(row)return {userId:row.id,displayName:row.name,email:row.email,provider:row.google_sub?'google':'email',role:row.role==='admin'?'both':row.role};
-    return null;
   }
-  // Explicit application sign-out suppresses the underlying workspace identity.
-  if(jar.get('__Host-pp_signed_out')?.value === '1')return null;
-  const workspace = await getChatGPTUser();
-  return workspace ? {...workspace,provider:'workspace',role:'both'} : null;
+  return null;
 }
 export async function sessionResponse(accountId:string, redirect=false) {
   const profile = await database().prepare('SELECT suspended FROM profiles WHERE id=?').bind(accountId).first<{suspended:number}>();
@@ -32,7 +30,6 @@ export async function sessionResponse(accountId:string, redirect=false) {
   await database().prepare('INSERT INTO sessions (token_hash,account_id,expires) VALUES (?,?,?)').bind(digest(token),accountId,new Date(Date.now()+7*86400000).toISOString()).run();
   const headers = new Headers({'Cache-Control':'no-store'});
   headers.append('Set-Cookie',secureCookie(sessionCookie,token,7*86400));
-  headers.append('Set-Cookie',secureCookie('__Host-pp_signed_out','',0));
   if(redirect){headers.set('Location',origin+'/?welcome=1');return new Response(null,{status:303,headers});}
   headers.set('Content-Type','application/json');return new Response(JSON.stringify({ok:true}),{headers});
 }

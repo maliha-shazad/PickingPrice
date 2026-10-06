@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Actions, Item, useLoad, Load, money, Status, Photo } from './ui';
+import { Actions, Item, useLoad, useLoadAll, Load, money, Status, Photo, date } from './ui';
 import { ProfileDialog } from './profile-dialog';
 import { Bell, Bookmark, MessageCircle, Eye, CheckCircle2, ShieldCheck, Edit2, MapPin, Calendar, LayoutDashboard } from 'lucide-react';
 
 export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode: (m: 'Buying' | 'Selling') => void }) {
     const me = useLoad('me', actions.revision);
-    const requests = useLoad('requests?mine=1', actions.revision);
+    const requests = useLoadAll('requests?mine=1', actions.revision);
     const drafts = useLoad('drafts', actions.revision);
-    const favorites = useLoad('listings?saved=1', actions.revision);
+    const reviews = useLoad('my-reviews?size=60', actions.revision);
+    const favorites = useLoadAll('listings?saved=1', actions.revision);
     const conversations = useLoad('conversations', actions.revision);
 
     const [reqTab, setReqTab] = useState('active');
@@ -40,7 +41,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                     <div className="bd-profile-card">
                         <div className="bd-profile-cover"></div>
                         <div className="bd-profile-avatar-wrap">
-                            <Photo src={profile.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Zainab"} alt="Profile" className="bd-avatar" />
+                            <Photo src={profile.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + profile.name} alt="Profile" className="bd-avatar" />
                             <button className="bd-edit-icon-btn" onClick={() => setEditProfileOpen(true)} aria-label="Edit Profile">
                                 <Edit2 size={14} />
                             </button>
@@ -48,7 +49,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                         <div className="bd-profile-info">
                             <h2>{profile.name || actions.user?.name} {!!profile.verified && <CheckCircle2 size={16} color="#10b981" />}</h2>
                             <div className="bd-profile-meta">
-                                <span><MapPin size={12}/> {profile.location || 'Lahore, PK'}</span>
+                                <span><MapPin size={12}/> {profile.location || 'Location not set'}</span>
                                 <span><Calendar size={12}/> Joined {new Date(profile.created || Date.now()).getFullYear()}</span>
                             </div>
                         </div>
@@ -95,7 +96,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                         <div className="bd-banner-content">
                             <div className="bd-banner-label">★ BUYER ADVANTAGE</div>
                             <h3>Can't find what you need?</h3>
-                            <p>Post a quick on-demand request. Verified local sellers compete with their lowest prices.</p>
+                            <p>Post a request for what you need. Sellers send you their offers and you choose the best one.</p>
                             <button className="bd-banner-btn" onClick={() => actions.open('request-form')}>
                                 📢 Post New On-Demand Request
                             </button>
@@ -171,6 +172,32 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                                                 <button className="bd-btn-primary" onClick={() => actions.open('request-form', { draft: d })}>Continue</button>
                                                 <button className="bd-btn-secondary" onClick={() => actions.open('confirm', { title: 'Delete this draft?', text: '“' + (d.title || 'Untitled request') + '” will be removed. This cannot be undone.', path: 'drafts/' + d.id, method: 'DELETE' })}>Delete</button>
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Load>
+                    </div>
+
+                    {/* Reviews this buyer has written about sellers */}
+                    <div className="bd-section bd-glass-panel" id="bd-reviews">
+                        <div className="bd-section-header">
+                            <h3>My Reviews <span className="bd-badge">{reviews.data?.total || 0} Written</span></h3>
+                        </div>
+                        <Load state={reviews}>
+                            {!(reviews.data?.items || []).length ? (
+                                <div className="bd-empty-state-small">No reviews yet. After you chat with a seller you can rate them from their product page or profile.</div>
+                            ) : (
+                                <div className="bd-review-list">
+                                    {(reviews.data?.items || []).map((r: any) => (
+                                        <div className="bd-review" key={r.id}>
+                                            <div className="bd-review-top">
+                                                <button type="button" className="bd-review-seller" onClick={() => actions.open('profile', { id: r.seller_id })}>{r.seller || 'Seller'}</button>
+                                                <span className="bd-review-stars" aria-label={r.rating + ' out of 5 stars'}>{'★'.repeat(Number(r.rating) || 0)}<i>{'★'.repeat(5 - (Number(r.rating) || 0))}</i></span>
+                                                <small>{date(r.created)}</small>
+                                            </div>
+                                            <p>{r.body}</p>
+                                            {r.hidden ? <small className="bd-review-hidden">Hidden by the Picking Price team</small> : null}
                                         </div>
                                     ))}
                                 </div>

@@ -19,6 +19,9 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
 
     
     const me = useLoad('me', actions.revision);
+    // The seller's own public profile, for the real review score in the header.
+    const own = useLoad(actions.user ? 'profiles/' + actions.user.id : null, actions.revision);
+    const ownReviews = Number(own.data?.rating?.count) || 0;
     const list = useLoad(['listings', 'requests'].includes(tab) ? tab + '?mine=1&page=' + page : null, actions.revision);
 
 
@@ -157,8 +160,8 @@ export function Dashboard({ actions, initial = 'listings', setMode }: {
                         <div className="bd-profile-info">
                             <h2>{profile.name || actions.user?.name} {!!profile.verified && <BadgeCheck size={16} color="#10b981" />}</h2>
                             <div className="bd-profile-meta">
-                                <span><MapPin size={12}/> {profile.location || 'Lahore, PK'}</span>
-                                <span><Star size={12} color="#f59e0b"/> 4.9 Rating</span>
+                                <span><MapPin size={12}/> {profile.location || 'Location not set'}</span>
+                                <span><Star size={12} color="#f59e0b"/> {ownReviews ? Number(own.data?.rating?.average).toFixed(1) + ' Rating (' + ownReviews + ')' : 'No ratings yet'}</span>
                             </div>
                         </div>
                     </div>

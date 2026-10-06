@@ -132,10 +132,14 @@ const subCategories: Record<string, string[]> = {
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'Made to Measure'];
 const CONDITIONS = [
-  { id: 'new', label: 'Brand New with Tags', desc: 'Completely unworn boutique stock' },
-  { id: 'like-new', label: 'Worn Once (Mint / Like Now)', desc: 'Dry-cleaned, wedding worn, pristine condition' },
-  { id: 'gently-worn', label: 'Gently Worn', desc: 'Clean, zero sequin loss or fabric pulls' }
+  { id: 'new', api: 'New', label: 'Brand New', desc: 'Unused, in its original packing or with tags' },
+  { id: 'like-new', api: 'Like New', label: 'Like New', desc: 'Used once or twice, no visible wear' },
+  { id: 'gently-worn', api: 'Good', label: 'Good', desc: 'Light signs of use, fully working and clean' },
+  { id: 'fair', api: 'Fair', label: 'Fair', desc: 'Noticeable wear, still works as it should' },
+  { id: 'used', api: 'Used', label: 'Used', desc: 'Well used, any state is fine at the right price' }
 ];
+// A request stays open for 14 days unless the buyer picks another date (up to a year ahead).
+const dayFromNow = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 
 export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item | null }) {
   // Opened from a saved draft: every field starts with what was saved.
@@ -156,6 +160,8 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
   const [negotiable, setNegotiable] = useState(saved.negotiable !== false);
   const [notes, setNotes] = useState(String(saved.notes || ''));
   const [handover, setHandover] = useState(String(saved.handover || 'in-person'));
+  const [place, setPlace] = useState(String(saved.location || actions.location || ''));
+  const [expiry, setExpiry] = useState(saved.expiry && String(saved.expiry) >= dayFromNow(1) ? String(saved.expiry) : dayFromNow(14));
   const [step, setStep] = useState(1);
   
   const [domain, setDomain] = useState(String(saved.domain || 'Accessories'));
@@ -194,7 +200,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
     if (!title.trim() && !notes.trim() && !budget && images.length === 0) { toast.error('Add a title, a budget or a note before saving a draft.'); return; }
     setSavingDraft(true);
     try {
-      const r = await api('drafts', 'POST', { id: draftId || undefined, data: { title, quantity, domain, subcategory: selectedCat, size: selectedSize, condition: selectedCondition, budget, negotiable, notes, handover, images } });
+      const r = await api('drafts', 'POST', { id: draftId || undefined, data: { title, quantity, domain, subcategory: selectedCat, size: selectedSize, condition: selectedCondition, budget, negotiable, notes, handover, images, location: place, expiry } });
       setDraftId(String(r.id));
       actions.refresh?.();
       toast.success(draftId ? 'Draft updated' : 'Draft saved', { description: 'You will find it under Draft Requests in your Buyer Dashboard.', action: { label: 'View drafts', onClick: () => actions.open('drafts') } });
@@ -215,10 +221,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         return;
     }
     
+    if (place.trim().length < 2) { toast.error('Enter the city or area where you need the item.'); return; }
+    if (!expiry || expiry < dayFromNow(1) || expiry > dayFromNow(365)) { toast.error('Choose an expiry date between tomorrow and one year from now.'); return; }
     setBusy(true);
-    let apiCondition = 'Good';
-    if (selectedCondition === 'new') apiCondition = 'New';
-    if (selectedCondition === 'like-new') apiCondition = 'Like New';
+    const apiCondition = CONDITIONS.find(c => c.id === selectedCondition)?.api || 'Good';
 
     let apiDesc = notes;
     if (!apiDesc || apiDesc.length < 10) {
@@ -230,10 +236,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         description: apiDesc,
         category: domain,
         price: Number(budget) || 0,
-        location: actions.location || 'Lahore',
+        location: place.trim(),
         condition: apiCondition,
         quantity: quantity || 1,
-        expiry: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+        expiry,
         image: images.length > 0 ? images[0] : ''
     });
     setBusy(false);
@@ -427,7 +433,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                       <span style={{ fontSize: '14px' }}>-</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
-                      Typical chest width ~20 in / Kurti length ~45 in
+                      Add exact measurements in the notes on the next step.
                     </div>
                   </div>
                 </div>
@@ -436,7 +442,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               <div className="pr-section" style={{ flex: 1, background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <label style={{ fontWeight: 600, color: '#0f172a' }}>Item State</label>
-                  <span style={{ fontSize: '11px', color: '#0f766e' }}>Pre-Loved Filter</span>
+                  <span style={{ fontSize: '11px', color: '#0f766e' }}>Condition you accept</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {CONDITIONS.map(cond => (
@@ -465,7 +471,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
             <div className="pr-section" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>Target Budget & Willingness</label>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Estimate: Rs. 24,000 - Rs. 32,000</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>The most you want to pay</span>
               </div>
               <div className="pr-budget">
                 <div className="pr-budget-input">
@@ -476,7 +482,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                   <input type="checkbox" checked={negotiable} onChange={e => setNegotiable(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#ea580c' }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e3a8a' }}>Open to Reasonable Negotiation</div>
-                    <div style={{ fontSize: '11px', color: '#3b82f6' }}>Accept offers +10% for superior products</div>
+                    <div style={{ fontSize: '11px', color: '#3b82f6' }}>Sellers may offer a little above or below it</div>
                   </div>
                 </div>
               </div>
@@ -499,7 +505,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>Reference Photos & Inspiration</label>
                 <span style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Optional</span>
               </div>
-              <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Helps verified sellers match exact models or styles.</p>
+              <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Helps sellers match the exact model or style.</p>
               
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {images.map((img, idx) => (
@@ -521,10 +527,28 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               </div>
             </div>
 
+            <div className="pr-section" id="pr-where-when" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <label style={{ fontWeight: 600, color: '#0f172a' }}>Location & Expiry</label>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Required</span>
+              </div>
+              <div className="pr-where-when">
+                <label>
+                  <span>City or area</span>
+                  <input id="pr-location" type="text" value={place} maxLength={80} onChange={e => setPlace(e.target.value)} placeholder="e.g. Peshawar, University Town" />
+                </label>
+                <label>
+                  <span>Request open until</span>
+                  <input id="pr-expiry" type="date" value={expiry} min={dayFromNow(1)} max={dayFromNow(365)} onChange={e => setExpiry(e.target.value)} />
+                </label>
+              </div>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '12px 0 0' }}>Sellers can send offers until this date. After it the request closes on its own.</p>
+            </div>
+
             <div className="pr-section" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>Preferred Handover Method</label>
-                <span style={{ fontSize: '11px', color: '#0f766e', display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Safe Trade Guarantee</span>
+                <span style={{ fontSize: '11px', color: '#0f766e', display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Stay safe</span>
               </div>
               <div className="pr-handover">
                 <div 
@@ -534,7 +558,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                   <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: handover === 'in-person' ? '5px solid #10b981' : '1px solid #94a3b8', background: 'white', marginTop: '4px', flexShrink: 0, transition: 'all 0.2s' }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: '#065f46', marginBottom: '4px' }}>In-Person Inspection</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Mall of Lahore / Packages Mall / Gulberg III. Inspect item before cash exchange.</div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Meet in a busy public place and inspect the item before you pay.</div>
                   </div>
                 </div>
                 <div 
@@ -543,8 +567,8 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 >
                   <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: handover === 'courier' ? '5px solid #3b82f6' : '1px solid #94a3b8', background: 'white', marginTop: '4px', flexShrink: 0, transition: 'all 0.2s' }} />
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e3a8a', marginBottom: '4px' }}>TCS / Trax Courier with Video Check</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Seller sends HD 4K video showing product details prior to dispatch.</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e3a8a', marginBottom: '4px' }}>Courier Delivery</div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Ask the seller for clear photos or a video before the item is sent.</div>
                   </div>
                 </div>
               </div>
@@ -594,7 +618,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '13px', background: '#e2e8f0' }}>No image uploaded</div>
               )}
               <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'white', color: '#0f766e', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '100px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                Worn Once • Like New
+                {CONDITIONS.find(c => c.id === selectedCondition)?.label || 'Good'}
               </div>
             </div>
             <div style={{ padding: '20px' }}>
@@ -602,19 +626,19 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 <div style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, letterSpacing: '0.05em' }}>WANTED BY BUYER</div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f766e' }}>Rs. {Number(budget || 0).toLocaleString()}</div>
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>{title || 'Request Title'} {isFashion && `(Size ${selectedSize})`}</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>{title || 'Request Title'} {isFashion && selectedSize ? `(Size ${selectedSize})` : ''}</h3>
               <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {notes}
               </p>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#64748b', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconMapPin /> {actions.location || 'Lahore'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Negotiable • Cash/TCS</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconMapPin /> {place.trim() || 'Your city'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> {negotiable ? 'Negotiable' : 'Fixed budget'} • {handover === 'courier' ? 'Courier' : 'In person'}</div>
               </div>
 
               <div style={{ background: '#ecfdf5', borderRadius: '8px', padding: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ fontSize: '11px', color: '#065f46', lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 700 }}>{Math.floor(Math.random() * 20) + 5} Active Sellers</span> are currently active in {actions.location || 'Lahore'} matching the {domain} category.
+                  <span style={{ fontWeight: 700 }}>Open to every seller.</span> Sellers in {place.trim() || 'your city'} and across Pakistan can see this {domain} request and send you offers.
                 </div>
               </div>
             </div>
@@ -623,36 +647,36 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
               <IconShieldCheck size={20} />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Safe Sourcing Guarantee</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>How Requests Work</h3>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</div>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>Explicit Details Guarantee</div>
-                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>Sellers are prompted to confirm exact measurements and condition before deals finalize.</div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>Clear Details Help</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>The more exact your size, model and condition, the better the offers you receive.</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>2</div>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>Direct Video Audits</div>
-                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>Receive authentic unedited videos showing condition and integrity of the item.</div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>Compare Offers</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>Sellers send a price and details. Chat with them and select the offer you prefer.</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>3</div>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>0% Commission on Hand-to-Hand Meets</div>
-                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>Meet securely at Gulberg or DHA partner rendezvous points, examine in person, and pay directly.</div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>No Commission</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>Meet in a public place, examine the item in person, and pay the seller directly.</div>
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '10px', fontWeight: 600, color: '#0f766e' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconCheck /> Authentic Brands Only</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Identity Verified Peers</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconCheck /> Free to post</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Report any problem</div>
             </div>
           </div>
 

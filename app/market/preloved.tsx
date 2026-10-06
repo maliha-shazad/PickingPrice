@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, ArrowRight, Timer, CheckCheck, FileCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoad, DELIVERY_OPTIONS, offersDelivery } from './ui';
+import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore } from './ui';
 import { samples } from '../samples';
 
 
@@ -76,7 +76,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
   const areas = getAreasForCity(currentCity);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const state = useLoad('listings?size=100', actions.revision);
+  const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
   const hasRealData = state.data?.total > 0;
   const sourceData = hasRealData ? realListings : samples;
@@ -120,10 +120,10 @@ export function PreLoved({ actions }: { actions: Actions }) {
           <div className="pl-breadcrumb">
             <button onClick={() => actions.go('Explore')}>Home</button> <ChevronRight size={13} /> 
             <button onClick={() => actions.go('Explore')}>Marketplace</button> <ChevronRight size={13} /> 
-            <span className="pl-bread-active">Pre-Loved Verified Deals</span>
+            <span className="pl-bread-active">Pre-Loved Deals</span>
           </div>
           <div className="pl-brand-switch">
-            ✨ Looking for Brand New? <button className="pl-switch-btn">Switch to Brand New Catalog &rarr;</button>
+            ✨ Looking for Brand New? <button className="pl-switch-btn" onClick={() => actions.go('BrandNew')}>Switch to Brand New Catalog &rarr;</button>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
         <div className="pl-hero">
           <div>
             <h1 className="pl-hero-title">Discover Pre-Loved Deals Near You</h1>
-            <p className="pl-hero-sub">Explore pre-loved products with clear condition details, verified information, and secure meetups.</p>
+            <p className="pl-hero-sub">Explore pre-loved products with clear condition details, and inspect them in person before you pay.</p>
           </div>
           <div className="pl-hero-right">
             <div className="pl-trust-pills">
@@ -141,8 +141,8 @@ export function PreLoved({ actions }: { actions: Actions }) {
               <span className="pl-trust-pill"><CheckCircle2 size={14}/> Zero Platform Fee</span>
             </div>
             <div className="pl-trust-pills">
-              <span className="pl-trust-pill"><Search size={14}/> 10-Pt Condition Score</span>
-              <span className="pl-trust-pill"><MapPin size={14}/> Safe Zones in Gulberg</span>
+              <span className="pl-trust-pill"><Search size={14}/> Condition on Every Item</span>
+              <span className="pl-trust-pill"><MapPin size={14}/> Meet in Public Places</span>
             </div>
           </div>
         </div>
@@ -233,22 +233,13 @@ export function PreLoved({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            <div className="pl-filter-section">
-              <div className="pl-filter-label">Trust Perks</div>
-              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">SECP Verified Sellers</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Rating 4.8 & Above</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" defaultChecked /><span className="pl-checkbox-label">Safe Handover Hubs</span></label>
-              <label className="pl-checkbox-row"><input type="checkbox" /><span className="pl-checkbox-label">Original Box & Bill</span></label>
-            </div>
-
-
           </aside>
 
           {/* Main List */}
           <div>
             <div className="pl-feed-header pl-feed-inline">
               <div>
-                <h2 className="pl-feed-title">Explore Verified Deals</h2>
+                <h2 className="pl-feed-title">Explore Pre-Loved Deals</h2>
                 <p className="pl-feed-sub">Check the product before you buy.</p>
               </div>
               <div className="pl-sort-wrap">
@@ -285,7 +276,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
                   <div className="pl-card-img-wrap">
                     <Photo src={Array.isArray((p as any).images) && (p as any).images.length ? (p as any).images[0] : (p as any).image} alt={p.title} />
                     <span className="pl-card-cond-pill">{p.condition}</span>
-                    <span className="pl-card-detail-pill"><ShieldCheck size={10} style={{display:'inline', marginRight: 2}}/> SECP Verified</span>
+                    {!!(p as any).verified && <span className="pl-card-detail-pill"><ShieldCheck size={10} style={{display:'inline', marginRight: 2}}/> Verified Seller</span>}
                     <button className="pl-heart-btn" onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}>
                       <Heart size={16} fill={wishlist.includes(p.id) ? '#ef4444' : 'none'} color={wishlist.includes(p.id) ? '#ef4444' : 'currentColor'} />
                     </button>
@@ -298,15 +289,14 @@ export function PreLoved({ actions }: { actions: Actions }) {
                       ) : p.condition === 'New' ? (
                          <span className="pl-card-badge" style={{color: '#2563eb', background: '#dbeafe'}}>New Arrival</span>
                       ) : (
-                         <span className="pl-card-badge" style={{color: '#dc2626', background: '#fee2e2'}}>Great Deal</span>
+                         <span className="pl-card-badge" style={{color: '#0d9488', background: '#ccfbf1'}}>Pre-Loved</span>
                       )}
                     </div>
                     <h3 className="pl-card-title">{p.title}</h3>
                     <div className="pl-card-price-row">
                       <span className="pl-card-price">Rs. {formatMoney(p.price)}</span>
-                      <span className="pl-card-orig">Rs. {formatMoney(Math.floor(p.price * 1.3))}</span>
                     </div>
-                    <div className="pl-card-ref"><ShieldCheck size={12} style={{display:'inline', marginRight: 2}}/> SECP Checked & Escrow Ready</div>
+                    <div className="pl-card-ref">{(p as any).brand ? 'Brand: ' + (p as any).brand : 'Condition: ' + p.condition}</div>
                     
                     <div className="pl-card-seller">
                       <div className="pl-seller-avatar">{p.seller.charAt(0)}</div>
@@ -316,8 +306,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
                       </div>
                       <div className="pl-seller-rating">
                         <Star size={10} fill="#f59e0b" color="#f59e0b" />
-                        <span>4.8</span>
-                        <span className="pl-review-count"></span>
+                        <span>{sellerScore(p as any)}</span>
                       </div>
                     </div>
                     
@@ -356,13 +345,13 @@ export function PreLoved({ actions }: { actions: Actions }) {
             <div className="pl-cta-banner" style={{ marginTop: '40px' }}>
               <div className="pl-cta-left">
                 <div className="pl-cta-badge" style={{ background: '#ffedd5', padding: '4px 10px', borderRadius: '12px' }}>
-                  <div className="pl-cta-dot"></div> Reverse Buyer Marketplace
+                  <div className="pl-cta-dot"></div> Buyer Requests
                 </div>
                 <h2 className="pl-cta-title">Can't Find Your Exact Pre-Loved Item?</h2>
                 <p className="pl-cta-desc">Post an On-Demand Buyer Request — Tell us what you need, your preferred condition, and your budget.<br/>Let sellers respond with suitable pre-loved products.</p>
                 <div className="pl-cta-stats">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Timer size={14} color="#0d5c45" /> Avg Response: 14 mins</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCheck size={14} color="#0d5c45" /> Zero spam, seller CNIC required</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Timer size={14} color="#0d5c45" /> Free to post</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCheck size={14} color="#0d5c45" /> Sellers send their offers to you</span>
                 </div>
               </div>
               <div className="pl-cta-right">

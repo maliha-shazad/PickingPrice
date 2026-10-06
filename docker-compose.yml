@@ -1,0 +1,42 @@
+# Runs the whole site on any computer that has Docker Desktop: the application and its PostgreSQL database.
+#
+#   docker compose up --build        (first run builds the image; allow several minutes)
+#   then open http://localhost:3000  (use exactly this address, not 127.0.0.1)
+#
+# Create the administrator at http://localhost:3000/admin with the setup code below.
+# Stop with Ctrl+C. `docker compose down -v` also deletes the database and the uploaded photos.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: picking
+      POSTGRES_PASSWORD: picking-local
+      POSTGRES_DB: picking_price
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U picking -d picking_price"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://picking:picking-local@db:5432/picking_price
+      APP_ORIGIN: http://localhost:3000
+      PORT: "3000"
+      UPLOADS_DIR: /data/uploads
+      # For local evaluation only. Use a private value of your own on a real server.
+      ADMIN_SETUP_CODE: local-admin-setup-code
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data
+
+volumes:
+  db-data:
+  uploads:

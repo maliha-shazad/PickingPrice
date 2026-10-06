@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money, useLoad } from './ui';
+import { Actions, Item, Photo, money, useLoad, Load, Pager } from './ui';
 import { samples, sampleRequests } from '../samples';
 
 const categories = [
@@ -55,7 +55,7 @@ function ProductCard({ item, saved, onSave, onClick }: { item: Item; saved: bool
         <button className={`hp-heart-btn${saved ? ' loved' : ''}`} aria-label={`Save ${item.title}`} onClick={onSave}>
           <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
         </button>
-        {item.featured && <span className="hp-featured-badge">Featured</span>}
+        {!!item.featured && <span className="hp-featured-badge">Featured</span>}
       </div>
       <div className="hp-product-info">
         <span className="hp-product-category">{item.category as string}</span>
@@ -92,6 +92,126 @@ function RequestCard({ item, onOffer }: { item: Item; onOffer: () => void }) {
   );
 }
 
+const SEARCH_CONDITIONS = ['New', 'Like New', 'Good', 'Fair', 'Used'];
+const SEARCH_SORTS = [['relevance', 'Relevance'], ['newest', 'Newest first'], ['low', 'Price: low to high'], ['high', 'Price: high to low']];
+
+// What a submitted search shows. The server looks through every active product (title, description, category
+// and brand) and applies the filters and the order; before the first real product exists, the samples are
+// searched here instead so the page still has something to show.
+function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClear, anchor }: {
+  actions: Actions; q: string; category: string; sampleMode: boolean;
+  saved: Set<string>; onSave: (id: string) => void; onClear: () => void; anchor: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [sort, setSort] = useState(q ? 'relevance' : 'newest');
+  const [condition, setCondition] = useState('all');
+  const [kind, setKind] = useState('all');   // all, new or preloved
+  const [place, setPlace] = useState(''), [min, setMin] = useState(''), [max, setMax] = useState('');
+  const [applied, setApplied] = useState({ place: '', min: '', max: '' });
+  const [page, setPage] = useState(1);
+  // Typed filters are applied a moment after the typing stops.
+  useEffect(() => { const t = setTimeout(() => { setApplied({ place: place.trim(), min, max }); setPage(1); }, 350); return () => clearTimeout(t); }, [place, min, max]);
+  useEffect(() => { setPage(1); setSort(q ? 'relevance' : 'newest'); }, [q, category]);
+
+  const params = new URLSearchParams({ page: String(page), size: '12', sort });
+  if (q) params.set('q', q);
+  if (category !== 'all') params.set('category', category);
+  if (condition !== 'all') params.set('condition', condition);
+  if (kind !== 'all') params.set('type', kind);
+  if (applied.place) params.set('location', applied.place);
+  if (applied.min) params.set('min', applied.min);
+  if (applied.max) params.set('max', applied.max);
+  const state = useLoad(sampleMode ? null : 'listings?' + params, actions.revision);
+
+  const term = q.toLowerCase();
+  const sampleHits = !sampleMode ? [] : (samples as Item[]).filter(p =>
+    (category === 'all' || String(p.category).toLowerCase() === category.toLowerCase()) &&
+    (!term || `${p.title} ${p.description} ${p.category} ${p.brand || ''}`.toLowerCase().includes(term)) &&
+    (condition === 'all' || p.condition === condition) &&
+    (kind === 'all' || (kind === 'new' ? p.condition === 'New' : p.condition !== 'New')) &&
+    (!applied.place || String(p.location).toLowerCase().includes(applied.place.toLowerCase())) &&
+    (!applied.min || Number(p.price) >= Number(applied.min)) && (!applied.max || Number(p.price) <= Number(applied.max)));
+  if (sort === 'low') sampleHits.sort((a, b) => Number(a.price) - Number(b.price));
+  if (sort === 'high') sampleHits.sort((a, b) => Number(b.price) - Number(a.price));
+  if (sort === 'relevance' && term) sampleHits.sort((a, b) => Number(String(b.title).toLowerCase().includes(term)) - Number(String(a.title).toLowerCase().includes(term)));
+
+  const items: Item[] = sampleMode ? sampleHits.slice((page - 1) * 12, page * 12) : ((state.data?.items as Item[]) || []);
+  const total = sampleMode ? sampleHits.length : Number(state.data?.total) || 0;
+  const filtered = condition !== 'all' || kind !== 'all' || !!applied.place || !!applied.min || !!applied.max;
+  const resetFilters = () => { setCondition('all'); setKind('all'); setPlace(''); setMin(''); setMax(''); };
+
+  return (
+    <section ref={anchor} className="hp-section hp-search-results">
+      <div className="hp-section-head">
+        <div className="hp-section-title-wrap">
+          <Search size={18} className="hp-zap-icon" />
+          <h2 className="hp-section-title">
+            {q ? `Results for "${q}"` : `Category: ${category}`}
+          </h2>
+        </div>
+        <button className="hp-see-all hp-clear-search" onClick={onClear}>
+          ✕ Clear search
+        </button>
+      </div>
+
+      <div className="hp-search-tools">
+        <label>
+          <span>Sort by</span>
+          <select id="hp-search-sort" className="pp-select" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
+            {SEARCH_SORTS.filter(([value]) => value !== 'relevance' || !!q).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Type</span>
+          <select id="hp-search-type" className="pp-select" value={kind} onChange={e => { setKind(e.target.value); setPage(1); }}>
+            <option value="all">New and pre-loved</option>
+            <option value="new">New only</option>
+            <option value="preloved">Pre-loved only</option>
+          </select>
+        </label>
+        <label>
+          <span>Condition</span>
+          <select id="hp-search-condition" className="pp-select" value={condition} onChange={e => { setCondition(e.target.value); setPage(1); }}>
+            <option value="all">Any condition</option>
+            {SEARCH_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Location</span>
+          <input id="hp-search-location" type="text" value={place} maxLength={80} placeholder="Any city" onChange={e => setPlace(e.target.value)} />
+        </label>
+        <label className="hp-search-price">
+          <span>Price (Rs.)</span>
+          <span className="hp-search-range">
+            <input id="hp-search-min" type="number" min={0} inputMode="numeric" value={min} placeholder="Min" onChange={e => setMin(e.target.value)} />
+            <i>to</i>
+            <input id="hp-search-max" type="number" min={0} inputMode="numeric" value={max} placeholder="Max" onChange={e => setMax(e.target.value)} />
+          </span>
+        </label>
+      </div>
+
+      <Load state={state}>
+        <p className="hp-search-count" id="hp-search-count">{total} {total === 1 ? 'result' : 'results'}{sampleMode ? ' in the sample products' : ''}</p>
+        {items.length === 0 ? (
+          <div className="hp-no-results">
+            <Search size={32} />
+            <p>No results found{q ? <> for &ldquo;{q}&rdquo;</> : null}{category !== 'all' ? ` in ${category}` : ''}{filtered ? ' with these filters' : ''}.</p>
+            {filtered
+              ? <button className="hp-cta-secondary" onClick={resetFilters}>Reset filters</button>
+              : <button className="hp-cta-secondary" onClick={onClear}>Clear search</button>}
+          </div>
+        ) : (
+          <div className="hp-arrivals-grid">
+            {items.map(item => (
+              <ProductCard key={String(item.id)} item={item} saved={saved.has(String(item.id))} onSave={() => onSave(String(item.id))} onClick={() => actions.open('listing', item)} />
+            ))}
+          </div>
+        )}
+        <Pager page={page} total={total} onChange={setPage} />
+      </Load>
+    </section>
+  );
+}
+
 export function Homepage({ actions }: { actions: Actions }) {
   const reqState = useLoad('requests?size=3', actions.revision);
   const listState = useLoad('listings?size=14', actions.revision);
@@ -105,6 +225,9 @@ export function Homepage({ actions }: { actions: Actions }) {
   const liveRequests = hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
   const recentDeals = hasRealLists ? realLists.slice(0, 6) : samples.slice(0, 6);
   const freshArrivals = hasRealLists ? realLists.slice(6, 14) : samples.slice(6, 14);
+  // Spotlight: a promoted product when there is one, otherwise the newest; the sample only before any real product exists.
+  const spotlight: any = hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0]) : featuredSpotlight;
+  const spotlightFeatured = !!spotlight.featured || !!spotlight.sample;
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
@@ -133,15 +256,6 @@ export function Homepage({ actions }: { actions: Actions }) {
     if (el) el.scrollBy({ left: dir === 'right' ? 280 : -280, behavior: 'smooth' });
   };
 
-  // Live filter sample data by search query + category
-  const filterItems = (items: typeof samples) =>
-    items.filter(p =>
-      (searchCategory === 'all' || p.category.toLowerCase() === searchCategory.toLowerCase()) &&
-      (!searchQ || `${p.title} ${p.description} ${p.category}`.toLowerCase().includes(searchQ.toLowerCase()))
-    );
-
-  const filteredRecentDeals = filterItems(recentDeals);
-  const filteredArrivals = filterItems(freshArrivals);
   const isSearching = searchQ.trim().length > 0 || searchCategory !== 'all';
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
@@ -249,7 +363,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         <div className="hp-banner hp-banner-orange">
           <div className="hp-banner-text">
             <h3>Have something to sell?</h3>
-            <p>List your item in minutes and reach thousands of buyers.</p>
+            <p>List your item in minutes and reach buyers across Pakistan.</p>
             <button className="hp-banner-btn hp-banner-btn-orange" onClick={() => actions.open('listing-form')}>
               Sell Now <ArrowUpRight size={15} />
             </button>
@@ -262,32 +376,8 @@ export function Homepage({ actions }: { actions: Actions }) {
 
         {/* ── LIVE SEARCH RESULTS (shown when searching) ── */}
         {isSearching && (
-          <section ref={searchResultsRef} className="hp-section hp-search-results">
-            <div className="hp-section-head">
-              <div className="hp-section-title-wrap">
-                <Search size={18} className="hp-zap-icon" />
-                <h2 className="hp-section-title">
-                  {searchQ ? `Results for "${searchQ}"` : `Category: ${searchCategory}`}
-                </h2>
-              </div>
-              <button className="hp-see-all hp-clear-search" onClick={() => { setSearchQ(''); setSearchCategory('all'); }}>
-                ✕ Clear search
-              </button>
-            </div>
-            {[...filteredRecentDeals, ...filteredArrivals].length === 0 ? (
-              <div className="hp-no-results">
-                <Search size={32} />
-                <p>No results found for &ldquo;{searchQ}&rdquo;{searchCategory !== 'all' ? ` in ${searchCategory}` : ''}.</p>
-                <button className="hp-cta-secondary" onClick={() => { setSearchQ(''); setSearchCategory('all'); }}>Clear filters</button>
-              </div>
-            ) : (
-              <div className="hp-arrivals-grid">
-                {[...new Map([...filteredRecentDeals, ...filteredArrivals].map(i => [i.id, i])).values()].map(item => (
-                  <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
-                ))}
-              </div>
-            )}
-          </section>
+          <SearchResults actions={actions} q={searchQ.trim()} category={searchCategory} sampleMode={!listState.loading && !hasRealLists}
+            saved={savedIds} onSave={toggleSave} onClear={() => { setSearchQ(''); setSearchCategory('all'); }} anchor={searchResultsRef} />
         )}
 
         {/* EXPLORE CATEGORIES */}
@@ -322,23 +412,22 @@ export function Homepage({ actions }: { actions: Actions }) {
         {/* FEATURED SPOTLIGHT */}
         <section className="hp-spotlight">
           <div className="hp-spotlight-badges">
-            <span className="hp-spotlight-badge">Featured</span>
-            <span className="hp-spotlight-badge hp-badge-hot">🔥 Hot Pick</span>
+            <span className="hp-spotlight-badge">{spotlightFeatured ? 'Featured' : 'Just Listed'}</span>
           </div>
           <div className="hp-spotlight-inner">
             <div className="hp-spotlight-img-wrap">
-              <Photo src={featuredSpotlight.image} alt={featuredSpotlight.title} />
+              <Photo src={spotlight.images?.[0] ?? spotlight.image} alt={String(spotlight.title)} />
             </div>
             <div className="hp-spotlight-info">
-              <span className="hp-spotlight-eyebrow">Featured Spotlight</span>
-              <h2 className="hp-spotlight-title">{featuredSpotlight.title}</h2>
-              <p className="hp-spotlight-sub">{featuredSpotlight.subtitle}</p>
-              <div className="hp-spotlight-price">{money(featuredSpotlight.price)}</div>
+              <span className="hp-spotlight-eyebrow">{spotlightFeatured ? 'Featured Spotlight' : 'Latest Listing'}</span>
+              <h2 className="hp-spotlight-title">{spotlight.title}</h2>
+              <p className="hp-spotlight-sub">{spotlight.subtitle || [spotlight.category, spotlight.condition].filter(Boolean).join(' · ')}</p>
+              <div className="hp-spotlight-price">{money(Number(spotlight.price) || 0)}</div>
               <div className="hp-spotlight-meta">
-                <span><MapPin size={13} /> {featuredSpotlight.location}</span>
-                <span>{featuredSpotlight.seller} {featuredSpotlight.verified && <ShieldCheck size={13} />}</span>
+                <span><MapPin size={13} /> {spotlight.location}</span>
+                <span>{spotlight.seller} {!!spotlight.verified && <ShieldCheck size={13} />}</span>
               </div>
-              <button className="hp-spotlight-buy" onClick={() => actions.open('listing', featuredSpotlight as unknown as Item)}>
+              <button className="hp-spotlight-buy" onClick={() => actions.open('listing', spotlight as Item)}>
                 Buy Now <ArrowUpRight size={16} />
               </button>
             </div>
@@ -357,7 +446,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             </div>
           </div>
           <div className="hp-horizontal-scroll" id="deals-scroll">
-            {filteredRecentDeals.length > 0 ? filteredRecentDeals.map(item => (
+            {recentDeals.length > 0 ? recentDeals.map(item => (
               <div key={item.id} className="hp-deal-card-wrap">
                 <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
               </div>
@@ -381,7 +470,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             <button className="hp-see-all" id="arrivals-see-all" onClick={() => actions.go('BrandNew')}>See All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-arrivals-grid">
-            {filteredArrivals.length > 0 ? filteredArrivals.map(item => (
+            {freshArrivals.length > 0 ? freshArrivals.map(item => (
               <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
             )) : freshArrivals.map(item => (
               <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
@@ -394,7 +483,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         <section className="hp-cant-find">
           <div className="hp-cant-find-left">
             <h2>Can&apos;t find what you&apos;re looking for?</h2>
-            <p>Tell us what you need and let thousands of verified sellers come to you with the best offers.</p>
+            <p>Tell us what you need and let sellers come to you with their best offers.</p>
             <div className="hp-cant-steps">
               <div className="hp-cant-step">
                 <span className="hp-step-num">1</span>
@@ -402,7 +491,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               </div>
               <div className="hp-cant-step">
                 <span className="hp-step-num">2</span>
-                <div><strong>Sellers Discover Your Request</strong><p>Verified sellers browse live requests and match them.</p></div>
+                <div><strong>Sellers Discover Your Request</strong><p>Sellers browse live requests and send you offers.</p></div>
               </div>
               <div className="hp-cant-step">
                 <span className="hp-step-num">3</span>
@@ -415,17 +504,17 @@ export function Homepage({ actions }: { actions: Actions }) {
             </div>
           </div>
           <div className="hp-cant-find-right">
-            <h3>Looking for iPhone 15 Pro?</h3>
-            <p className="hp-cf-sub">Popular searches right now</p>
+            <h3>Not sure where to start?</h3>
+            <p className="hp-cf-sub">Try one of these searches</p>
             <div className="hp-cf-tags">
               {['iPhone 15 Pro', 'MacBook Air', 'PS5', 'Nike Jordan', 'Canon DSLR', 'Sofa Set', 'Office Chair', 'Samsung Galaxy'].map(t => (
-                <button key={t} className="hp-cf-tag" onClick={() => actions.go('Explore')}>{t}</button>
+                <button key={t} className="hp-cf-tag" onClick={() => actions.submitSearch(t)}>{t}</button>
               ))}
             </div>
             <div className="hp-trust-stats">
-              <div className="hp-trust-stat"><strong>10K+</strong><span>Active Listings</span></div>
-              <div className="hp-trust-stat"><strong>5K+</strong><span>Verified Sellers</span></div>
-              <div className="hp-trust-stat"><strong>50+</strong><span>Cities</span></div>
+              <div className="hp-trust-stat"><strong>Free</strong><span>To Join</span></div>
+              <div className="hp-trust-stat"><strong>0%</strong><span>Sales Commission</span></div>
+              <div className="hp-trust-stat"><strong>Direct</strong><span>Buyer–Seller Chat</span></div>
             </div>
           </div>
         </section>

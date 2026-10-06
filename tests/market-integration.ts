@@ -18,7 +18,7 @@ async function suite(db: unknown, label: string) {
     const denied = async (fn: () => Promise<unknown>, status?: number) => { await assert.rejects(fn, e => e instanceof MarketError && (!status || e.status === status)); checks++; };
     for (const who of Object.keys(users))
         await call(who, 'GET', 'bootstrap');
-    const listing = { title: 'Canvas tote bag', description: 'A well kept everyday canvas bag.', category: 'Bags', subcategory: 'Handbags', brand: 'Test', price: 1500, quantity: 1, condition: 'Good', location: 'Karachi', images: ['https://example.test/photo.jpg'] };
+    const listing = { title: 'Canvas tote bag', description: 'A well kept everyday canvas bag.', category: 'Accessories', subcategory: '', brand: 'Test', price: 1500, quantity: 1, condition: 'Good', location: 'Karachi', images: ['https://example.test/photo.jpg'] };
     await denied(() => call(null, 'POST', 'listings', listing), 401);
     await denied(() => call('buyer', 'POST', 'listings', listing), 403);
     for (const bad of [{ condition: 'Invalid' }, { quantity: -1 }, { description: '' }, { location: '' }, { price: 0 }, { category: 'Missing' }, { images: [] }, { images: [''] }, { images: ['javascript:alert(1)'] }, { price: 1.5 }, { quantity: 1.5 }])
@@ -93,10 +93,10 @@ async function suite(db: unknown, label: string) {
     const pages = await call(null, 'GET', 'listings', {}, 'size=60&page=9');
     ok(pages.total >= 520 && pages.items.length > 0);
     // Search, category/brand keywords, combined filters and every sorting mode.
-    for (const term of ['Canvas', 'Test', 'Bags'])
+    for (const term of ['Canvas', 'Test', 'Accessories'])
         ok((await call(null, 'GET', 'listings', {}, 'q=' + term)).items.some((v: Record<string, unknown>) => v.id === l.id));
-    ok((await call(null, 'GET', 'listings', {}, 'category=Bags&condition=Good&location=Karachi&min=1600&max=1800&type=preloved')).items[0].id === l.id);
-    ok((await call(null, 'GET', 'listings', {}, 'category=Bags&type=new')).total === 0);
+    ok((await call(null, 'GET', 'listings', {}, 'category=Accessories&condition=Good&location=Karachi&min=1600&max=1800&type=preloved')).items[0].id === l.id);
+    ok((await call(null, 'GET', 'listings', {}, 'category=Accessories&type=new')).total === 0);
     ok((await call(null, 'GET', 'listings', {}, 'q=' + encodeURIComponent("' OR 1=1 --"))).total === 0);
     for (const sort of ['low', 'high', 'newest', 'relevance'])
         ok((await call(null, 'GET', 'listings', {}, 'sort=' + sort)).items.length === 12);

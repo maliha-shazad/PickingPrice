@@ -1,40 +1,54 @@
 # Picking Price account setup
 
-Email/password registration and login use D1 accounts, salted scrypt password hashes, opaque server-side sessions, secure HttpOnly cookies, origin checks, and per-email/IP attempt limits. A buyer/seller selection is a preference, not an administrator entitlement. Passwords must have 12–128 characters. Sessions expire in seven days. Sign-out revokes the current session.
+## Member accounts
 
-Existing workspace-owned marketplace records remain under their original identity. Creating an email or Google account creates a separate identity and does not move those records. The Site remains owner-private; application registration does not grant access through the Sites sharing gate.
+Members register and sign in with an email address (or phone number) and a password of 8 to 128 characters. Passwords are stored only as salted scrypt hashes. A sign-in creates a server-side session kept in a secure, HttpOnly cookie; it expires after seven days and signing out ends it immediately. Sign-up, sign-in and reset attempts are limited per email address and per IP address, and every form request is checked against the site's own origin.
 
-## Enable Google sign-up
+The role chosen at sign-up (buying, selling, or both) only decides which features the member sees first. It can be changed later in the profile, and it never gives administrator rights.
 
-1. Create a Web application OAuth client in Google Cloud and configure the consent screen.
-2. Add this exact authorized redirect URI:
-   `https://picking-price.ahsanjaved-it.chatgpt.site/api/auth/google/callback`
-3. Set `GOOGLE_CLIENT_ID` and secret `GOOGLE_CLIENT_SECRET` using the Site's hosted environment settings. Do not place the secret in frontend code or commit it.
-4. Redeploy and test with an allowed Google test user, then publish the Google consent app as appropriate.
+## Google sign-in
 
-The button enables only when both values are configured. Until then, the UI clearly states that Google sign-up is unavailable. The OAuth code flow uses one-time state bound to an HttpOnly browser cookie, PKCE, server-side token exchange, and Google's HTTPS userinfo endpoint. Only verified Google email identities are accepted. Access tokens are not stored. Existing password accounts are never automatically linked by matching email.
+1. In Google Cloud, create an OAuth client of type **Web application** and configure the consent screen.
+2. Add this authorized redirect URI, using your own site address:
+   `https://YOUR-DOMAIN/api/auth/google/callback`
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as environment variables on the server. Never put the secret in frontend code or commit it.
+4. Redeploy, test with a Google test user, then publish the consent screen.
 
-## Administrator access
+The Google button is enabled only when both values are set. The flow uses a one-time state value tied to an HttpOnly cookie, PKCE, a server-side token exchange and Google's userinfo endpoint. Only verified Google email addresses are accepted and Google access tokens are not stored. A Google sign-in is never linked automatically to an existing password account with the same email.
 
-The admin panel is a separate page at `/admin` with its own sign-in. Nothing in the marketplace links to it, and a marketplace account never has administrator rights, whatever its stored role.
+## Administrator account
 
-There is exactly one administrator. It is not a marketplace account: its email and scrypt password hash live in a single-row `admin_auth` table with their own `admin_sessions` (12-hour, HttpOnly, SameSite=Strict cookie), so member sign-up, sign-in and password reset cannot create or take over the administrator.
+The admin panel is a separate page at `/admin` with its own sign-in. Nothing in the marketplace links to it, and a member account never has administrator rights.
+
+There is exactly one administrator. It is not a member account: its email and scrypt password hash live in their own `admin_auth` table with their own sessions (12 hours, HttpOnly, SameSite=Strict cookie), so member sign-up, sign-in and password reset cannot create or take over the administrator.
 
 Creating the administrator (once):
 
-- Hosted and local Worker edition: set the secret `ADMIN_SETUP_CODE` (16 characters or more), open `/admin`, and enter that code with the email and password you want. For local development put it in a project-root `.dev.vars` file; `pnpm start` copies it beside the built Worker config. Once the administrator exists the code can no longer be used, and with no code set, setup is switched off.
-- Portable Express edition: either set `ADMIN_SETUP_CODE` the same way, or run `pnpm admin:postgres` with `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+- Set the secret `ADMIN_SETUP_CODE` (16 characters or more), open `/admin`, and enter that code with the email and password you want. For local development put the code in a `.dev.vars` file in the project folder. Once the administrator exists the code can no longer be used, and with no code set, setup is switched off.
+- On the Express edition you can instead run `npm run admin:postgres` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` set.
 
-The password (12–128 characters) is changed inside the panel with **Change password**, which signs out every other admin session. There is no forgotten-password flow for the administrator: if that password is lost, someone with database access must delete the row in `admin_auth` and run setup again. Sign-in, setup and password attempts are limited per IP address.
+The administrator password (12 to 128 characters) is changed inside the panel with **Change password**, which signs out every other admin session. There is no forgotten-password flow for the administrator: if that password is lost, someone with database access must delete the row in `admin_auth` and run setup again. Sign-in, setup and password attempts are limited per IP address.
 
-## Remaining account features
+## Forgotten member passwords
 
-Email confirmation, MFA and user-managed account linking are not implemented, and no email is ever sent. Email/password addresses are not marked verified.
+Password reset does not depend on email. The member contacts support; the administrator confirms who they are, opens `/admin` → Members → **Reset password**, and gives them the one-time code shown. The member enters that code with their email and a new password on the Forgot Password page. A code is valid for 60 minutes and for one use, issuing a new one cancels the previous one, and a successful reset signs the member out everywhere else. Issued codes appear in the admin Activity log.
 
-## Forgotten passwords
+## Notification emails
 
-Because there is no email delivery, a member cannot reset a password with an email address alone. The member contacts support; the administrator confirms who they are, opens `/admin` → Members → **Reset password**, and reads out the one-time code shown. The member enters that code with their email and a new password on the Forgot Password page. A code is valid for 60 minutes and for one use, issuing a new one cancels the previous one, and a successful reset signs the member out everywhere else. Issued codes appear in the admin Activity log.
+Every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached) can also be sent to the member's email address through [Resend](https://resend.com).
+
+1. Create a Resend account and an API key.
+2. Set `RESEND_API_KEY` on the server.
+3. Optionally verify your own domain in Resend and set `EMAIL_FROM`, for example `Picking Price <notify@yourdomain.com>`.
+
+Without `RESEND_API_KEY` no email is sent and the in-app notifications work as usual. Without `EMAIL_FROM` Resend's test sender is used, which only delivers to the Resend account owner's own address; a verified domain is needed to email every member.
+
+Rules the sender follows: each notification is emailed at most once; chat messages send at most one email per conversation every 15 minutes; accounts registered with a phone number instead of an email address are skipped; notifications older than one hour are never emailed, so switching the key on does not send a backlog.
+
+## Not included
+
+Email address confirmation, multi-factor sign-in and member-managed account linking are not implemented.
 
 ## Checks
 
-Use `pnpm test:password` for password checks. Type-check and build before publication. Run `pnpm test:auth` after building for Worker-runtime integration checks. These use an isolated disposable database; no test accounts are seeded to production.
+`npm run test:password` covers password hashing, `npm run test:auth` covers sign-up, sign-in and sessions on the Workers runtime (build first), and `npm run test:http` covers the Express server, including notification emails against a stand-in mail server. All use throwaway databases.

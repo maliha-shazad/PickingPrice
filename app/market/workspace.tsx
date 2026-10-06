@@ -36,7 +36,6 @@ export default function Workspace() {
     const [activeProduct, setActiveProduct] = useState<Item | null>(null);
     const [pending, setPending] = useState<{ type: string; item: Item } | null>(null);
     const [confirmBusy, setConfirmBusy] = useState(false);
-    const [workspaceEnabled, setWorkspaceEnabled] = useState(false);
 
     // Header state
     const [searchQ, setSearchQ] = useState('');          // the applied search
@@ -49,13 +48,6 @@ export default function Workspace() {
     const [mode, setMode] = useState<'Buying' | 'Selling'>('Buying');
     const [modeToggle, setModeToggle] = useState(false); // toggle switch
     const locationRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        fetch('/api/auth/options')
-            .then(r => r.json() as Promise<{ workspace?: boolean }>)
-            .then(d => setWorkspaceEnabled(d.workspace === true))
-            .catch(() => { });
-    }, []);
 
     // Auto-detect live location once
     useEffect(() => {
@@ -162,11 +154,17 @@ export default function Workspace() {
     const switchMode = (next: 'Buying' | 'Selling') => {
         if (next === 'Selling' && buyingOnly) return askToEnableSelling();
         setMode(next); setModeToggle(next === 'Selling');
+        // Remembered for this member on this device, so a reload keeps the side they chose.
+        try { if (user?.id) window.localStorage.setItem('pp-mode:' + user.id, next); } catch { }
     };
 
     // The Buying/Selling toggle starts on the side the member registered for; it is theirs to switch afterwards.
+    // A member who both buys and sells comes back to the side they last switched to.
     useEffect(() => {
-        setMode(user?.role === 'seller' ? 'Selling' : 'Buying');
+        let saved = '';
+        try { saved = (user?.id && window.localStorage.getItem('pp-mode:' + user.id)) || ''; } catch { }
+        const next = user?.role === 'both' && (saved === 'Selling' || saved === 'Buying') ? saved : user?.role === 'seller' ? 'Selling' : 'Buying';
+        setMode(next); setModeToggle(next === 'Selling');
     }, [user?.id, user?.role]);
 
     const open = (type: string, item: Item = {}) => {

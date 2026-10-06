@@ -1,7 +1,20 @@
-import { useState, useRef } from 'react';
-import { ChevronRight, Heart, Share2, MapPin, Clock, ShieldCheck, CheckCircle2, Star, MessageSquare, Phone, Camera, X, Send } from 'lucide-react';
-import { Item, Actions, money, Photo, useLoad, Load } from './ui';
+import { useState } from 'react';
+import { ChevronRight, Heart, Share2, MapPin, Clock, ShieldCheck, CheckCircle2, Star, MessageSquare, Phone, Send, Flag, BadgePercent, Repeat } from 'lucide-react';
+import { Item, Actions, money, Photo, useLoad, Load, api } from './ui';
 import { toast } from 'sonner';
+
+// "Listed 3 hours ago": how long since the seller posted it.
+const since = (iso: string) => {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (!Number.isFinite(mins)) return 'recently';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + (mins === 1 ? ' minute ago' : ' minutes ago');
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.floor(hours / 24);
+  if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+  return 'on ' + new Date(iso).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 export function ProductPage({ item, actions }: { item: Item; actions: Actions }) {
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -10,12 +23,11 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
   const sellerState = useLoad(item.owner ? 'profiles/' + item.owner : null, actions.revision);
   const sellerData = sellerState.data;
 
-  // Use real data if available, otherwise mock data for the visual fidelity of Figma
-  const title = String(item.title || 'Sony WH-1000XM4 Noise Canceling Headphones — Silver');
-  const priceText = item.price ? money(Number(item.price)) : 'Rs. 24,500';
-  const location = String(item.location || 'DHA Phase 6, Karachi');
-  const category = String(item.category || 'ELECTRONICS > Over-Ear Audio');
-  const description = String(item.description || 'Gently used for 4 months. Complete box, original AUX cable, airplane adapter, and carrying case included. Zero scratches on headband or ear cups. Battery comfortably holds full 30 hours charge with ANC on. Selling because upgraded to studio monitoring gear.');
+  const title = String(item.title || 'Untitled product');
+  const priceText = money(Number(item.price) || 0);
+  const location = String(item.location || 'Pakistan');
+  const category = String(item.category || 'Products');
+  const description = String(item.description || 'The seller has not added a description.');
   
   // Extract images
   let images: string[] = [];
@@ -81,7 +93,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             {/* Badges */}
             <div className="pp-prod-img-badges-top">
               <span className="badge-like-new">{item.condition || 'Like New'}</span>
-              {item.verified && <span className="badge-verified"><ShieldCheck size={12} /> Verified Listing</span>}
+              {!!item.verified && <span className="badge-verified"><ShieldCheck size={12} /> Verified Listing</span>}
             </div>
             
             {/* Main Image */}
@@ -121,8 +133,8 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
           <div className="pp-prod-price-row">
             <h1 className="pp-prod-price">{priceText}</h1>
             <div className="pp-prod-price-badges">
-              <span className="badge-fixed-price">FIXED<br/>PRICE</span>
-              <span className="badge-negotiable"><span className="neg-dot"></span> Negotiable: No</span>
+              <span className="badge-fixed-price">{item.negotiable ? 'ASKING' : 'FIXED'}<br/>PRICE</span>
+              <span className="badge-negotiable"><span className="neg-dot" style={item.negotiable ? { background: '#10b981' } : undefined}></span> Negotiable: {item.negotiable ? 'Yes' : 'No'}</span>
             </div>
           </div>
 
@@ -131,8 +143,10 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
           <div className="pp-prod-meta">
             <span><MapPin size={14} /> {location}</span>
             <span className="meta-dot">•</span>
-            <span><Clock size={14} /> Listed 3 hours ago</span>
+            <span><Clock size={14} /> {item.created ? 'Listed ' + since(String(item.created)) : 'Listed recently'}</span>
           </div>
+
+          {(item.negotiable || item.exchange) && item.owner ? <DealOptions item={item} actions={actions} title={title} /> : null}
 
           <div className="pp-safety-notice">
             <div className="safety-icon-wrap"><ShieldCheck size={20} /></div>
@@ -140,36 +154,6 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
               <strong>Picking Price Safety Notice</strong>
               <p>We connect buyers and sellers directly. Always inspect product thoroughly in a safe daylight public place before releasing cash.</p>
             </div>
-          </div>
-
-          <div className="pp-verification-box">
-            <div className="verification-head">
-              <strong><ShieldCheck size={16} /> Item Verification Checklist</strong>
-              <span className="badge-pass">PASS 100%</span>
-            </div>
-            <ul className="verification-list">
-              <li>
-                <CheckCircle2 size={18} className="check-icon" />
-                <div>
-                  <strong>Original Box & Accessories</strong>
-                  <p>Includes AUX cable, airplane pin & hard-case</p>
-                </div>
-              </li>
-              <li>
-                <CheckCircle2 size={18} className="check-icon" />
-                <div>
-                  <strong>Functionality Tested 100%</strong>
-                  <p>Active Noise Canceling & dual touch panels pristine</p>
-                </div>
-              </li>
-              <li>
-                <CheckCircle2 size={18} className="check-icon" />
-                <div>
-                  <strong>Original Bill / Purchase Receipt</strong>
-                  <p>Verified invoice from authorized distributor</p>
-                </div>
-              </li>
-            </ul>
           </div>
 
           <div className="pp-about-item">
@@ -186,6 +170,14 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
               <span>CATEGORY</span>
               <strong>{item.condition === 'New' ? 'Brand New' : 'Pre-Loved'}</strong>
             </div>
+            {item.brand ? <div className="cond-badge" id="pp-brand">
+              <span>BRAND</span>
+              <strong>{String(item.brand)}</strong>
+            </div> : null}
+            {Number(item.quantity) > 0 && <div className="cond-badge" id="pp-quantity">
+              <span>QUANTITY</span>
+              <strong>{Number(item.quantity)} available</strong>
+            </div>}
           </div>
 
           {Array.isArray(item.delivery) && item.delivery.length > 0 && <div className="pp-delivery-options">
@@ -205,10 +197,10 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
           <div className="pp-seller-box">
             <div className="seller-head">
               <div className="seller-avatar">
-                <Photo src={sellerData?.profile?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Hamza"} alt="Seller" />
+                <Photo src={sellerData?.profile?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(String(sellerData?.profile?.name || item.seller || 'Seller'))} alt="Seller" />
               </div>
               <div className="seller-info">
-                <strong>{sellerData?.profile?.name || item.seller || 'Seller Name'}</strong>
+                <strong>{sellerData?.profile?.name || item.seller || 'Seller'}</strong>
                 <span>Member since {sellerData?.profile?.created ? new Date(sellerData.profile.created).toLocaleDateString() : 'recently'}</span>
               </div>
               <div className="seller-rating">
@@ -217,8 +209,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             </div>
             
             <div className="seller-trust-badges">
-              {sellerData?.profile?.verified && <span><ShieldCheck size={12} /> Verified Member</span>}
-              <span><Clock size={12} /> Fast Replier</span>
+              {!!sellerData?.profile?.verified && <span><ShieldCheck size={12} /> Verified Member</span>}
               {sellerData?.activeListings > 0 && <span><CheckCircle2 size={12} /> {sellerData.activeListings} Active Listings</span>}
             </div>
 
@@ -244,6 +235,9 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
               <Phone size={18} /> Contact
             </button>
           </div>
+          {item.owner && actions.user?.id !== item.owner ? <button type="button" className="pp-report-link" onClick={() => actions.open('report', { type: 'listing', id: item.id })}>
+            <Flag size={13} /> Report this listing
+          </button> : null}
         </div>
 
       {/* Reviews: under the photos on desktop, after the details on phones (see .pp-prod-grid in styles.css) */}
@@ -272,7 +266,8 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
           )}
         </Load>
 
-        <ReviewForm item={item} actions={actions} />
+        {item.owner && actions.user?.id !== item.owner ? <ReviewForm item={item} actions={actions} /> : null}
+        {!item.owner ? <p className="pp-sample-note" id="pp-sample-note">This is a sample product, shown until sellers list real ones. Reviews can be written on real sellers' products.</p> : null}
       </div>
       </div>
     </div>
@@ -282,50 +277,113 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
   );
 }
 
+// What the seller switched on in Sell Now: price offers and exchange proposals. Both go to the seller
+// through this product's chat, so they are answered like any other message.
+function DealOptions({ item, actions, title }: { item: Item; actions: Actions; title: string }) {
+  const [open, setOpen] = useState<'' | 'offer' | 'exchange'>('');
+  const [amount, setAmount] = useState('');
+  const [swap, setSwap] = useState('');
+  const [busy, setBusy] = useState(false);
+  const own = actions.user?.id === item.owner;
+
+  const sendToSeller = async (text: string) => {
+    if (!actions.user) { actions.open('login'); return; }
+    setBusy(true);
+    try {
+      const chat = await api('conversations', 'POST', { contextType: 'listing', contextId: item.id });
+      await api('messages/' + encodeURIComponent(String(chat.id)), 'POST', { body: text });
+      setOpen(''); setAmount(''); setSwap('');
+      toast.success('Sent to the seller', { description: 'Their reply will appear in this chat.' });
+      actions.open('conversation', { id: chat.id });
+    } catch (e) {
+      const err = e as { status?: number; message?: string };
+      if (err.status === 401) actions.open('login');
+      else toast.error(err.message || 'It could not be sent. Please try again.');
+    }
+    setBusy(false);
+  };
+
+  const sendOffer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = Math.round(Number(amount));
+    if (!Number.isFinite(value) || value < 1 || value > 100000000) { toast.error('Enter the price you want to offer.'); return; }
+    sendToSeller(`Price offer: ${money(value)} for "${title}" (listed at ${money(Number(item.price) || 0)}).`);
+  };
+  const sendExchange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (swap.trim().length < 10) { toast.error('Describe what you would give in exchange (at least 10 characters).'); return; }
+    sendToSeller(`Exchange proposal for "${title}": ${swap.trim()}`);
+  };
+
+  return (
+    <div className="pp-deal" id="pp-deal">
+      {item.negotiable ? (
+        <div className="pp-deal-item">
+          <div className="pp-deal-row">
+            <span className="pp-deal-icon"><BadgePercent size={18} /></span>
+            <div className="pp-deal-text">
+              <strong>Open to offers</strong>
+              <p>The seller accepts reasonable price offers.</p>
+            </div>
+            {!own && <button type="button" id="pp-make-offer" className="pp-deal-btn" onClick={() => setOpen(open === 'offer' ? '' : 'offer')}>Make an Offer</button>}
+          </div>
+          {open === 'offer' && (
+            <form className="pp-deal-form" onSubmit={sendOffer}>
+              <label htmlFor="pp-offer-amount">Your offer (Rs.)</label>
+              <div className="pp-deal-line">
+                <input id="pp-offer-amount" type="number" min={1} inputMode="numeric" required autoFocus value={amount} onChange={e => setAmount(e.target.value)} placeholder={String(item.price || '')} />
+                <button type="submit" id="pp-offer-send" disabled={busy}>{busy ? 'Sending…' : 'Send Offer'}</button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : null}
+      {item.exchange ? (
+        <div className="pp-deal-item">
+          <div className="pp-deal-row">
+            <span className="pp-deal-icon"><Repeat size={18} /></span>
+            <div className="pp-deal-text">
+              <strong>Open to exchange</strong>
+              <p>The seller will consider an item in exchange, with a cash adjustment.</p>
+            </div>
+            {!own && <button type="button" id="pp-propose-exchange" className="pp-deal-btn" onClick={() => setOpen(open === 'exchange' ? '' : 'exchange')}>Propose Exchange</button>}
+          </div>
+          {open === 'exchange' && (
+            <form className="pp-deal-form" onSubmit={sendExchange}>
+              <label htmlFor="pp-exchange-text">What would you give in exchange?</label>
+              <textarea id="pp-exchange-text" required minLength={10} maxLength={500} autoFocus value={swap} onChange={e => setSwap(e.target.value)} placeholder="e.g. Samsung A54 in good condition plus Rs. 5,000" />
+              <button type="submit" id="pp-exchange-send" disabled={busy}>{busy ? 'Sending…' : 'Send Proposal'}</button>
+            </form>
+          )}
+        </div>
+      ) : null}
+      {own && <p className="pp-deal-own">Buyers see these options on your product. Change them with Edit in your Seller Dashboard.</p>}
+    </div>
+  );
+}
+
+// A buyer's review of the seller of this product. The server keeps one review per buyer and seller and only
+// accepts it once the two have been in contact, so the form reports what the server actually said.
 function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [body, setBody] = useState('');
-  const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).slice(0, 3 - images.length).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) setImages(prev => [...prev.slice(0, 2), reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleSubmit = async () => {
     if (!actions.user) { actions.open('login'); return; }
     if (rating === 0) { toast.error('Please select a star rating.'); return; }
-    if (!body.trim()) { toast.error('Please write a review.'); return; }
+    if (body.trim().length < 10) { toast.error('Please write at least 10 characters.'); return; }
     setSubmitting(true);
-    try {
-      await actions.perform('reviews/' + item.owner, 'POST', {
-        rating,
-        body: body.trim(),
-        images,
-        listingId: item.id,
-      });
-      toast.success('Review submitted!');
-      setSubmitted(true);
-    } catch {
-      toast.error('Failed to submit review.');
-    }
+    const saved = await actions.perform('profiles/' + item.owner + '/reviews', 'POST', { rating, body: body.trim() });
     setSubmitting(false);
+    if (saved) setSubmitted(true);
   };
 
   if (submitted) {
     return (
-      <div style={{ marginTop: '24px', padding: '24px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', textAlign: 'center' }}>
+      <div id="pp-review-thanks" style={{ marginTop: '24px', padding: '24px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', textAlign: 'center' }}>
         <CheckCircle2 size={32} style={{ color: '#059669', margin: '0 auto 8px', display: 'block' }} />
         <p style={{ fontSize: '15px', fontWeight: 600, color: '#065f46', margin: 0 }}>Thank you for your review!</p>
         <p style={{ fontSize: '13px', color: '#047857', margin: '4px 0 0' }}>Your feedback helps other buyers.</p>
@@ -334,10 +392,11 @@ function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
   }
 
   return (
-    <div style={{ marginTop: '24px', padding: '24px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-      <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div id="pp-review-form" style={{ marginTop: '24px', padding: '24px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+      <h4 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Star size={18} /> Write a Review
       </h4>
+      <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#6b7280', lineHeight: 1.5 }}>You can review this seller after you have chatted with them. One review per seller; saving again updates it.</p>
 
       {/* Star Rating */}
       <div style={{ marginBottom: '16px' }}>
@@ -347,6 +406,7 @@ function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
             <button
               key={star}
               type="button"
+              aria-label={star + (star === 1 ? ' star' : ' stars')}
               onClick={() => setRating(star)}
               onMouseEnter={() => setHover(star)}
               onMouseLeave={() => setHover(0)}
@@ -365,53 +425,21 @@ function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
         <textarea
           value={body}
           onChange={e => setBody(e.target.value)}
-          placeholder="Share your experience with this product..."
-          maxLength={1000}
+          placeholder="Share your experience with this seller (at least 10 characters)..."
+          maxLength={2000}
           style={{
             width: '100%', minHeight: '100px', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px',
             fontSize: '14px', color: '#111827', resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.5',
-            background: '#fff',
+            background: '#fff', boxSizing: 'border-box',
           }}
         />
-        <div style={{ textAlign: 'right', fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>{body.length}/1000</div>
-      </div>
-
-      {/* Image Upload */}
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Add Photos (optional, max 3)</label>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {images.map((img, i) => (
-            <div key={i} style={{ position: 'relative', width: '72px', height: '72px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-              <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button
-                type="button"
-                onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
-                style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          {images.length < 3 && (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              style={{
-                width: '72px', height: '72px', borderRadius: '8px', border: '2px dashed #d1d5db', background: '#fff',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                color: '#9ca3af', fontSize: '11px', gap: '2px',
-              }}
-            >
-              <Camera size={18} />
-              Add
-            </button>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={handleImage} />
-        </div>
+        <div style={{ textAlign: 'right', fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>{body.length}/2000</div>
       </div>
 
       {/* Submit Button */}
       <button
+        type="button"
+        id="pp-review-submit"
         onClick={handleSubmit}
         disabled={submitting || rating === 0}
         style={{

@@ -4,9 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Picking Price — Good finds. Better prices.",
   description: "Discover new and pre-loved products, or post what you need. A two-way marketplace in Pakistan.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
