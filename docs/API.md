@@ -51,7 +51,7 @@ A listing, request, offer or profile may only reference images uploaded by the s
 | `GET /my-reviews` | Reviews you wrote | Yes |
 | `GET /favorites` | Ids of products you saved | Yes |
 | `GET /conversations` | Your chats, each with the item it is about | Yes |
-| `GET /messages/:conversationId` | Messages of one chat (participants only) | Yes |
+| `GET /messages/:conversationId` | Messages of one chat (participants only). Reading it marks the chat as seen; each of your own messages carries `read: true` once the other member has seen it | Yes |
 | `GET /drafts` | Your saved request drafts | Yes |
 | `GET /notifications` | Your notifications | Yes |
 | `GET /services` | Slot usage, prices, payment instructions, your payment requests and promotions | Yes |

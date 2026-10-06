@@ -33,6 +33,8 @@ You can browse products and requests without an account. You need to sign in to 
 
 On a phone the same links are in the bar under the logo, with **Post a Request** and **Sell Now** buttons at the top.
 
+The browser's Back button works throughout the site: it closes an open popup first, then returns to the page you came from at the place where you left it.
+
 ## 3. Search and filter
 
 1. Type what you want in the search box and press **Search**. You can pick a category first.
@@ -84,6 +86,8 @@ If your account is for selling only, the site asks you to switch on buying first
 ## 7. Messages
 
 Every chat is about one product, request or offer, and the chat shows that item at the top with a **View** button. Open **Messages** to see all your chats and reply.
+
+Under each message you send there is a tick: one tick means it was sent, two ticks mean the other person has opened the chat and seen it. An open chat updates by itself every few seconds.
 
 If someone sends you something abusive or suspicious, press the small flag beside their message to report it.
 

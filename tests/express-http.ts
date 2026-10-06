@@ -99,6 +99,16 @@ try{
  equal(await waitFor(()=>mailsTo(signup.email,'New review | Picking Price').length===1),true);equal(mailsTo(signup.email,'New message | Picking Price').length,1);
  // Nothing is emailed twice, and the buyer who caused the notifications gets none of them.
  r=await read('/api/market/notifications',cookie);equal(r.status,200);await new Promise(r=>setTimeout(r,300));equal(mailsTo(signup.email,'New review | Picking Price').length,1);equal(outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test').length,0);
+ // Read receipts: your message is unread until the other member opens the chat.
+ type Msg={body:string;read:boolean};const chat=async(c:string)=>((await (await read('/api/market/messages/'+mailChat.id,c)).json()) as {items:Msg[]}).items;
+ equal((await chat(mailBuyer)).map(m=>m.read),[false,false]);
+ equal((await chat(cookie)).map(m=>m.read),[false,false]);   // the seller opens the chat; the buyer's messages are not the seller's to tick
+ equal((await chat(mailBuyer)).map(m=>m.read),[true,true]);
+ await new Promise(r=>setTimeout(r,15));r=await send('/api/market/messages/'+mailChat.id,{body:'One more question.'},mailBuyer);equal(r.status,200);
+ const later=await chat(mailBuyer);equal(later.find(m=>m.body==='One more question.')!.read,false);equal(later.find(m=>m.body==='I can collect it today.')!.read,true);
+ await new Promise(r=>setTimeout(r,15));r=await send('/api/market/messages/'+mailChat.id,{body:'Yes, still available.'},cookie);equal(r.status,200);
+ equal((await chat(cookie)).find(m=>m.body==='Yes, still available.')!.read,false);await chat(mailBuyer);equal((await chat(cookie)).find(m=>m.body==='Yes, still available.')!.read,true);
+ r=await read('/api/market/messages/'+mailChat.id);equal(r.status,401);
  // The counts behind the header badges are real numbers on PostgreSQL too (it returns COUNT as text).
  r=await read('/api/market/bootstrap',cookie);const boot=await r.json() as {unread:unknown;openRequests:unknown};equal(typeof boot.unread,'number');equal(typeof boot.openRequests,'number');
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII=','base64');

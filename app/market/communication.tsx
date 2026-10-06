@@ -1,7 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search, Package } from 'lucide-react';
-import { Actions, Item, useLoad, Load, date, money } from './ui';
+import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search, Package, Check, CheckCheck } from 'lucide-react';
+import { Actions, Item, useLoad, Load, date, money, api } from './ui';
+import { toast } from 'sonner';
 
 const contextLabel = (about: Item | null, type: string) => { const k = String(about?.kind || type); return k === 'listing' ? 'Product' : k === 'request' ? 'Buyer request' : k === 'offer' ? 'Offer' : 'Chat'; };
 
@@ -107,9 +108,19 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
     const [busy, setBusy] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const state = useLoad('messages/' + encodeURIComponent(id) + '?page=' + page + '&size=50', actions.revision);
-    const messages: Item[] = state.data?.items || [];
-    const conv = state.data?.conversation;
+    const path = 'messages/' + encodeURIComponent(id) + '?page=' + page + '&size=50';
+    const state = useLoad(path, actions.revision);
+    // The chat keeps itself up to date quietly (new messages, and the ticks on your own), without
+    // blanking the list the way a full reload would.
+    const [live, setLive] = useState<{ path: string; data: Item } | null>(null);
+    const reload = () => api(path).then(data => setLive({ path, data })).catch(() => { });
+    useEffect(() => {
+        const timer = setInterval(() => { if (document.visibilityState === 'visible') reload(); }, 5000);
+        return () => clearInterval(timer);
+    }, [path]);
+    const data = live && live.path === path ? live.data : state.data;
+    const messages: Item[] = data?.items || [];
+    const conv = data?.conversation;
 
     useEffect(() => {
         // Scroll the message list itself, not the page: the page jumping down hid the chat's header.
@@ -121,12 +132,17 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
         e.preventDefault();
         if (!body.trim()) return;
         setBusy(true);
-        const r = await actions.perform('messages/' + encodeURIComponent(id), 'POST', { body: body.trim() });
-        setBusy(false);
-        if (r) {
+        // A sent message shows up in the chat itself, so there is no "saved" notice for it.
+        try {
+            await api('messages/' + encodeURIComponent(id), 'POST', { body: body.trim() });
             setBody('');
-            setPage(1);
+            if (page === 1) await reload(); else setPage(1);
+        } catch (err) {
+            const failure = err as { status?: number; message?: string };
+            if (failure.status === 401) actions.open('login');
+            else toast.error(failure.message || 'The message could not be sent. Please try again.');
         }
+        setBusy(false);
     };
 
     const otherName = String(conv?.other_name || 'Member');
@@ -147,7 +163,7 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
                     <strong>{otherName}</strong>
                     <span>{conv ? 'Chat about this ' + kind.toLowerCase() : ''}</span>
                 </div>
-                <button className="msg-refresh-btn" onClick={state.retry} title="Refresh">
+                <button className="msg-refresh-btn" onClick={reload} title="Refresh">
                     <RefreshCcw size={16} />
                 </button>
             </div>
@@ -188,6 +204,9 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
                                         {m.owner !== actions.user?.id && <button type="button" className="msg-report" title="Report this message" aria-label="Report this message" onClick={() => actions.open('report', { type: 'message', id: m.id })}><Flag size={12} /></button>}
                                     </div>
                                     <p className="msg-bubble-body">{m.body}</p>
+                                    {m.owner === actions.user?.id && (m.read
+                                        ? <span className="msg-tick read" title="Read" aria-label="Read"><CheckCheck size={15} /></span>
+                                        : <span className="msg-tick" title="Sent" aria-label="Sent"><Check size={15} /></span>)}
                                 </div>
                             </div>
                         ))}

@@ -24,6 +24,8 @@ import { SellNow } from './sell-now';
 import { AllCategories } from './all-categories';
 
 const protectedViews = ['Saved', 'Messages', 'Notifications', 'Dashboard', 'Services', 'PostRequest', 'SellNow'];
+// Every page that has an address of its own ("/#name").
+const VIEWS = ['Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'AllCategories', 'PostRequest', 'SellNow', 'BuyerRequests'];
 
 const LOCATIONS = ['Peshawar', 'Lahore', 'Islamabad', 'Karachi', 'Rawalpindi', 'Faisalabad', 'Multan', 'Abbottabad', 'Quetta'];
 const CATEGORY_NAV = ['Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
@@ -97,8 +99,92 @@ export default function Workspace() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
+    // ---- Browser history ----
+    // Each page the visitor goes to is one history entry holding what is needed to show it again (the page,
+    // its product or draft, and how far it was scrolled). A popup adds one entry of its own, so Back closes
+    // the popup first and then returns to the previous page.
+    type Place = { id?: string; view: string; product?: Item | null; draft?: Item | null; scroll?: number; modal?: boolean; stale?: boolean };
+    const placeRef = useRef<Place>({ view: 'Explore' });
+    const modalOpen = useRef(false);
+    const onUsedPopupEntry = useRef(false);
+    const newId = () => Math.random().toString(36).slice(2, 10);
+    const placeFromUrl = (): Place => {
+        const path = window.location.pathname, hash = window.location.hash.replace('#', '').toLowerCase();
+        if (path.startsWith('/product/')) return { view: 'Product' };
+        if (path === '/request-form') return { view: 'PostRequest' };
+        return { view: VIEWS.find(v => v.toLowerCase() === hash) || 'Explore' };
+    };
+    const writeHistory = (method: 'pushState' | 'replaceState', place: Place, url?: string) => {
+        // A product or draft that cannot be stored is simply fetched again when the visitor comes back.
+        try { window.history[method](place, '', url); } catch { window.history[method]({ ...place, product: null, draft: null }, '', url); }
+    };
+    const rememberScroll = () => { if (window.history.state?.view) writeHistory('replaceState', { ...window.history.state, scroll: window.scrollY }); };
+    const pushPlace = (place: Place, url: string) => {
+        const next = { ...place, id: newId() };
+        // Leaving a popup for another page replaces the popup's entry, so Back goes to the page underneath.
+        if (window.history.state?.modal) writeHistory('replaceState', next, url);
+        else { rememberScroll(); writeHistory('pushState', next, url); }
+        placeRef.current = next; onUsedPopupEntry.current = false;
+    };
+    const restoreScroll = (y: number) => {
+        let tries = 0;
+        const step = () => { window.scrollTo(0, y); if (Math.abs(window.scrollY - y) > 2 && ++tries < 40) setTimeout(step, 50); };
+        requestAnimationFrame(step);
+    };
+    const showPlace = (place: Place) => {
+        placeRef.current = place; onUsedPopupEntry.current = !!place.modal;
+        if (place.view === 'Product') {
+            if (place.product) setActiveProduct(place.product);
+            else { const id = window.location.pathname.match(/^\/product\/(.+)$/)?.[1]; if (id) api('listings/' + id).then((d: any) => { if (d && !d.error) setActiveProduct(d); }).catch(() => { }); }
+        }
+        else if (place.view === 'SellNow') setActiveProduct(place.product || {});
+        else if (place.view === 'PostRequest') { setRequestDraft(place.draft || null); setRequestKey(k => k + 1); }
+        setView(place.view); setModal(null);
+        restoreScroll(Number(place.scroll) || 0);
+    };
+    useEffect(() => {
+        try { window.history.scrollRestoration = 'manual'; } catch { }
+        const onPop = (e: PopStateEvent) => {
+            const place: Place = e.state?.view ? e.state : placeFromUrl();
+            if (modalOpen.current) {
+                // Back with a popup open: close it, and stay on the page it was opened from.
+                modalOpen.current = false; setModal(null);
+                if (place.id && place.id === placeRef.current.id) return;
+            }
+            else if (onUsedPopupEntry.current && place.id && place.id === placeRef.current.id && !place.modal) {
+                // The entry just left belonged to a popup that was already closed on the page, so this
+                // press changed nothing on screen: go one step further back.
+                onUsedPopupEntry.current = false; window.history.back(); return;
+            }
+            showPlace(place);
+        };
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+    useEffect(() => {
+        const st = window.history.state || {};
+        if (modal) {
+            if (!st.modal) { rememberScroll(); writeHistory('pushState', { ...placeRef.current, modal: true }); }
+            else if (st.stale) writeHistory('replaceState', { ...st, stale: false });
+            onUsedPopupEntry.current = false;
+        }
+        else if (st.modal && !st.stale) { writeHistory('replaceState', { ...st, stale: true }); onUsedPopupEntry.current = true; }
+        modalOpen.current = !!modal;
+    }, [modal]);
+
     // Handle shared product links and view hash
     useEffect(() => {
+        // A reload keeps the entry's own record; a first visit gets one from the address.
+        const known = window.history.state?.view ? window.history.state as Place : null;
+        placeRef.current = known ? { ...known, modal: false, stale: false } : { ...placeFromUrl(), id: newId() };
+        if (!known) writeHistory('replaceState', placeRef.current);
+        else if (known.view === 'Product' && known.product) {
+            // Keep the product's own address even when the page was reached through "/?product=...".
+            setActiveProduct(known.product); setView('Product');
+            if (!window.location.pathname.startsWith('/product/')) writeHistory('replaceState', placeRef.current, '/product/' + known.product.id);
+            return;
+        }
+        else if (known.view === 'SellNow' && known.product) setActiveProduct(known.product);
         const params = new URLSearchParams(window.location.search);
         const productId = params.get('product');
         if (productId) {
@@ -108,7 +194,8 @@ export default function Workspace() {
                         setActiveProduct(d);
                         setView('Product');
                         setModal(null);
-                        window.history.replaceState({}, '', '/product/' + productId);
+                        placeRef.current = { id: placeRef.current.id || newId(), view: 'Product', product: d };
+                        writeHistory('replaceState', placeRef.current, '/product/' + productId);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 })
@@ -117,8 +204,7 @@ export default function Workspace() {
             setView('PostRequest');
         } else if (window.location.hash) {
             const hash = window.location.hash.replace('#', '');
-            const mappedView = [ 'Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'AllCategories', 'PostRequest', 'SellNow', 'BuyerRequests' ]
-                .find(v => v.toLowerCase() === hash.toLowerCase());
+            const mappedView = VIEWS.find(v => v.toLowerCase() === hash.toLowerCase());
             if (mappedView) setView(mappedView);
         }
     }, []);
@@ -145,8 +231,9 @@ export default function Workspace() {
     const askToEnableSelling = () => setModal({ type: 'enable-selling', item: {} });
     const askToEnableBuying = () => setModal({ type: 'enable-buying', item: {} });
     useEffect(() => {
-        if (buyingOnly && view === 'SellNow') { setView('Explore'); window.history.replaceState({}, '', '/'); askToEnableSelling(); }
-        if (sellingOnly && view === 'PostRequest') { setView('Explore'); window.history.replaceState({}, '', '/'); askToEnableBuying(); }
+        const home = () => { setView('Explore'); placeRef.current = { id: placeRef.current.id || newId(), view: 'Explore' }; writeHistory('replaceState', placeRef.current, '/'); };
+        if (buyingOnly && view === 'SellNow') { home(); askToEnableSelling(); }
+        if (sellingOnly && view === 'PostRequest') { home(); askToEnableBuying(); }
     }, [buyingOnly, sellingOnly, view]);
     // A draft being continued on the Post a Request page (null for a new request).
     const [requestDraft, setRequestDraft] = useState<Item | null>(null);
@@ -178,7 +265,7 @@ export default function Workspace() {
             setActiveProduct(item);
             setView('Product');
             setModal(null);
-            window.history.pushState({}, '', '/product/' + item.id);
+            pushPlace({ view: 'Product', product: item }, '/product/' + item.id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -186,7 +273,7 @@ export default function Workspace() {
         if (type === 'drafts') {
             // The Draft Requests section of the buyer dashboard.
             setMode('Buying'); setModeToggle(false); setView('Dashboard'); setModal(null);
-            window.history.pushState({}, '', '#dashboard');
+            pushPlace({ view: 'Dashboard' }, viewPath('Dashboard'));
             let tries = 0; const find = () => { const el = document.getElementById('bd-drafts'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 130, behavior: 'smooth' }); else if (++tries < 25) setTimeout(find, 120); }; setTimeout(find, 120);
             return;
         }
@@ -197,7 +284,7 @@ export default function Workspace() {
             setRequestDraft((item.draft as Item) || null); setRequestKey(k => k + 1);
             setView('PostRequest');
             setModal(null);
-            window.history.pushState({}, '', '/request-form');
+            pushPlace({ view: 'PostRequest', draft: (item.draft as Item) || null }, '/request-form');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -208,7 +295,7 @@ export default function Workspace() {
             setActiveProduct(item);
             setView('SellNow');
             setModal(null);
-            window.history.pushState({}, '', viewPath('SellNow'));
+            pushPlace({ view: 'SellNow', product: item }, viewPath('SellNow'));
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -227,9 +314,11 @@ export default function Workspace() {
         }
         if (next === 'SellNow' && buyingOnly) return askToEnableSelling();
         if (next === 'PostRequest' && sellingOnly) return askToEnableBuying();
+        // Choosing the page that is already open only goes back to its top; it adds nothing to Back.
+        if (next === placeRef.current.view && next === view && !window.history.state?.modal) { setModal(null); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
         setView(next);
         setModal(null);
-        window.history.pushState({}, '', next === 'Explore' ? '/' : '#' + next.toLowerCase());
+        pushPlace({ view: next }, viewPath(next));
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -276,30 +365,12 @@ export default function Workspace() {
         }
     }, []);
 
-    useEffect(() => {
-        const context = (document as { modelContext?: { registerTool?: (tool: unknown, opts: unknown) => unknown } }).modelContext;
-        if (!context?.registerTool) return;
-        const controller = new AbortController();
-        Promise.resolve(context.registerTool({
-            name: 'open_marketplace_section',
-            description: 'Navigate to an existing marketplace section.',
-            inputSchema: { type: 'object', properties: { section: { type: 'string', enum: ['Explore', 'Requests', 'Saved', 'Messages', 'Notifications', 'Dashboard'] } }, required: ['section'], additionalProperties: false },
-            annotations: { readOnlyHint: true },
-            execute: (v: { section: string }) => {
-                if (!['Explore', 'Requests', 'Saved', 'Messages', 'Notifications', 'Dashboard'].includes(v.section)) throw Error('Invalid section');
-                if (protectedViews.includes(v.section) && !user) throw Error('Sign in first');
-                setView(v.section); setModal(null); return { section: v.section };
-            }
-        }, { signal: controller.signal })).catch(() => { });
-        return () => controller.abort();
-    }, [user]);
-
     async function logout() {
         try {
             const r = await fetch('/api/auth/logout', { method: 'POST' });
             if (!r.ok) throw Error();
             setView('Explore');
-            window.history.pushState({}, '', '/');
+            pushPlace({ view: 'Explore' }, '/');
             refresh();
             toast.success('Signed out');
         } catch {

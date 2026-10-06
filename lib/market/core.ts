@@ -63,6 +63,8 @@ export async function initialize(db: Database) {
     // Which notifications have already been handled by the email sender (see email.ts).
     await run(db, "CREATE TABLE IF NOT EXISTS notification_emails (id TEXT PRIMARY KEY, owner TEXT NOT NULL, link TEXT NOT NULL DEFAULT '', sent INTEGER NOT NULL DEFAULT 0, created TEXT NOT NULL)");
     await run(db, 'CREATE INDEX IF NOT EXISTS notification_emails_owner ON notification_emails (owner, link)');
+    // When each member last opened each chat: a message sent before that moment has been read.
+    await run(db, 'CREATE TABLE IF NOT EXISTS conversation_reads (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, owner TEXT NOT NULL, read_at TEXT NOT NULL)');
     initialized.add(db);
 }
 export async function expireForUser(c: Context) {
