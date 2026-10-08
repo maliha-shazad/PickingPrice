@@ -160,7 +160,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
   const [negotiable, setNegotiable] = useState(saved.negotiable !== false);
   const [notes, setNotes] = useState(String(saved.notes || ''));
   const [handover, setHandover] = useState(String(saved.handover || 'in-person'));
-  const [place, setPlace] = useState(String(saved.location || actions.location || ''));
+  const [place, setPlace] = useState(String(saved.location || (actions.location !== 'all' ? actions.location : '') || ''));
   const [expiry, setExpiry] = useState(saved.expiry && String(saved.expiry) >= dayFromNow(1) ? String(saved.expiry) : dayFromNow(14));
   const [step, setStep] = useState(1);
   

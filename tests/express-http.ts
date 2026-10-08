@@ -7,19 +7,44 @@ import type {Pool} from 'pg';
 import {createServer} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {createApp} from '../server/app';
+import {sendMail} from '../lib/market/email';
 import {PgDatabase} from '../server/database';
 import {migrate} from '../server/migrate';
 const pg=new PGlite();
 const adapter={query:async(sql:string,args:unknown[]=[])=>{const result=await pg.query(sql,args);return {rows:result.rows,rowCount:result.affectedRows}},connect:async()=>({...adapter,release(){}})};
 const pool=adapter as unknown as Pool;
 await migrate(pool);
-// A stand-in for the email service: it records what the app would have sent.
-type Sent={auth:string;mail:{from:string;to:string[];subject:string;text:string;html:string}};
-const outbox:Sent[]=[];
-const mailServer=createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);req.on('end',()=>{outbox.push({auth:String(req.headers.authorization),mail:JSON.parse(raw)});res.setHeader('Content-Type','application/json');res.end('{"id":"test"}')})}).listen(0,'127.0.0.1');
+// A stand-in for the outside services: Resend, and Google's token, profile, Gmail and revoke addresses. It records what the app would have sent.
+type Sent={auth:string;mail:{from:string;to:string[];name?:string;subject:string;text:string;html:string}};
+const outbox:Sent[]=[],tokenCalls:Record<string,string>[]=[],revoked:string[]=[];
+const google={issued:0,expired:false,withdrawn:''};
+const sendScope='https://www.googleapis.com/auth/gmail.send';
+// Reads a Gmail "raw" message back into its parts, undoing the header and body encodings.
+const words=(v:string)=>v.replace(/(\?=)\s+(=\?UTF-8\?B\?)/g,'$1$2').replace(/=\?UTF-8\?B\?([^?]*)\?=/g,(_,b:string)=>Buffer.from(b,'base64').toString('utf8'));
+function letterOf(raw:string):Sent['mail']{
+ const all=Buffer.from(raw,'base64url').toString('utf8'),cut=all.indexOf('\r\n\r\n'),head=all.slice(0,cut).replace(/\r\n /g,' ');
+ const field=(name:string)=>words((head.split('\r\n').find(l=>l.startsWith(name+': '))||'').slice(name.length+2));
+ const boundary=/boundary="([^"]+)"/.exec(head)![1];
+ const parts=all.slice(cut+4).split('--'+boundary).slice(1,3).map(p=>Buffer.from(p.slice(p.indexOf('\r\n\r\n')+4).replace(/\s/g,''),'base64').toString('utf8'));
+ const to=field('To');
+ return {from:field('From'),to:[/<([^>]+)>/.exec(to)![1]],name:to.slice(0,to.indexOf('<')).trim(),subject:field('Subject'),text:parts[0],html:parts[1]};
+}
+const mailServer=createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);req.on('end',()=>{
+ const reply=(status:number,body:unknown)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body))};
+ const auth=String(req.headers.authorization||'');
+ if(req.url==='/token'){const f=Object.fromEntries(new URLSearchParams(raw));tokenCalls.push(f);
+  if(f.grant_type==='refresh_token')return google.expired?reply(400,{error:'invalid_grant'}):reply(200,{access_token:'access-'+(++google.issued),expires_in:3600});
+  return reply(200,{access_token:'access-'+(++google.issued),refresh_token:'refresh-'+google.issued,expires_in:3600,scope:'openid https://www.googleapis.com/auth/userinfo.email'+(f.code==='no-send'?'':' '+sendScope)});}
+ if(req.url==='/profile')return reply(200,{email:'PickingPrice@gmail.test',email_verified:true});
+ if(req.url==='/revoke'){revoked.push(new URLSearchParams(raw).get('token')||'');return reply(200,{});}
+ if(req.url==='/send'){if(auth==='Bearer '+google.withdrawn)return reply(401,{error:'invalid_credentials'});const mail=letterOf(JSON.parse(raw).raw);outbox.push({auth:'gmail '+auth,mail});return reply(mail.subject==='refuse me'?400:200,{id:'test'});}
+ const b=JSON.parse(raw);outbox.push({auth,mail:b});reply(b.subject==='refuse me'?400:201,{id:'test'});
+})}).listen(0,'127.0.0.1');
 await new Promise<void>(r=>mailServer.once('listening',r));
-const config={resendKey:'re_test_key',emailFrom:'Picking Price <notify@example.test>',emailEndpoint:'http://127.0.0.1:'+(mailServer.address() as AddressInfo).port+'/emails',origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',googleSiteVerification:'test-verify_Code-123"><x',adminSetupCode:'test-setup-code-0123456789'};
-const server=createApp(new PgDatabase(pool),config).listen(0,'127.0.0.1');
+const outside='http://127.0.0.1:'+(mailServer.address() as AddressInfo).port;
+const config={gmailClientId:'mail-client',gmailClientSecret:'mail-secret',gmailEndpoints:{auth:outside+'/consent',token:outside+'/token',profile:outside+'/profile',send:outside+'/send',revoke:outside+'/revoke'},resendKey:'re_test_key',emailFrom:'Picking Price <notify@example.test>',emailEndpoint:outside+'/emails',origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',googleSiteVerification:'test-verify_Code-123"><x',adminSetupCode:'test-setup-code-0123456789'};
+const db=new PgDatabase(pool);
+const server=createApp(db,config).listen(0,'127.0.0.1');
 await new Promise<void>(r=>server.once('listening',r));
 const address=server.address();if(!address||typeof address==='string')throw Error('Server address missing');
 config.origin='http://127.0.0.1:'+address.port;
@@ -65,6 +90,8 @@ try{
  type Found={total:number;size:number;items:{id:string}[]};const find=async(query:string)=>(await (await fetch(config.origin+'/api/market/listings?'+query)).json()) as Found;
  equal((await find('q=http&sort=relevance')).items.some(i=>i.id===created.id),true);equal((await find('q=no-such-product-xyz')).total,0);
  equal((await find('location=pesh')).items.some(i=>i.id===created.id),true);equal((await find('location=PESHAWAR')).items.some(i=>i.id===created.id),true);equal((await find('location=lahore')).items.some(i=>i.id===created.id),false);
+ // The header's city: looked for inside the location, on its own or together with an area.
+ equal((await find('city=Peshawar')).items.some(i=>i.id===created.id),true);equal((await find('city=lahore')).items.some(i=>i.id===created.id),false);equal((await find('city=all')).items.some(i=>i.id===created.id),true);equal((await find('city=peshawar&location=pesh&q=http')).total,1);equal((await find('city=peshawar&location=gulberg')).total,0);
  equal((await find('q=http&category=Books&condition=Good&min=100&max=300&location=peshawar')).total,1);equal((await find('q=http&min=300')).total,0);equal((await find('size=100')).size,60);
  // Every condition in the SRS can be saved and filtered on, Fair included.
  r=await patch({...listing,condition:'Fair',brand:'Oxford',delivery:['In-Store Pickup','Nationwide Delivery']});equal(r.status,200);equal((await find('condition=Fair')).items.some(i=>i.id===created.id),true);equal((await find('condition=Good')).items.some(i=>i.id===created.id),false);
@@ -155,7 +182,33 @@ try{
  r=await send('/api/admin/logout',{},admin);equal(r.status,200);r=await get('/api/admin/market/admin/stats',admin);equal(r.status,401);
  r=await send('/api/admin/login',{email:boss,password:first});equal(r.status,401);
  r=await send('/api/admin/login',{email:boss,password:second});equal(r.status,200);const panel=r.headers.get('set-cookie')!.split(';')[0];
- // Password reset needs a single-use code issued by the administrator; an email address alone resets nothing.
+ // Email from the site's own Gmail account: the administrator connects it once in the panel. Until then Resend carries the emails.
+ type MailState={service:string;available:boolean;connected:boolean;email:string;problem:string;returnAddress:string};
+ const mailState=async()=>(await (await get('/api/admin/mail',panel)).json()) as MailState;
+ r=await get('/api/admin/mail');equal(r.status,401);r=await get('/api/admin/mail',cookie);equal(r.status,401);r=await send('/api/admin/mail/connect',{});equal(r.status,401);r=await send('/api/admin/mail/test',{},cookie);equal(r.status,401);
+ const lastTest=()=>outbox.filter(m=>m.mail.subject==='Picking Price test email').at(-1)!;
+ let ms=await mailState();equal([ms.service,ms.available,ms.connected,ms.email],['resend',true,false,'']);equal(ms.returnAddress,config.origin+'/api/admin/mail/callback');
+ const connect=async()=>{const started=await send('/api/admin/mail/connect',{},panel);equal(started.status,200);return {jar:started.headers.get('set-cookie')!.split(';')[0],consent:new URL((await started.json() as {url:string}).url)}};
+ const back=(query:string,jar:string)=>fetch(config.origin+'/api/admin/mail/callback?'+query,{redirect:'manual',headers:{Cookie:jar}});
+ let link=await connect(),state=link.consent.searchParams.get('state')!;
+ equal(link.consent.origin+link.consent.pathname,config.gmailEndpoints.auth);equal(link.consent.searchParams.get('client_id'),'mail-client');equal(link.consent.searchParams.get('scope'),'openid email '+sendScope);
+ equal([link.consent.searchParams.get('access_type'),link.consent.searchParams.get('prompt'),link.consent.searchParams.get('code_challenge_method')],['offline','consent','S256']);equal(link.consent.searchParams.get('redirect_uri'),config.origin+'/api/admin/mail/callback');
+ // Google's answer is accepted only in the browser that started, only once, and only with the permission to send.
+ r=await back('code=good&state='+state,'');equal(r.status,302);equal(r.headers.get('location'),'/admin?mail=invalid_state');
+ r=await back('code=good&state=made-up',link.jar);equal(r.headers.get('location'),'/admin?mail=invalid_state');
+ r=await back('code=no-send&state='+state,link.jar);equal(r.headers.get('location'),'/admin?mail=no_permission');equal((await mailState()).connected,false);
+ r=await back('code=good&state='+state,link.jar);equal(r.headers.get('location'),'/admin?mail=cancelled');
+ link=await connect();state=link.consent.searchParams.get('state')!;r=await back('error=access_denied&state='+state,link.jar);equal(r.headers.get('location'),'/admin?mail=cancelled');
+ link=await connect();state=link.consent.searchParams.get('state')!;r=await back('code=good&state='+state,link.jar);equal(r.headers.get('location'),'/admin?mail=connected');
+ const exchange=tokenCalls.at(-1)!;equal([exchange.grant_type,exchange.client_id,exchange.client_secret,exchange.code,exchange.redirect_uri],['authorization_code','mail-client','mail-secret','good',config.origin+'/api/admin/mail/callback']);assert(exchange.code_verifier.length>40);checks++;
+ ms=await mailState();equal([ms.service,ms.connected,ms.email,ms.problem],['gmail',true,'pickingprice@gmail.test','']);assert(!JSON.stringify(ms).includes('refresh-'));checks++;
+ // The test button sends through Gmail, from the connected address, to the administrator unless another address is given.
+ r=await send('/api/admin/mail/test',{to:'not an address'},panel);equal(r.status,400);
+ r=await send('/api/admin/mail/test',{},panel);equal(r.status,200);equal(await r.json(),{ok:true,to:boss});
+ const trial=lastTest();equal(trial.auth,'gmail Bearer access-'+google.issued);equal(trial.mail.from,'Picking Price <pickingprice@gmail.test>');equal(trial.mail.to,[boss]);equal(trial.mail.subject,'Picking Price test email');
+ assert(trial.mail.text.includes('This is a test email from Picking Price.')&&trial.mail.html.includes('This is a test email from Picking Price.'));checks++;
+ r=await send('/api/admin/mail/test',{to:'Elsewhere@Example.test'},panel);equal(r.status,200);equal(lastTest().mail.to,['elsewhere@example.test']);
+ // Password reset needs a single-use code; an email address alone resets nothing. First the administrator's code.
  const member=((await (await get('/api/market/bootstrap',cookie)).json()) as {user:{id:string;email:string}}).user;equal(member.email,signup.email);
  const renewed='renewed-password-456';
  r=await send('/api/auth/reset',{email:signup.email,password:renewed});equal(r.status,400);
@@ -165,11 +218,56 @@ try{
  r=await send('/api/admin/market/admin/reset-code',{id:member.id},panel);equal(r.status,200);const issued=await r.json() as {code:string;email:string};equal(issued.email,signup.email);assert.match(issued.code,/^[A-Z2-9]{5}-[A-Z2-9]{5}$/);checks++;
  r=await send('/api/auth/reset',{email:signup.email,code:stale,password:renewed});equal(r.status,400);
  r=await send('/api/auth/reset',{email:'other@example.test',code:issued.code,password:renewed});equal(r.status,400);
- r=await send('/api/auth/reset',{email:signup.email,code:issued.code.toLowerCase().replace('-',' '),password:renewed});equal(r.status,200);const fresh=r.headers.get('set-cookie')!.split(';')[0];
- r=await get('/api/market/me',cookie);equal(r.status,401);r=await get('/api/market/me',fresh);equal(r.status,200);
+ r=await send('/api/auth/reset',{email:signup.email,code:issued.code.toLowerCase().replace('-',' '),password:renewed});equal(r.status,200);equal(r.headers.get('set-cookie'),null);   // the member signs in afterwards
+ r=await get('/api/market/me',cookie);equal(r.status,401);
  r=await send('/api/auth/reset',{email:signup.email,code:issued.code,password:'another-password-789'});equal(r.status,400);
  r=await send('/api/auth/login',{email:signup.email,password:signup.password});equal(r.status,401);
- r=await send('/api/auth/login',{email:signup.email,password:renewed});equal(r.status,200);
+ r=await send('/api/auth/login',{email:signup.email,password:renewed});equal(r.status,200);r=await get('/api/market/me',r.headers.get('set-cookie')!.split(';')[0]);equal(r.status,200);
+ // Forgot password by email: a 6-digit code goes to the account's own address, is checked, then sets the new password.
+ const resetMails=()=>outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test'&&/reset code/.test(m.mail.subject));
+ r=await send('/api/auth/forgot',{email:'0300 1234567'});equal(r.status,400);assert(/phone number/.test(((await r.json()) as {error:string}).error));checks++;
+ r=await send('/api/auth/forgot',{email:'nobody-here@example.test'});equal(r.status,200);equal(outbox.filter(m=>m.mail.to[0]==='nobody-here@example.test').length,0);
+ r=await send('/api/auth/forgot',{email:' MailBuyer@Example.test '});equal(r.status,200);equal(resetMails().length,1);
+ const resetMail=resetMails()[0],emailed=resetMail.mail.subject.slice(0,6);assert.match(emailed,/^[0-9]{6}$/);checks++;equal(resetMail.auth,'gmail Bearer access-'+google.issued);equal(resetMail.mail.from,'Picking Price <pickingprice@gmail.test>');equal(resetMail.mail.name,'Mail Buyer');
+ assert(resetMail.mail.text.includes('Hello Mail Buyer')&&resetMail.mail.text.includes(emailed)&&resetMail.mail.text.includes('15 minutes')&&resetMail.mail.html.includes(emailed));checks++;
+ const wrong=emailed==='000000'?'000001':'000000';
+ r=await send('/api/auth/reset/verify',{email:'mailbuyer@example.test',code:wrong});equal(r.status,400);
+ r=await send('/api/auth/reset/verify',{email:'mailbuyer@example.test',code:emailed});equal(r.status,200);
+ r=await send('/api/auth/reset',{email:'mailbuyer@example.test',code:emailed,password:'Fresh-password-2026'});equal(r.status,200);equal(r.headers.get('set-cookie'),null);
+ r=await send('/api/auth/reset/verify',{email:'mailbuyer@example.test',code:emailed});equal(r.status,400);   // used up
+ r=await get('/api/market/me',mailBuyer);equal(r.status,401);                                                 // signed out everywhere
+ r=await send('/api/auth/login',{email:'mailbuyer@example.test',password:'safe-http-password-123'});equal(r.status,401);
+ r=await send('/api/auth/login',{email:'mailbuyer@example.test',password:'Fresh-password-2026'});equal(r.status,200);
+ // An access token that Google withdraws early is replaced without losing the email.
+ const refreshes=()=>tokenCalls.filter(t=>t.grant_type==='refresh_token');equal(refreshes().length,0);
+ google.withdrawn='access-'+google.issued;r=await send('/api/admin/mail/test',{},panel);equal(r.status,200);equal(lastTest().auth,'gmail Bearer access-'+google.issued);
+ equal(refreshes().length,1);equal([refreshes()[0].client_id,refreshes()[0].client_secret],['mail-client','mail-secret']);assert(/^refresh-\d+$/.test(refreshes()[0].refresh_token));checks++;
+ // When Google stops accepting the connection the panel says so, and Resend carries the emails until it is connected again.
+ google.withdrawn='access-'+google.issued;google.expired=true;r=await send('/api/admin/mail/test',{},panel);equal(r.status,502);
+ ms=await mailState();equal([ms.service,ms.connected,ms.problem],['resend',true,'expired']);
+ r=await send('/api/auth/signup',{email:'fallback@example.test',name:'Fall Back',password:'safe-http-password-123',role:'buyer'});equal(r.status,200);
+ r=await send('/api/auth/forgot',{email:'fallback@example.test'});equal(r.status,200);const viaOther=outbox.filter(m=>m.mail.to[0]==='fallback@example.test');equal(viaOther.length,1);equal(viaOther[0].auth,'Bearer re_test_key');equal(viaOther[0].mail.from,'Picking Price <notify@example.test>');
+ google.expired=false;link=await connect();r=await back('code=good&state='+link.consent.searchParams.get('state'),link.jar);equal(r.headers.get('location'),'/admin?mail=connected');ms=await mailState();equal([ms.service,ms.problem],['gmail','']);
+ // Headers are encoded, so any language arrives intact and an address cannot smuggle in a second recipient.
+ const viaGmail={gmail:{clientId:'mail-client',clientSecret:'mail-secret',endpoints:config.gmailEndpoints},from:'Picking Price <notify@example.test>',site:config.origin};
+ const longSubject='نیا پیغام: '+'قیمت کم ہو سکتی ہے؟ '.repeat(6)+'| Picking Price';
+ equal(await sendMail(db,viaGmail,{to:'urdu@example.test',name:'محمد شہریار',subject:longSubject,text:'سلام\nline two',html:'<p>سلام</p>'}),true);
+ const urdu=outbox.find(m=>m.mail.to[0]==='urdu@example.test')!;equal(urdu.mail.subject,longSubject);equal(urdu.mail.name,'محمد شہریار');equal(urdu.mail.text,'سلام\nline two');equal(urdu.mail.html,'<p>سلام</p>');
+ equal(await sendMail(db,viaGmail,{to:'one@example.test,two@example.test',subject:'x',text:'x',html:'x'}),false);equal(await sendMail(db,viaGmail,{to:'one@example.test>\r\nBcc: two@example.test',subject:'x',text:'x',html:'x'}),false);equal(outbox.some(m=>/one@|two@/.test(m.mail.to.join())),false);
+ equal(await sendMail(db,viaGmail,{to:'urdu@example.test',subject:'refuse me',text:'x',html:'x'}),false);
+ // Disconnecting forgets the account, tells Google, and is written to the activity log with the connections.
+ const held=tokenCalls.filter(t=>t.grant_type==='authorization_code').length;
+ r=await send('/api/admin/mail/disconnect',{});equal(r.status,401);r=await send('/api/admin/mail/disconnect',{},panel);equal(r.status,200);equal(revoked,['refresh-'+google.issued]);assert(held>=3);checks++;
+ ms=await mailState();equal([ms.service,ms.connected,ms.email],['resend',false,'']);
+ r=await get('/api/admin/market/admin/audit',panel);const audit=JSON.stringify(await r.json());assert(audit.includes('admin:mail-connect')&&audit.includes('admin:mail-disconnect')&&audit.includes('pickingprice@gmail.test'));checks++;
+ // Resend uses its own request shape; a refusal is reported as not sent.
+ const viaResend={resendKey:'re_direct_key',from:'Picking Price <notify@example.test>',site:config.origin,endpoint:config.emailEndpoint};
+ equal(await sendMail(db,viaResend,{to:'direct@example.test',subject:'Direct check',text:'plain',html:'<p>rich</p>'}),true);const direct=outbox.find(m=>m.mail.to[0]==='direct@example.test')!;equal(direct.auth,'Bearer re_direct_key');equal(direct.mail.from,'Picking Price <notify@example.test>');equal(direct.mail.text,'plain');
+ equal(await sendMail(db,viaResend,{to:'direct@example.test',subject:'refuse me',text:'x',html:'x'}),false);
+ // With no Gmail account connected and no other service, Forgot Password says email is not set up instead of pretending.
+ const bare=createApp(db,{...config,resendKey:undefined}).listen(0,'127.0.0.1');await new Promise<void>(done=>bare.once('listening',done));
+ try{r=await fetch('http://127.0.0.1:'+(bare.address() as AddressInfo).port+'/api/auth/forgot',{method:'POST',headers:{Origin:config.origin,'Content-Type':'application/json'},body:JSON.stringify({email:'fallback@example.test'})});equal(r.status,503);assert(/not set up/.test(((await r.json()) as {error:string}).error));checks++;}
+ finally{await new Promise<void>(done=>bare.close(()=>done()));}
  r=await get('/admin');equal(r.status,200);r=await get('/login');equal(r.status,200);
  r=await send('/api/auth/logout',{},cookie);equal(r.status,200);r=await fetch(config.origin+'/api/market/me',{headers:{Cookie:cookie}});equal(r.status,401);
  r=await fetch(config.origin);equal(r.status,200);const home=await r.text();assert(home.includes('Picking Price'));checks++;

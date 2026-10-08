@@ -51,10 +51,14 @@ export default function Workspace() {
     const [modeToggle, setModeToggle] = useState(false); // toggle switch
     const locationRef = useRef<HTMLDivElement>(null);
 
+    // The city the visitor chose stays chosen on this device.
+    const chooseLocation = (city: string) => { setLocation(city); try { localStorage.setItem('pp_location', city); } catch { } };
+    useEffect(() => { try { const saved = localStorage.getItem('pp_location'); if (saved) setLocation(saved); } catch { } }, []);
+
     // Auto-detect live location once
     useEffect(() => {
         const detected = localStorage.getItem('pp_location_detected');
-        if (!detected && navigator.geolocation) {
+        if (!detected && !localStorage.getItem('pp_location') && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     try {
@@ -72,7 +76,7 @@ export default function Workspace() {
                             }
                         }
                         
-                        if (city) {
+                        if (city && !localStorage.getItem('pp_location')) {
                             setLocation(city);
                         }
                         localStorage.setItem('pp_location_detected', 'true');
@@ -348,7 +352,7 @@ export default function Workspace() {
     const takeSearchScroll = () => { const pendingScroll = searchScroll.current; searchScroll.current = false; return pendingScroll; };
     useEffect(() => { if (!searchQ) setHeaderSearch(''); }, [searchQ]);
 
-    const actions: Actions = { open, go, perform, user, location, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, submitSearch, searchTick, takeSearchScroll, searchCategory, setSearchCategory };
+    const actions: Actions = { open, go, perform, user, location, setLocation: chooseLocation, revision, categories: boot.data?.categories || [], refresh, searchQuery: searchQ, setSearchQuery: setSearchQ, submitSearch, searchTick, takeSearchScroll, searchCategory, setSearchCategory };
 
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
@@ -452,23 +456,26 @@ export default function Workspace() {
                             <button
                                 className="pp-location-btn"
                                 onClick={() => setLocationOpen(v => !v)}
-                                aria-label={'Location: ' + location}
-                                title={location}
+                                aria-label={'Location: ' + (location === 'all' ? 'All Pakistan' : location)}
+                                title={location === 'all' ? 'All Pakistan' : location}
                                 id="header-location-btn"
                             >
                                 <MapPin size={14} className="pp-loc-icon" />
-                                <span className="pp-loc-text">{location}</span>
+                                <span className="pp-loc-text">{location === 'all' ? 'All Pakistan' : location}</span>
                                 <ChevronDown size={13} className={`pp-loc-caret${locationOpen ? ' open' : ''}`} />
                             </button>
                             {locationOpen && (
                                 <div className="pp-location-dropdown" role="listbox" aria-label="Select city">
+                                    <button className={`pp-loc-option${location === 'all' ? ' selected' : ''}`} role="option" aria-selected={location === 'all'} onClick={() => { chooseLocation('all'); setLocationOpen(false); }}>
+                                        <MapPin size={12} /> All Pakistan
+                                    </button>
                                     {LOCATIONS.map(loc => (
                                         <button
                                             key={loc}
                                             className={`pp-loc-option${location === loc ? ' selected' : ''}`}
                                             role="option"
                                             aria-selected={location === loc}
-                                            onClick={() => { setLocation(loc); setLocationOpen(false); }}
+                                            onClick={() => { chooseLocation(loc); setLocationOpen(false); }}
                                         >
                                             <MapPin size={12} /> {loc}
                                         </button>
@@ -495,8 +502,8 @@ export default function Workspace() {
                             </button>
                         </div>}
 
-                        {/* Bell notification */}
-                        <button
+                        {/* Bell notification: members only */}
+                        {user && <button
                             id="header-notifications-btn"
                             className="pp-bell-btn"
                             aria-label="Notifications"
@@ -506,7 +513,7 @@ export default function Workspace() {
                             {unread > 0 && (
                                 <span className="pp-bell-badge" aria-label={unread + ' unread notifications'}>{unread > 99 ? '99+' : unread}</span>
                             )}
-                        </button>
+                        </button>}
 
                         {/* Auth / Account actions */}
                         <div className="pp-header-auth">
@@ -660,18 +667,18 @@ export default function Workspace() {
                         <img src="/footer-logo.png" alt="Picking Price" style={{ width: '200px', height: 'auto', display: 'block', mixBlendMode: 'screen', marginBottom: '12px' }} />
                         <p>Pakistan's trusted marketplace for new and pre-loved products. Buy smart, sell easy, or post a request and let sellers find you.</p>
                         <div className="hp-footer-social">
-                            <button aria-label="Facebook" onClick={() => window.open('https://www.facebook.com/', '_blank', 'noopener,noreferrer')}>
+                            <a aria-label="Facebook" title="Facebook" href="https://www.facebook.com/profile.php?id=61594982798852" target="_blank" rel="noopener noreferrer">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                            </button>
-                            <button aria-label="Instagram" onClick={() => window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')}>
+                            </a>
+                            <a aria-label="Instagram" title="Instagram" href="https://www.instagram.com/picking_price" target="_blank" rel="noopener noreferrer">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                            </button>
-                            <button aria-label="Twitter" onClick={() => window.open('https://x.com/', '_blank', 'noopener,noreferrer')}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-                            </button>
-                            <button aria-label="YouTube" onClick={() => window.open('https://www.youtube.com/', '_blank', 'noopener,noreferrer')}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
-                            </button>
+                            </a>
+                            <a aria-label="X" title="X" href="https://x.com/Pickingprice" target="_blank" rel="noopener noreferrer">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                            </a>
+                            <a aria-label="Email us on Gmail" title="pickingprice@gmail.com" href="mailto:pickingprice@gmail.com">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
+                            </a>
                         </div>
                     </div>
                     <div className="hp-footer-col">

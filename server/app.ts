@@ -7,10 +7,11 @@ import { Database, MarketError, User, Context, now, id } from '../lib/market/typ
 import { one, run, stmt, ensureProfile, initialize } from '../lib/market/core';
 import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
-import { redeemResetCode } from '../lib/market/password-reset';
+import { redeemResetCode, requestResetCode, checkResetCode } from '../lib/market/password-reset';
 import { legalHtml, legalTitle } from '../app/legal-content';
-import { setMailer, defaultSender } from '../lib/market/email';
-import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '../lib/market/admin-auth';
+import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail } from '../lib/market/email';
+import type { GmailClient } from '../lib/market/gmail';
+import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds } from '../lib/market/admin-auth';
 export type Config = {
     origin: string;
     uploadsDir: string;
@@ -20,10 +21,15 @@ export type Config = {
     googleClientSecret?: string;
     /** Google Search Console "HTML tag" code, proving to Google that we own this website. */
     googleSiteVerification?: string;
-    /** Resend API key; notification emails are sent only when it is set. */
+    /** Google OAuth client for sending from the site's Gmail account, which the administrator connects in the admin panel. */
+    gmailClientId?: string;
+    gmailClientSecret?: string;
+    /** Google's addresses; only tests change them. */
+    gmailEndpoints?: GmailClient['endpoints'];
+    /** Resend, as the other way to send (needs a verified domain), with its sender address. */
     resendKey?: string;
     emailFrom?: string;
-    /** Where emails are posted; only tests change it. */
+    /** Where Resend emails are posted; only tests change it. */
     emailEndpoint?: string;
 };
 const digest = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -34,7 +40,7 @@ export function createApp(db: Database, config: Config) {
     app.disable('x-powered-by');
     app.set('trust proxy', 1);
     const secure = config.origin.startsWith('https:');
-    setMailer(config.resendKey ? { key: config.resendKey, from: config.emailFrom || defaultSender, site: config.origin, background: true, endpoint: config.emailEndpoint } : null);
+    setMailer(mailerFrom({ gmailClientId: config.gmailClientId, gmailClientSecret: config.gmailClientSecret, gmailEndpoints: config.gmailEndpoints, resendKey: config.resendKey, from: config.emailFrom, site: config.origin, background: true, endpoint: config.emailEndpoint }));
     const sessionName = secure ? '__Host-pp_session' : 'pp_session';
     const oauthName = secure ? '__Host-pp_oauth' : 'pp_oauth';
     const googleReady = () => !!(config.googleClientId && config.googleClientSecret);
@@ -67,7 +73,14 @@ export function createApp(db: Database, config: Config) {
         throw new MarketError('Your account is suspended.', 403); await session(res, a!.id); res.json({ ok: true }); });
     app.post('/api/auth/logout', async (req, res) => { const t = cookie(req, sessionName); if (t)
         await run(db, 'DELETE FROM sessions WHERE token_hash=?', digest(t)); setCookie(res, sessionName, '', 0); res.json({ ok: true }); });
-    app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); await session(res, await redeemResetCode(db, email, req.body.code, password)); res.json({ ok: true }); });
+    // Forgot password: a code is emailed, checked, then exchanged for a new password. The member signs in afterwards.
+    const identity = (body: Record<string, unknown> = {}) => { const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''; if (!email || email.length > 254) throw new MarketError('Enter the email address of your account.'); return email; };
+    app.post('/api/auth/forgot', async (req, res) => { const email = identity(req.body); await limit(req, email); if (!isEmail(email))
+        throw new MarketError('Reset codes are sent by email. For an account registered with a phone number, contact support for a code.'); const mail = activeMailer(); if (!mail || !await mailService(db, mail))
+        throw new MarketError('Password reset by email is not set up on this site yet. Contact support for a reset code.', 503); const issued = await requestResetCode(db, email); if (issued && !await sendMail(db, mail, { to: issued.email, name: issued.name, ...resetEmail(issued.name, issued.code, issued.minutes) }))
+        throw new MarketError('The email could not be sent. Try again in a minute, or contact support for a reset code.', 502); res.json({ ok: true, minutes: 15 }); });
+    app.post('/api/auth/reset/verify', async (req, res) => { const email = identity(req.body); await limit(req, email); res.json(await checkResetCode(db, email, req.body.code)); });
+    app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); await redeemResetCode(db, email, req.body.code, password); res.json({ ok: true }); });
     app.get('/api/auth/google', async (_req, res) => { if (!googleReady())
         return res.redirect('/?auth_error=google_not_configured'); const state = token(), verifier = token(); await run(db, 'INSERT INTO oauth_states (state_hash,verifier,expires) VALUES (?,?,?)', digest(state), verifier, new Date(Date.now() + 600000).toISOString()); setCookie(res, oauthName, state, 600); const url = new URL('https://accounts.google.com/o/oauth2/v2/auth'); url.search = new URLSearchParams({ client_id: config.googleClientId!, redirect_uri: config.origin + '/api/auth/google/callback', response_type: 'code', scope: 'openid email profile', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString(); res.redirect(url.toString()); });
     app.get('/api/auth/google/callback', async (req, res) => { const fail = (code: string) => { setCookie(res, oauthName, '', 0); return res.redirect('/?auth_error=' + code); }; if (!googleReady())
@@ -119,6 +132,11 @@ export function createApp(db: Database, config: Config) {
     app.post('/api/admin/setup', async (req, res) => { adminCookie(res, await adminSetup(db, req.body, config.adminSetupCode, ip(req)), adminSessionSeconds); res.json({ ok: true }); });
     app.post('/api/admin/logout', async (req, res) => { await adminLogout(db, cookie(req, adminName)); adminCookie(res, '', 0); res.json({ ok: true }); });
     app.post('/api/admin/password', async (req, res) => { res.json(await adminChangePassword(db, cookie(req, adminName), req.body, ip(req))); });
+    // The Gmail account the site sends from: status, connect (Google returns to /callback), disconnect, test email.
+    const mailOauth = secure ? '__Host-pp_mail_oauth' : 'pp_mail_oauth';
+    app.use('/api/admin/mail', async (req, res) => { const action = req.path.split('/').filter(Boolean)[0] || ''; const out = await adminMail(db, cookie(req, adminName), req.method, action, req.body || {}, activeMailer(), config.origin, { cookie: cookie(req, mailOauth), query: new URL(req.originalUrl, config.origin).searchParams }); if (out.state !== undefined)
+        setCookie(res, mailOauth, out.state, out.state ? 600 : 0); if (out.redirect)
+        return res.redirect(out.redirect); res.json(out.json); });
     app.use('/api/admin/market', async (req, res) => { const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); res.json(await adminMarket(db, cookie(req, adminName), req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {})); });
     app.use('/api/market', async (req, res) => { const c = await context(req); const path = req.path.split('/').filter(Boolean).map(decodeURIComponent); const result = await market(c, req.method, path, new URL(req.originalUrl, config.origin).searchParams, req.body || {}); res.json(result); });
     app.use(express.static(config.publicDir, { index: false }));

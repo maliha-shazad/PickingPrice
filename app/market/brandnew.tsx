@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Camera, Package, ArrowRight, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, RefreshCcw, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, offersDelivery, sellerScore } from './ui';
+import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -37,7 +37,8 @@ export function BrandNew({ actions }: { actions: Actions }) {
     setSelectedArea('');
   };
 
-  const currentCity = actions.location && actions.location !== 'all' ? actions.location : 'Lahore';
+  // The city chosen in the header ('' when every city is shown).
+  const currentCity = actions.location && actions.location !== 'all' ? actions.location : '';
 
   const getAreasForCity = (city: string) => {
     switch (city) {
@@ -48,7 +49,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
       case 'Faisalabad': return ['D-Ground', 'Kohinoor', 'Peoples Colony', 'Samanabad', 'Gulberg'];
       case 'Multan': return ['Gulgasht', 'Cantt', 'Bosan Road', 'Shah Rukn-e-Alam', 'Wapda Town'];
       case 'Peshawar': return ['Hayatabad', 'University Rd', 'Saddar', 'Town', 'Cantt'];
-      default: return ['Center', 'North', 'South', 'East', 'West'];
+      default: return [];
     }
   };
 
@@ -62,7 +63,9 @@ export function BrandNew({ actions }: { actions: Actions }) {
   const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
   const hasRealData = state.data?.total > 0;
-  const sourceData = hasRealData ? realListings : samples;
+  // Only the chosen city's products, whether they are members' listings or the samples.
+  const sourceData = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   let filtered = sourceData.filter((p: any) => p.condition === 'New').filter((p: any) => {
     if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
@@ -70,7 +73,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
     if (maxPrice && p.price > parseInt(maxPrice)) return false;
     if (selectedBrands.length > 0 && !selectedBrands.includes((p as any).brand || '')) return false;
     if (selectedWarranty.length > 0 && !selectedWarranty.includes((p as any).warranty || '')) return false;
-    if (selectedArea && p.location !== currentCity) return false;
+    if (!inArea(p.location, selectedArea)) return false;
     if (!offersDelivery(p, selectedDelivery)) return false;
     return true;
   });
@@ -218,7 +221,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
               })}
             </div>
 
-            <div className="bn-filter-section">
+            {areas.length > 0 && <div className="bn-filter-section">
               <div className="bn-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
               <div className="pl-area-pills">
                 {areas.map(area => (
@@ -231,7 +234,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
 
             {availableWarranties.length > 0 && <div className="bn-filter-section">
               <div className="bn-filter-label">SEAL & WARRANTY</div>
@@ -302,7 +305,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
             <div className="pl-feed-header">
               <div style={{display:'flex', alignItems: 'center', gap: '8px'}}>
                 <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#059669'}}></div>
-                <h2 className="pl-feed-title" style={{fontSize: '18px', margin: 0}}>Showing {filtered.length} Brand New items in Pakistan</h2>
+                <h2 className="pl-feed-title" style={{fontSize: '18px', margin: 0}}>Showing {filtered.length} Brand New items in {currentCity || 'Pakistan'}</h2>
               </div>
               <div className="pl-sort-wrap">
                 <span className="pl-sort-label">Sort by:</span>
@@ -394,6 +397,10 @@ export function BrandNew({ actions }: { actions: Actions }) {
                 </article>
               ))}
             </div>
+
+            {filtered.length === 0 && (newProducts.length === 0
+              ? <NoneInCity actions={actions} what="new products" />
+              : <div className="pp-city-empty"><strong>No new products match these filters</strong><button type="button" onClick={resetFilters}>Reset filters</button></div>)}
 
             {totalPages > 1 && (
               <div className="pl-pagination" style={{justifyContent: 'space-between', borderTop: 'none', paddingTop: '24px', marginTop: '32px'}}>

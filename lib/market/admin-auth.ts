@@ -3,6 +3,8 @@ import { Database, MarketError, User, id, now } from './types';
 import { one, run, stmt } from './core';
 import { market } from './router';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { Mailer, isEmail, mailService, sendMail, testEmail } from './email';
+import { gmailAccount, gmailStart, gmailFinish, gmailDisconnect, gmailCallbackPath } from './gmail';
 
 // The administrator is deliberately not a marketplace account: it lives in its own
 // single-row table with its own sessions, so member sign-up, sign-in and password
@@ -131,4 +133,43 @@ export async function adminMarket(db: Database, token: string, method: string, p
     if (area !== 'admin' && !view)
         throw new MarketError('This action is not available in the admin panel.', 404);
     return market({ db, user }, method, path, q, body);
+}
+/** The Email section of the admin panel: the Gmail account the site sends from. */
+export async function adminMail(db: Database, token: string, method: string, action: string, raw: unknown, mail: Mailer | null, origin: string, oauth: { cookie: string; query: URLSearchParams }): Promise<{ json?: unknown; redirect?: string; state?: string }> {
+    // Google sends the browser back here from another site, so the admin cookie (SameSite=Strict) does not
+    // come with the request. The one-time state, issued only to a signed-in administrator and kept in this
+    // browser's own cookie, stands in for it.
+    if (method === 'GET' && action === 'callback') {
+        const outcome = mail?.gmail ? await gmailFinish(db, mail.gmail, origin, { state: oauth.query.get('state') || '', code: oauth.query.get('code') || '', cookie: oauth.cookie }) : 'failed';
+        return { redirect: '/admin?mail=' + outcome, state: '' };
+    }
+    const user = await adminUser(db, token);
+    if (!user)
+        throw new MarketError('Sign in to continue.', 401);
+    if (method === 'GET' && !action) {
+        const account = await gmailAccount(db);
+        return { json: { service: await mailService(db, mail), available: !!mail?.gmail, connected: !!account, email: account?.email || '', problem: account?.problem || '', since: account?.connected || '', returnAddress: origin + gmailCallbackPath } };
+    }
+    if (method === 'POST' && action === 'connect') {
+        if (!mail?.gmail)
+            throw new MarketError('Set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET on the server first.', 409);
+        const started = await gmailStart(db, mail.gmail, origin);
+        return { json: { url: started.url }, state: started.state };
+    }
+    if (method === 'POST' && action === 'disconnect') {
+        await gmailDisconnect(db, mail?.gmail);
+        return { json: { ok: true } };
+    }
+    if (method === 'POST' && action === 'test') {
+        const body = input(raw);
+        const to = typeof body.to === 'string' && body.to.trim() ? body.to.trim().toLowerCase() : user.email;
+        if (!isEmail(to) || to.length > 254)
+            throw new MarketError('Enter a valid email address.');
+        if (!mail || !await mailService(db, mail))
+            throw new MarketError('Email is not set up yet. Connect a Gmail account first.', 409);
+        if (!await sendMail(db, mail, { to, ...testEmail() }))
+            throw new MarketError('The test email could not be sent. If the Gmail connection has expired, connect it again.', 502);
+        return { json: { ok: true, to } };
+    }
+    throw new MarketError('This action is not available.', 404);
 }

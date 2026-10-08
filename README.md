@@ -13,7 +13,8 @@ Live site: https://web-production-e86b77.up.railway.app
 - **Search**: keyword search over title, description, category and brand, with category, condition, location and price filters and four sort orders.
 - **Wishlist, chat, reviews, reports**: save products, message the other member about a product, request or offer, review a seller after contact, and report a listing, request, message, review or member.
 - **Listing slots and promotions**: every seller has a free listing allowance; extra slots and featured promotions are requested with a manual payment reference that the administrator approves.
-- **Notifications**: in-app for every important event, and by email when an email key is configured.
+- **Notifications**: in-app for every important event, and by email once the administrator has connected a Gmail account.
+- **Password reset**: a code emailed to the account's address, checked, then a new password; the administrator can issue a code as a fallback.
 - **Admin panel** at `/admin`: members, listings, requests, payments, reports, promotions, reviews, activity log, categories and settings.
 
 Out of scope by design: online product payments, orders, delivery management, wallets and auctions. Buyers and sellers agree the deal between themselves.
@@ -69,7 +70,7 @@ npm run build:postgres
 DATABASE_URL=postgresql://user:password@127.0.0.1:5432/picking_price npm run start:postgres
 ```
 
-Settings are read from environment variables: `DATABASE_URL`, `APP_ORIGIN`, `PORT`, `UPLOADS_DIR`, `ADMIN_SETUP_CODE`, and the optional `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY` and `EMAIL_FROM`. For the Workers edition copy `dev.vars.example` to `.dev.vars` in the project folder and edit it. Never commit real values.
+Settings are read from environment variables: `DATABASE_URL`, `APP_ORIGIN`, `PORT`, `UPLOADS_DIR`, `ADMIN_SETUP_CODE`, and the optional `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` (or `RESEND_API_KEY` with `EMAIL_FROM`). For the Workers edition copy `dev.vars.example` to `.dev.vars` in the project folder and edit it. Never commit real values.
 
 The Workers edition keeps its database and uploaded photos in the `.wrangler` folder. The first `npm start` creates the database tables by itself (`scripts/local-db.mjs`); delete the `.wrangler` folder to start empty again.
 

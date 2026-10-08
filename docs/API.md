@@ -19,7 +19,9 @@ Developer documentation for the HTTP API. The same API is served by the Express 
 | `POST /api/auth/signup` | Register: `{ name, email, password, role }`; signs the member in |
 | `POST /api/auth/login` | Sign in: `{ email, password }` |
 | `POST /api/auth/logout` | End the current session |
-| `POST /api/auth/reset` | Set a new password with an admin-issued code: `{ email, code, password }` |
+| `POST /api/auth/forgot` | Email a 6-digit reset code to the account: `{ email }`. Same answer whether or not the address has an account; 503 when no email account is connected |
+| `POST /api/auth/reset/verify` | Check a reset code without using it: `{ email, code }` |
+| `POST /api/auth/reset` | Set the new password with the code: `{ email, code, password }`. Signs out every session; the member then logs in |
 | `GET /api/auth/google` | Start Google sign-in (redirect) |
 | `GET /api/auth/google/callback` | Google returns here |
 
@@ -105,12 +107,17 @@ The administrator has a separate account and cookie; member sessions are never a
 | `POST /api/admin/market/admin/moderate` | `{ type, id, action, reason }`: warn, suspend, restore, verify, unverify (user); hide, restore (listing, request, review); resolve, dismiss (report); cancel (promotion) |
 | `POST /api/admin/market/admin/payments/:id` | Approve or reject a payment request: `{ status, note }` |
 | `POST /api/admin/market/admin/reset-code` | Issue a one-time password reset code for a member |
+| `GET /api/admin/mail` | Email status: `{ service, available, connected, email, problem, since, returnAddress }`. `service` is `gmail`, `resend` or empty |
+| `POST /api/admin/mail/connect` | Start connecting the Gmail account emails are sent from; returns `{ url }`, Google's permission page |
+| `GET /api/admin/mail/callback` | Google returns here; saves the connection and redirects to `/admin?mail=<result>` |
+| `POST /api/admin/mail/test` | Send a test email: `{ to }`, or the administrator's address when empty |
+| `POST /api/admin/mail/disconnect` | Forget the connected account and cancel the permission at Google |
 
 Approving a payment adds the slots or starts the promotion; nothing is activated before approval. Every admin action is written to the activity log.
 
 ## Database
 
-PostgreSQL in the deployed edition; the schema is created by the migrations in `drizzle/` and `server/migrate.ts`. Main tables: `accounts`, `sessions`, `profiles`, `listings`, `categories`, `buyer_requests`, `seller_offers`, `favorites`, `reviews`, `promotions`, `payment_requests`, `conversations`, `chat_messages`, `reports`, `notifications`, `request_drafts`, `settings`, `uploads`, `admin_auth`, `admin_sessions`, `admin_audit`. There are no order, auction, bid, wallet or withdrawal tables: those functions are outside the project's scope.
+PostgreSQL in the deployed edition; the schema is created by the migrations in `drizzle/` and `server/migrate.ts`. Main tables: `accounts`, `sessions`, `profiles`, `listings`, `categories`, `buyer_requests`, `seller_offers`, `favorites`, `reviews`, `promotions`, `payment_requests`, `conversations`, `chat_messages`, `reports`, `notifications`, `request_drafts`, `settings`, `uploads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`. There are no order, auction, bid, wallet or withdrawal tables: those functions are outside the project's scope.
 
 ## Testing
 

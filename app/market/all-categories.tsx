@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery } from './ui';
+import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -60,13 +60,16 @@ export function AllCategories({ actions }: { actions: Actions }) {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const currentCity = actions.location && actions.location !== 'all' ? actions.location : 'Lahore';
-  const areas = AREAS[currentCity] || ['Center', 'North', 'South', 'East', 'West'];
+  // The city chosen in the header ('' when every city is shown).
+  const currentCity = actions.location && actions.location !== 'all' ? actions.location : '';
+  const areas = AREAS[currentCity] || [];
 
   const state = useLoadAll('listings', actions.revision);
   const realListings = (state.data?.items || []) as any[];
   const hasRealData = Number(state.data?.total) > 0;
-  const sourceData: any[] = hasRealData ? realListings : samples;
+  // Only the chosen city's products, whether they are members' listings or the samples.
+  const sourceData: any[] = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const options = (field: string) => Array.from(new Set(sourceData.map(p => p[field]).filter(Boolean) as string[]))
     .map(name => ({ name, count: sourceData.filter(p => p[field] === name).length }));
@@ -79,7 +82,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
     if (selectedConditions.length > 0 && !selectedConditions.includes(p.condition)) return false;
     if (minPrice && p.price < parseInt(minPrice)) return false;
     if (maxPrice && p.price > parseInt(maxPrice)) return false;
-    if (selectedArea && p.location !== currentCity) return false;
+    if (!inArea(p.location, selectedArea)) return false;
     if (selectedBrands.length > 0 && !selectedBrands.includes(p.brand || '')) return false;
     if (selectedWarranty.length > 0 && !selectedWarranty.includes(p.warranty || '')) return false;
     if (!offersDelivery(p, selectedDelivery)) return false;
@@ -135,7 +138,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
         <div className="pl-hero">
           <div>
             <h1 className="pl-hero-title">Browse All Products</h1>
-            <p className="pl-hero-sub">New and pre-loved products across all categories. Filter by condition, price, and more.</p>
+            <p className="pl-hero-sub">New and pre-loved products {currentCity ? 'in ' + currentCity : 'across Pakistan'}, in every category. Filter by condition, price, and more.</p>
           </div>
           <div className="pl-hero-right">
             <div className="pl-trust-pills">
@@ -172,14 +175,14 @@ export function AllCategories({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            <div className="pl-filter-section">
+            {areas.length > 0 && <div className="pl-filter-section">
               <div className="pl-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
               <div className="pl-area-pills">
                 {areas.map(area => (
                   <button key={area} className={`pl-area-pill ${selectedArea === area ? 'active' : ''}`} onClick={() => setSelectedArea(selectedArea === area ? '' : area)}>{area}</button>
                 ))}
               </div>
-            </div>
+            </div>}
 
             <div className="pl-filter-section">
               <div className="pl-filter-label">Condition Grade</div>
@@ -320,8 +323,9 @@ export function AllCategories({ actions }: { actions: Actions }) {
             {items.length === 0 && (
               <div style={{textAlign:'center',padding:'60px 20px',color:'#94a3b8'}}>
                 <Package size={48} style={{opacity:0.3,marginBottom:'16px'}} />
-                <p style={{fontSize:'16px',fontWeight:600}}>No products found</p>
-                <p style={{fontSize:'14px'}}>Try adjusting your filters or browse all categories.</p>
+                <p style={{fontSize:'16px',fontWeight:600}}>No products found{currentCity ? ' in ' + currentCity : ''}</p>
+                <p style={{fontSize:'14px'}}>{currentCity ? 'Only ' + currentCity + ' is shown because it is the city selected at the top of the page.' : 'Try adjusting your filters or browse all categories.'}</p>
+                {currentCity && actions.setLocation ? <button id="ac-all-pakistan" style={{marginTop:'12px',marginRight:'8px',padding:'10px 20px',background:'#fff',color:'#059669',border:'1.5px solid #059669',borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={() => actions.setLocation!('all')}>Show all Pakistan</button> : null}
                 <button style={{marginTop:'12px',padding:'10px 20px',background:'#059669',color:'#fff',border:0,borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={resetFilters}>Reset Filters</button>
               </div>
             )}

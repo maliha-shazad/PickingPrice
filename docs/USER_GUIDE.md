@@ -13,7 +13,13 @@ Picking Price connects buyers and sellers directly. You can browse products that
 
 You can browse products and requests without an account. You need to sign in to save products, chat, post a request, send an offer, write a review or report something. When you try one of these while signed out, the site takes you to the login page and brings you back afterwards.
 
-**Forgot your password?** Contact support (see **Contact Us** in the footer). After confirming who you are, the support team gives you a one-time code. Open **Forgot Password** on the login page and enter your email, the code and a new password. The code works once and expires after 60 minutes.
+**Forgot your password?** Open **Forgot Password** on the login page:
+
+1. Enter the email address of your account and press **Send Code**. A 6-digit code is emailed to you; check the spam folder if it does not arrive.
+2. Enter the code and press **Verify Code**. The code is valid for 15 minutes and works once.
+3. Choose a new password, type it again and press **Update Password**. Then log in with the new password.
+
+If you registered with a phone number, or the email does not arrive, contact support (see **Contact Us** in the footer). They give you a code that you enter through **Already have a code from support?** on the same page.
 
 ## 2. Find your way around
 

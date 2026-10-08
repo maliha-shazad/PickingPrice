@@ -43,6 +43,12 @@ export async function listCatalogue(c: Context, kind: 'listings' | 'requests', q
         clauses.push('LOWER(a.location) LIKE ?');
         args.push('%' + place + '%');
     }
+    // The city chosen in the header; it can be combined with a location (an area inside that city).
+    const city = (q.get('city') || '').trim().slice(0, 80).toLowerCase();
+    if (city && city !== 'all') {
+        clauses.push('LOWER(a.location) LIKE ?');
+        args.push('%' + city + '%');
+    }
     if (q.get('type') === 'new')
         clauses.push("a.condition='New'");
     if (q.get('type') === 'preloved')

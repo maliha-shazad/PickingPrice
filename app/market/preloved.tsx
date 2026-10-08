@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, ArrowRight, Timer, CheckCheck, FileCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore } from './ui';
+import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
 import { samples } from '../samples';
 
 
@@ -42,7 +42,8 @@ export function PreLoved({ actions }: { actions: Actions }) {
     );
   };
 
-  const currentCity = actions.location && actions.location !== 'all' ? actions.location : 'Lahore';
+  // The city chosen in the header ('' when every city is shown).
+  const currentCity = actions.location && actions.location !== 'all' ? actions.location : '';
   
   const getAreasForCity = (city: string) => {
     switch (city) {
@@ -53,7 +54,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
       case 'Faisalabad': return ['D-Ground', 'Kohinoor', 'Peoples Colony', 'Samanabad', 'Gulberg'];
       case 'Multan': return ['Gulgasht', 'Cantt', 'Bosan Road', 'Shah Rukn-e-Alam', 'Wapda Town'];
       case 'Peshawar': return ['Hayatabad', 'University Rd', 'Saddar', 'Town', 'Cantt'];
-      default: return ['Center', 'North', 'South', 'East', 'West'];
+      default: return [];
     }
   };
 
@@ -79,14 +80,16 @@ export function PreLoved({ actions }: { actions: Actions }) {
   const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
   const hasRealData = state.data?.total > 0;
-  const sourceData = hasRealData ? realListings : samples;
+  // Only the chosen city's products, whether they are members' listings or the samples.
+  const sourceData = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   let filtered = sourceData.filter((p: any) => p.condition !== 'New').filter((p: any) => {
     if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
     if (selectedConditions.length > 0 && !selectedConditions.includes(p.condition)) return false;
     if (minPrice && p.price < parseInt(minPrice)) return false;
     if (maxPrice && p.price > parseInt(maxPrice)) return false;
-    if (selectedArea && p.location !== currentCity) return false;
+    if (!inArea(p.location, selectedArea)) return false;
     if (!offersDelivery(p, selectedDelivery)) return false;
     return true;
   });
@@ -132,7 +135,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
       <div className="pl-hero-wrap">
         <div className="pl-hero">
           <div>
-            <h1 className="pl-hero-title">Discover Pre-Loved Deals Near You</h1>
+            <h1 className="pl-hero-title">Discover Pre-Loved Deals {currentCity ? 'in ' + currentCity : 'Near You'}</h1>
             <p className="pl-hero-sub">Explore pre-loved products with clear condition details, and inspect them in person before you pay.</p>
           </div>
           <div className="pl-hero-right">
@@ -185,7 +188,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            <div className="pl-filter-section">
+            {areas.length > 0 && <div className="pl-filter-section">
               <div className="pl-filter-label">{currentCity} Radius {selectedArea && <span className="pl-active-badge">Active</span>}</div>
               <div className="pl-area-pills">
                 {areas.map(area => (
@@ -198,7 +201,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
 
             <div className="pl-filter-section">
               <div className="pl-filter-label">Condition Grade</div>
@@ -322,6 +325,10 @@ export function PreLoved({ actions }: { actions: Actions }) {
                 </article>
               ))}
             </div>
+
+            {filtered.length === 0 && (sourceData.some((p: any) => p.condition !== 'New')
+              ? <div className="pp-city-empty"><strong>No pre-loved products match these filters</strong><button type="button" onClick={resetFilters}>Reset filters</button></div>
+              : <NoneInCity actions={actions} what="pre-loved products" />)}
 
             {totalPages > 1 && (
               <div className="pl-pagination">

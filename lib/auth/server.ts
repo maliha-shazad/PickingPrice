@@ -1,14 +1,15 @@
 import { env } from 'cloudflare:workers';
 import { cookies } from 'next/headers';
 import { createHash, randomBytes } from 'node:crypto';
+import { mailerFrom } from '@/lib/market/email';
 export const sessionCookie = '__Host-pp_session';
 // The public address of the site, used for the Google sign-in return address.
 export const origin = 'https://web-production-e86b77.up.railway.app';
 export type AccountUser = {userId:string; displayName:string; email:string; provider:'email'|'google'; role:string};
-export const bindings = () => env as unknown as { DB:D1Database; GOOGLE_CLIENT_ID?:string; GOOGLE_CLIENT_SECRET?:string; RESEND_API_KEY?:string; EMAIL_FROM?:string };
+export const bindings = () => env as unknown as { DB:D1Database; GOOGLE_CLIENT_ID?:string; GOOGLE_CLIENT_SECRET?:string; GMAIL_CLIENT_ID?:string; GMAIL_CLIENT_SECRET?:string; RESEND_API_KEY?:string; EMAIL_FROM?:string };
 export const database = () => bindings().DB;
-// Notification emails: sent only when RESEND_API_KEY is set.
-export const mailSettings = (req:Request) => ({ key:bindings().RESEND_API_KEY||'', from:bindings().EMAIL_FROM||'', site:new URL(req.url).origin });
+// Reset codes and notification emails: sent from the Gmail account connected in the admin panel, or through Resend.
+export const mailSettings = (req:Request) => mailerFrom({ gmailClientId:bindings().GMAIL_CLIENT_ID, gmailClientSecret:bindings().GMAIL_CLIENT_SECRET, resendKey:bindings().RESEND_API_KEY, from:bindings().EMAIL_FROM, site:new URL(req.url).origin });
 export const digest = (value:string) => createHash('sha256').update(value).digest('hex');
 export const randomToken = () => randomBytes(32).toString('base64url');
 export const secureCookie = (name:string, value:string, maxAge:number) => `${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;

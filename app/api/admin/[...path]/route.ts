@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import { MarketError, Database } from '@/lib/market/types';
 import { mailSettings } from '@/lib/auth/server';
 import { setMailer } from '@/lib/market/email';
-import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminSessionSeconds } from '@/lib/market/admin-auth';
+import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds } from '@/lib/market/admin-auth';
 export const dynamic = 'force-dynamic';
 const cookieName = '__Host-pp_admin';
+const mailOauth = '__Host-pp_mail_oauth';
 const headers = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 const withCookie = (value: string, maxAge: number) => ({ ...headers, 'Set-Cookie': `${cookieName}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}` });
 async function handle(req: Request, path: string[]) {
@@ -31,6 +32,19 @@ async function handle(req: Request, path: string[]) {
         if (area === 'market') {
             setMailer(mailSettings(req));
             return Response.json(await adminMarket(db, token, req.method, rest, new URL(req.url).searchParams, body), { headers });
+        }
+        // The Gmail account the site sends from: status, connect (Google returns to /callback), disconnect, test email.
+        if (area === 'mail') {
+            const url = new URL(req.url);
+            const out = await adminMail(db, token, req.method, rest[0] || '', body, mailSettings(req), url.origin, { cookie: (await cookies()).get(mailOauth)?.value || '', query: url.searchParams });
+            const reply = new Headers(headers);
+            if (out.state !== undefined)
+                reply.append('Set-Cookie', `${mailOauth}=${out.state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${out.state ? 600 : 0}`);
+            if (out.redirect) {
+                reply.set('Location', url.origin + out.redirect);
+                return new Response(null, { status: 303, headers: reply });
+            }
+            return Response.json(out.json, { headers: reply });
         }
         if (req.method === 'GET' && area === 'session')
             return Response.json(await adminStatus(db, token, setupCode), { headers });

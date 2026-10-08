@@ -1,5 +1,6 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Actions, Item, useLoad, Load, Pager, Choice, money, date, Status, Empty } from './ui';
@@ -17,7 +18,8 @@ const STAT_LOOK: Record<string, { icon: ReactNode; bg: string; fg: string }> = {
 };
 
 export function Admin({ actions }: { actions: Actions; }) { 
-    const [tab, setTab] = useState('users');
+    // Coming back from connecting Gmail lands on Settings, where the result is shown.
+    const [tab, setTab] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('mail') ? 'settings' : 'users');
     const [page, setPage] = useState(1);
     const [q, setQ] = useState(''); 
     
@@ -218,6 +220,94 @@ const actionBtnStyle = { padding: '6px 12px', background: '#f8fafc', border: '1p
 const actionBtnStyleDark = { padding: '6px 12px', background: '#1e293b', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#fff' };
 const actionBtnStyleDanger = { display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#fff', border: '1px solid #fca5a5', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: '#b91c1c', whiteSpace: 'nowrap' as const };
 
+type MailStatus = { service: string; available: boolean; connected: boolean; email: string; problem: string; since: string; returnAddress: string };
+const MAIL_OUTCOME: Record<string, string> = {
+    invalid_state: 'The connection was started in another browser or took too long. Press Connect Gmail again.',
+    cancelled: 'Google did not give permission. Press Connect Gmail again and allow it.',
+    no_permission: 'The permission to send email was not ticked on the Google page. Press Connect Gmail again and tick it.',
+    failed: 'Google could not complete the connection. Check the client ID, the client secret and the return address, then try again.',
+};
+async function mailCall(action = '', body?: Record<string, unknown>) {
+    const r = await fetch('/api/admin/mail' + (action ? '/' + action : ''), body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' });
+    const d = await r.json().catch(() => ({})) as { error?: string } & Record<string, unknown>;
+    if (!r.ok)
+        throw new Error(d.error || 'Unable to complete this action.');
+    return d;
+}
+
+/** Settings > Email: the Gmail account that password reset codes and notification emails are sent from. */
+function MailSettings() {
+    const [status, setStatus] = useState<MailStatus | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(''), [to, setTo] = useState('');
+    const load = () => mailCall().then(d => { setStatus(d as unknown as MailStatus); setError(''); }).catch((e: Error) => setError(e.message));
+    useEffect(() => {
+        // Back from Google: say how it went, and take the answer out of the address bar.
+        const outcome = new URLSearchParams(window.location.search).get('mail');
+        if (outcome) {
+            window.history.replaceState(window.history.state, '', window.location.pathname);
+            if (outcome === 'connected')
+                toast.success('Gmail connected. Send a test email to check it.');
+            else
+                toast.error(MAIL_OUTCOME[outcome] || MAIL_OUTCOME.failed);
+        }
+        load();
+    }, []);
+    const act = async (name: string, work: () => Promise<void>) => {
+        setBusy(name);
+        try { await work(); } catch (e: unknown) { toast.error((e as Error).message || 'Unable to complete this action.'); } finally { setBusy(''); }
+    };
+    const connect = () => act('connect', async () => { const d = await mailCall('connect', {}); window.location.href = String(d.url); });
+    const disconnect = () => act('disconnect', async () => { await mailCall('disconnect', {}); toast.success('Gmail disconnected. No email is sent until an account is connected.'); await load(); });
+    const test = () => act('test', async () => { const d = await mailCall('test', { to }); toast.success('Test email sent to ' + d.to + '. Check the inbox and the spam folder.'); });
+    const note = { margin: 0, fontSize: '14px', color: '#475569', lineHeight: 1.6 };
+    const primary = { padding: '10px 18px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '14px' };
+    const ok = !!status && status.connected && !status.problem;
+    return (
+        <div id="adm-mail" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Email</h2>
+            <p style={note}>Password reset codes and copies of notifications are emailed to members from the Gmail account connected here.</p>
+            {error && <p role="alert" style={{ ...note, color: '#b91c1c' }}>{error} <button type="button" style={actionBtnStyle} onClick={load}>Retry</button></p>}
+            {status && !status.available && (
+                <p id="adm-mail-status" style={{ ...note, padding: '14px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                    {status.service === 'resend' ? 'Emails are being sent through Resend. ' : 'Email is switched off: nothing is sent yet. '}
+                    To send from a Gmail address, set <strong>GMAIL_CLIENT_ID</strong> and <strong>GMAIL_CLIENT_SECRET</strong> on the server, then reload this page. The steps are in AUTH_SETUP.md.
+                </p>
+            )}
+            {status && status.available && !status.connected && (
+                <>
+                    <p id="adm-mail-status" style={{ ...note, padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', color: '#92400e' }}>
+                        No Gmail account is connected{status.service === 'resend' ? '; emails are going through Resend for now.' : ', so no email is sent yet.'}
+                    </p>
+                    <p style={note}>Press the button and sign in with the Gmail address the emails should come from. Google will ask for permission to send email; the site cannot read the mailbox.</p>
+                    <p style={{ ...note, fontSize: '13px' }}>The Google OAuth client must list this authorised redirect URI: <code style={{ overflowWrap: 'anywhere' }}>{status.returnAddress}</code></p>
+                    <div><button id="adm-mail-connect" type="button" style={primary} disabled={!!busy} onClick={connect}>{busy === 'connect' ? 'Opening Google…' : 'Connect Gmail'}</button></div>
+                </>
+            )}
+            {status && status.available && status.connected && (
+                <>
+                    <p id="adm-mail-status" style={{ ...note, padding: '14px 16px', borderRadius: '10px', overflowWrap: 'anywhere', ...(ok ? { background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46' } : { background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' }) }}>
+                        {ok
+                            ? <>Sending from <strong>{status.email}</strong>, connected on {date(status.since)}.</>
+                            : <>Google no longer accepts the connection to <strong>{status.email}</strong> (the permission was removed or has expired), so no email is being sent. Connect it again.</>}
+                    </p>
+                    {ok && (
+                        <form style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }} onSubmit={e => { e.preventDefault(); test(); }}>
+                            <label style={{ flex: '1 1 240px', fontSize: '13px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155' }}>
+                                Send a test email to
+                                <input id="adm-mail-to" type="email" maxLength={254} value={to} onChange={e => setTo(e.target.value)} placeholder="Leave empty to use the admin email" style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit' }} />
+                            </label>
+                            <button id="adm-mail-test" style={primary} disabled={!!busy}>{busy === 'test' ? 'Sending…' : 'Send test email'}</button>
+                        </form>
+                    )}
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button id="adm-mail-connect" type="button" style={ok ? actionBtnStyle : primary} disabled={!!busy} onClick={connect}>{busy === 'connect' ? 'Opening Google…' : ok ? 'Connect a different account' : 'Connect again'}</button>
+                        <button id="adm-mail-disconnect" type="button" style={actionBtnStyleDanger} disabled={!!busy} onClick={disconnect}>Disconnect</button>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) { 
     const [f, setF] = useState({ ...data.settings }); 
     return (
@@ -261,6 +351,8 @@ function SettingsEditor({ data, actions }: { data: Item; actions: Actions; }) {
                     <button style={{ padding: '12px 24px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Save Configurations</button>
                 </div>
             </form>
+
+            <MailSettings />
 
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '32px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

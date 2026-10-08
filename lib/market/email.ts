@@ -1,43 +1,104 @@
 import { Database, Row, now } from './types';
 import { one, rows } from './core';
+import { GmailClient, gmailAccount, gmailSend } from './gmail';
 
-// Email copies of in-app notifications, sent through Resend (https://resend.com).
-// Nothing is sent until an API key is configured (RESEND_API_KEY); the in-app notifications never depend on it.
+// Outgoing email: password reset codes and copies of in-app notifications.
+// Two ways to send, both over HTTPS (hosts such as Railway block SMTP):
+//   Gmail  - the site's own Gmail account, connected once in the admin panel (see gmail.ts). No domain needed.
+//   Resend - RESEND_API_KEY; needs a verified domain to reach anyone but the account owner.
+// A connected Gmail account is used first. Nothing is sent until one of the two is ready; the in-app
+// notifications never depend on it.
 export type Mailer = {
-    key: string;
-    /** "Name <address>" on a domain verified in Resend. */
+    /** The Google OAuth client the Gmail account is connected through. */
+    gmail?: GmailClient;
+    resendKey?: string;
+    /** "Name <address>" for Resend. Gmail always sends from the connected address. */
     from: string;
     /** Public address of the site, for the link in each email. */
     site: string;
-    /** Send after the response instead of before it (long-running servers). */
+    /** Send notification copies after the response instead of before it (long-running servers). */
     background?: boolean;
-    /** Where emails are posted; only tests change it. */
+    /** Where Resend emails are posted; only tests change it. */
     endpoint?: string;
 };
 export const defaultSender = 'Picking Price <onboarding@resend.dev>';
+/** The email settings of this server; null when neither way of sending is configured. */
+export function mailerFrom(v: { gmailClientId?: string; gmailClientSecret?: string; gmailEndpoints?: GmailClient['endpoints']; resendKey?: string; from?: string; site: string; background?: boolean; endpoint?: string }): Mailer | null {
+    const gmail = v.gmailClientId && v.gmailClientSecret ? { clientId: v.gmailClientId, clientSecret: v.gmailClientSecret, endpoints: v.gmailEndpoints } : undefined;
+    if (!gmail && !v.resendKey)
+        return null;
+    return { gmail, resendKey: v.resendKey || undefined, from: v.from || defaultSender, site: v.site, background: v.background, endpoint: v.endpoint };
+}
 let mailer: Mailer | null = null;
-export const setMailer = (next: Mailer | null) => { mailer = next?.key ? next : null; };
+export const setMailer = (next: Mailer | null) => { mailer = next; };
+export const activeMailer = () => mailer;
+/** The Gmail account to send from, when one is connected and Google still accepts it. */
+const usableGmail = async (db: Database, mail: Mailer) => { const account = mail.gmail ? await gmailAccount(db) : null; return account && !account.problem ? account : null; };
+/** Which way an email would go right now: 'gmail', 'resend', or '' when nothing can be sent. */
+export async function mailService(db: Database, mail: Mailer | null) {
+    if (!mail)
+        return '';
+    return await usableGmail(db, mail) ? 'gmail' : mail.resendKey ? 'resend' : '';
+}
 
-const WINDOW_MINUTES = 60;        // older notifications are never emailed (no flood when the key is first added)
+const WINDOW_MINUTES = 60;        // older notifications are never emailed (no flood when email is first switched on)
 const CHAT_GAP_MINUTES = 15;      // at most one "New message" email per conversation in this time
 const BATCH = 20;
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString();
 const escape = (s: string) => s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
-const isEmail = (s: unknown): s is string => typeof s === 'string' && /^\S+@\S+\.\S+$/.test(s);
+export const isEmail = (s: unknown): s is string => typeof s === 'string' && /^\S+@\S+\.\S+$/.test(s);
 const pages: Record<string, string> = { conversation: '/#messages', services: '/#services', listing: '/#dashboard', request: '/#dashboard', offer: '/#dashboard', profile: '/#dashboard' };
+const frame = (inner: string) => `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1e3d2f">`
+    + `<p style="font-size:20px;font-weight:700;margin:0 0 20px;color:#2d6a4f">Picking Price</p>${inner}</div>`;
+
+/** Sends one email, from the connected Gmail account or else through Resend. Returns whether it was accepted. */
+export async function sendMail(db: Database, mail: Mailer, message: { to: string; name?: string; subject: string; text: string; html: string }) {
+    const account = await usableGmail(db, mail);
+    if (account)
+        return gmailSend(db, mail.gmail!, account, message);
+    if (!mail.resendKey)
+        return false;
+    try {
+        const r = await fetch(mail.endpoint || 'https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + mail.resendKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: mail.from, to: [message.to], subject: message.subject, text: message.text, html: message.html }) });
+        if (!r.ok)
+            console.error('Email was refused by the mail service', r.status);
+        return r.ok;
+    }
+    catch (e) {
+        console.error('Email could not be sent', e instanceof Error ? e.name : 'unknown');
+        return false;
+    }
+}
 
 export function emailFor(note: Row, site: string) {
     const link = site + (pages[String(note.link_type)] || '/#notifications');
     const title = String(note.title), body = String(note.body || '');
     const text = `Hello ${note.name || 'there'},\n\n${title}\n${body}\n\nOpen Picking Price: ${link}\n\nYou are receiving this email because you have an account on Picking Price.`;
-    const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1e3d2f">`
-        + `<p style="font-size:20px;font-weight:700;margin:0 0 20px;color:#2d6a4f">Picking Price</p>`
-        + `<p style="font-size:15px;margin:0 0 12px">Hello ${escape(String(note.name || 'there'))},</p>`
+    const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(String(note.name || 'there'))},</p>`
         + `<p style="font-size:17px;font-weight:700;margin:0 0 6px">${escape(title)}</p>`
         + `<p style="font-size:15px;line-height:1.6;margin:0 0 22px;color:#3c5446">${escape(body)}</p>`
         + `<p style="margin:0 0 26px"><a href="${escape(link)}" style="background:#2d6a4f;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:8px;display:inline-block">Open Picking Price</a></p>`
-        + `<p style="font-size:12px;color:#8aa08a;margin:0">You are receiving this email because you have an account on Picking Price.</p></div>`;
+        + `<p style="font-size:12px;color:#8aa08a;margin:0">You are receiving this email because you have an account on Picking Price.</p>`);
     return { subject: title + ' | Picking Price', text, html };
+}
+
+/** The email that carries a password reset code. */
+export function resetEmail(name: string, code: string, minutes: number) {
+    const text = `Hello ${name || 'there'},\n\nYour Picking Price password reset code is: ${code}\n\nEnter it on the Forgot Password page. It is valid for ${minutes} minutes and works once.\n\nIf you did not ask to reset your password, ignore this email; your password stays the same.`;
+    const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(name || 'there')},</p>`
+        + `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3c5446">Use this code to reset your Picking Price password:</p>`
+        + `<p style="font-size:30px;font-weight:700;letter-spacing:6px;margin:0 0 14px;color:#1e3d2f;background:#eef5ea;border-radius:10px;padding:14px 18px;display:inline-block">${escape(code)}</p>`
+        + `<p style="font-size:14px;line-height:1.6;margin:0 0 20px;color:#3c5446">Enter it on the Forgot Password page. It is valid for ${minutes} minutes and works once.</p>`
+        + `<p style="font-size:12px;color:#8aa08a;margin:0">If you did not ask to reset your password, ignore this email; your password stays the same.</p>`);
+    return { subject: `${code} is your Picking Price reset code`, text, html };
+}
+
+/** What the admin panel's "Send test email" button sends. */
+export function testEmail() {
+    const text = 'This is a test email from Picking Price.\n\nIf you are reading it, the site can send password reset codes and notification emails.';
+    const html = frame(`<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3c5446">This is a test email from Picking Price.</p>`
+        + `<p style="font-size:15px;line-height:1.6;margin:0;color:#3c5446">If you are reading it, the site can send password reset codes and notification emails.</p>`);
+    return { subject: 'Picking Price test email', text, html };
 }
 
 /** Emails the notifications created in the last hour that have not been emailed yet. Returns how many were sent. */
@@ -52,26 +113,18 @@ export async function deliverNotifications(db: Database, mail: Mailer) {
         const claimed = await one(db, 'INSERT INTO notification_emails (id,owner,link,sent,created) VALUES (?,?,?,?,?) ON CONFLICT(id) DO NOTHING RETURNING id', note.id, note.owner, chat ? note.link_id : '', send ? 1 : 0, now());
         if (!claimed || !send)
             continue;
-        try {
-            const r = await fetch(mail.endpoint || 'https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + mail.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: mail.from || defaultSender, to: [note.email], ...emailFor(note, mail.site) }) });
-            if (r.ok)
-                sent++;
-            else
-                console.error('Notification email was refused', r.status);
-        }
-        catch (e) {
-            console.error('Notification email could not be sent', e instanceof Error ? e.name : 'unknown');
-        }
+        if (await sendMail(db, mail, { to: note.email, name: String(note.name || ''), ...emailFor(note, mail.site) }))
+            sent++;
     }
     return sent;
 }
 
-/** Called after a marketplace request: sends any new notification emails, when email is configured. */
+/** Called after a marketplace request: sends any new notification emails, when email is ready. */
 export async function afterRequest(db: Database) {
     const mail = mailer;
     if (!mail)
         return;
-    const job = deliverNotifications(db, mail).catch(e => { console.error('Notification emails failed', e instanceof Error ? e.name : 'unknown'); return 0; });
+    const job = mailService(db, mail).then(ready => ready ? deliverNotifications(db, mail) : 0).catch(e => { console.error('Notification emails failed', e instanceof Error ? e.name : 'unknown'); return 0; });
     if (!mail.background)
         await job;
 }

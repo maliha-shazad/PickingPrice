@@ -69,8 +69,9 @@ On managed hosting, use the provider's selected Node environment and approved pa
 | `NODE_ENV` | `production` when running the built application |
 | `GOOGLE_CLIENT_ID` | Optional Google web application client ID |
 | `GOOGLE_CLIENT_SECRET` | Optional server-only Google client secret |
-| `RESEND_API_KEY` | Optional. API key from resend.com; when set, every in-app notification is also emailed to the member |
-| `EMAIL_FROM` | Optional sender for those emails, e.g. `Picking Price <notify@yourdomain.com>` on a domain verified in Resend. Without it Resend's test sender is used, which only delivers to the Resend account owner's own address |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | Optional. A Google OAuth client with the Gmail API enabled. With both set, the administrator connects a Gmail account in `/admin` → Settings → Email, and password reset codes and copies of notifications are emailed from it. Works without a domain of your own (see AUTH_SETUP.md) |
+| `RESEND_API_KEY` | Optional alternative (resend.com). Needs a verified domain to reach anyone but the account owner |
+| `EMAIL_FROM` | Sender for Resend, e.g. `Picking Price <notify@yourdomain.com>` on the verified domain. Gmail does not use it: it sends from the connected address |
 | `PGSSL` | `require` enables verified database TLS in `server/index.ts`; see the TLS caveat below |
 | `NODE_EXTRA_CA_CERTS` | Optional trusted database CA certificate file when required by the provider |
 
@@ -80,7 +81,7 @@ Passwords inside a connection URL must be URL-encoded. For example, a literal `@
 
 **Remote PostgreSQL TLS caveat:** the admin creation script does not read `PGSSL`, although the main server does. For a remote database, use the provider's verified-TLS connection URL for both commands, such as its documented `sslmode=verify-full` configuration, with the correct CA trust. Avoid mixing conflicting URL SSL options with `PGSSL`; URL SSL parameters can override the pool SSL object. Never fix certificate errors by disabling certificate verification. Local loopback PostgreSQL can use the simple URL shown above when configured that way.
 
-The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. Notification emails are optional: they are sent only when `RESEND_API_KEY` is set (see the table above). Password reset does not use email; the administrator issues a one-time reset code from the admin panel.
+The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. Email is optional: reset codes and notification copies are sent only when a Gmail account is connected in the admin panel (which needs `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET`) or `RESEND_API_KEY` is set (see the table above and AUTH_SETUP.md). Without it, members ask support for a reset code that the administrator issues from the admin panel.
 
 ## 4. Windows 11 local installation
 
@@ -374,7 +375,7 @@ Railway runs this same portable edition from the repository's `Dockerfile`; noth
 5. App service → **Volumes**: add a volume mounted at `/data`. Uploaded photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
 6. After the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again afterwards and can be removed from Variables.
 
-The database starts empty: accounts and listings from a local copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) the Google sign-in variables from Section 7, and `RESEND_API_KEY` / `EMAIL_FROM` for notification emails.
+The database starts empty: accounts and listings from a local copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) the Google sign-in variables from Section 7, and `GMAIL_CLIENT_ID` + `GMAIL_CLIENT_SECRET` for password reset and notification emails (then connect the Gmail account in `/admin` → Settings → Email).
 
 ## 8. First administrator configuration
 

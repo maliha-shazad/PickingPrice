@@ -31,24 +31,59 @@ The administrator password (12 to 128 characters) is changed inside the panel wi
 
 ## Forgotten member passwords
 
-Password reset does not depend on email. The member contacts support; the administrator confirms who they are, opens `/admin` → Members → **Reset password**, and gives them the one-time code shown. The member enters that code with their email and a new password on the Forgot Password page. A code is valid for 60 minutes and for one use, issuing a new one cancels the previous one, and a successful reset signs the member out everywhere else. Issued codes appear in the admin Activity log.
+A member resets a forgotten password from the **Forgot Password** page in three steps:
 
-## Notification emails
+1. They enter the email address of their account. The site emails a 6-digit code to that address. The answer on screen is the same whether or not the address has an account.
+2. They enter the code. It is valid for 15 minutes, works once, and a newer code cancels an older one.
+3. They choose a new password and confirm it. The password is updated, every existing session of the account is signed out, and the member logs in with the new password.
 
-Every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached) can also be sent to the member's email address through [Resend](https://resend.com).
+This needs outgoing email to be working (next section). Until it is, the page says so and asks the member to contact support.
 
-1. Create a Resend account and an API key.
-2. Set `RESEND_API_KEY` on the server.
-3. Optionally verify your own domain in Resend and set `EMAIL_FROM`, for example `Picking Price <notify@yourdomain.com>`.
+**Codes from the administrator.** The administrator can also issue a code: `/admin` → Members → **Reset password**. It is valid for 60 minutes and works once. The member enters it through "Already have a code from support?" on the Forgot Password page. This is the way for accounts registered with a phone number, and a fallback if an email does not arrive. Issued codes appear in the admin Activity log.
 
-Without `RESEND_API_KEY` no email is sent and the in-app notifications work as usual. Without `EMAIL_FROM` Resend's test sender is used, which only delivers to the Resend account owner's own address; a verified domain is needed to email every member.
+Requests for a code, code checks and password changes are all counted by the same limit as sign-in attempts (per email address and per IP address), so a code cannot be guessed by trying many.
 
-Rules the sender follows: each notification is emailed at most once; chat messages send at most one email per conversation every 15 minutes; accounts registered with a phone number instead of an email address are skipped; notifications older than one hour are never emailed, so switching the key on does not send a backlog.
+## Outgoing email
+
+The site sends two kinds of email: password reset codes, and a copy of every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached). Email is sent over HTTPS, so it works on hosts that block SMTP.
+
+### Gmail (works without your own domain)
+
+The site sends from a Gmail account of your own, through Google's Gmail API. The emails really come from that address, so no domain is needed. A normal Gmail account can send about 500 emails a day.
+
+**In Google Cloud (once)**
+
+1. Open [console.cloud.google.com](https://console.cloud.google.com) and create a project for email. Keep it separate from the project used for Google sign-in, so the permission to send email never becomes part of the sign-in app's review.
+2. **APIs & Services → Library**: find **Gmail API** and enable it.
+3. **Google Auth Platform**: fill in the app name and support email, choose audience **External**, and add the sending Gmail address as a test user.
+4. **Clients → Create client**, type **Web application**, with this authorised redirect URI (your own site address):
+   `https://YOUR-DOMAIN/api/admin/mail/callback`
+5. Set the client's two values on the server and redeploy:
+   - `GMAIL_CLIENT_ID`
+   - `GMAIL_CLIENT_SECRET`
+
+**In the admin panel (once)**
+
+1. Open `/admin` → **Settings** → **Email** and press **Connect Gmail**.
+2. Sign in with the Gmail address the emails should come from. Google shows "Google hasn't verified this app" because the app is your own and unreviewed: choose **Advanced**, continue, tick **Send email on your behalf** and confirm.
+3. Back in the panel the section shows the connected address. Press **Send test email** and check that it arrives.
+
+**Keeping the connection alive.** While the Google project's publishing status is **Testing**, Google cancels the connection after 7 days. Set it to **In production** (Google Auth Platform → Audience → **Publish app**) and connect again; the connection then lasts until it is removed. The app can stay unverified: the only effect is the warning in step 2, which only the administrator ever sees. Google also cancels the connection when the Gmail account's password is changed or the permission is removed in the Google account. When that happens the Email section says so in red and nothing is sent until **Connect again** is pressed.
+
+**What is stored.** Google gives the site a token that allows sending email from that account and nothing else: the site cannot read the mailbox. The token is kept in the `mail_account` table and is unusable without `GMAIL_CLIENT_SECRET`. **Disconnect** deletes it and tells Google to cancel it. Connecting and disconnecting appear in the admin Activity log.
+
+### Resend (needs your own domain)
+
+Set `RESEND_API_KEY`, verify your domain in [Resend](https://resend.com) and set `EMAIL_FROM` to an address on it. Without a verified domain Resend only delivers to the Resend account owner's own address. A connected Gmail account is used first; Resend is used when none is connected.
+
+### Rules the sender follows
+
+Each notification is emailed at most once; chat messages send at most one email per conversation every 15 minutes; accounts registered with a phone number are skipped; notifications older than one hour are never emailed, so switching email on does not send a backlog. When neither Gmail nor Resend is ready no email is sent and the in-app notifications work as usual.
 
 ## Not included
 
-Email address confirmation, multi-factor sign-in and member-managed account linking are not implemented.
+Email address confirmation at sign-up, multi-factor sign-in and member-managed account linking are not implemented.
 
 ## Checks
 
-`npm run test:password` covers password hashing, `npm run test:auth` covers sign-up, sign-in and sessions on the Workers runtime (build first), and `npm run test:http` covers the Express server, including notification emails against a stand-in mail server. All use throwaway databases.
+`npm run test:password` covers password hashing, `npm run test:auth` covers sign-up, sign-in and sessions on the Workers runtime (build first), and `npm run test:http` covers the Express server, including password reset by email and notification emails against a stand-in mail server. All use throwaway databases.

@@ -3,14 +3,16 @@ import { useEffect, useState, ReactNode } from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, MapPin } from 'lucide-react';
 export type Item = Record<string, unknown>;
 export type Actions = {
     open: (type: string, item?: Item) => void;
     go: (view: string) => void;
     perform: (path: string, method?: string, body?: Record<string, unknown>) => Promise<Item | null>;
     user: Item | null;
+    /** The city chosen in the header; "all" means every city. */
     location: string;
+    setLocation?: (city: string) => void;
     revision: number;
     categories: Item[];
     refresh: () => void;
@@ -37,6 +39,11 @@ export const offersDelivery = (product: Item, ticked: string[]) => ticked.length
 export const money = (n: number) => 'Rs. ' + Number(n).toLocaleString('en-PK');
 // A seller's review score on a product card: "4.5 (3)", or "New" before the first review.
 export const sellerScore = (p: Item) => { const n = Number(p.seller_reviews) || 0; return n ? Number(p.seller_rating).toFixed(1) + ' (' + n + ')' : 'New'; };
+// The header's city applies to every product list. Sellers type their location freely, so the city is
+// looked for inside it ("Lahore" matches "Gulberg, Lahore"). "all" shows every city.
+export const inCity = (place: unknown, city: string) => !city || city === 'all' || String(place || '').toLowerCase().includes(city.toLowerCase());
+// An area pill such as "F-7/F-8" matches a location that names either part.
+export const inArea = (place: unknown, area: string) => !area || area.split('/').some(part => String(place || '').toLowerCase().includes(part.trim().toLowerCase()));
 export const date = (s: string) => s ? new Date(s).toLocaleDateString('en-PK') : '';
 export async function api(path: string, method = 'GET', body?: Record<string, unknown>) { const r = await fetch(apiBase + path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, ...(body ? { body: JSON.stringify(body) } : {}) }); const d: {error?: string} & Record<string, unknown> = await r.json(); if (!r.ok)
     throw Object.assign(new Error(d.error || 'Unable to complete this action.'), { status: r.status }); return d; }
@@ -95,6 +102,12 @@ export function Pager({ page, total, size = 12, onChange }: {
     onChange: (p: number) => void;
 }) { const pages = Math.ceil(total / size); if (pages <= 1)
     return null; return <Pagination className="pager"><PaginationContent><PaginationItem><button className="btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button></PaginationItem><PaginationItem><span aria-live="polite">Page {page} of {pages}</span></PaginationItem><PaginationItem><button className="btn" disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button></PaginationItem></PaginationContent></Pagination>; }
+// Shown where a list has nothing for the chosen city, with a way to see every city.
+export function NoneInCity({ actions, what = 'products' }: { actions: Actions; what?: string }) {
+    const city = actions.location;
+    if (!city || city === 'all') return <div className="pp-city-empty"><strong>No {what} yet</strong></div>;
+    return <div className="pp-city-empty"><MapPin size={22} /><strong>No {what} in {city} yet</strong><p>Only {city} is shown because it is the city selected at the top of the page.</p>{actions.setLocation && <button type="button" onClick={() => actions.setLocation!('all')}>Show all Pakistan</button>}</div>;
+}
 export function Empty({ title, text, children }: {
     title: string;
     text?: string;

@@ -365,8 +365,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .hp-footer-logo span{font-weight:400}
 .hp-footer-brand p{font-size:13px;color:#8aaa8a;line-height:1.7;margin:0 0 16px}
 .hp-footer-social{display:flex;gap:8px;margin-top:10px}
-.hp-footer-social button{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#c8d8c0;font-size:13px;font-weight:700;transition:all .2s;padding:0}
-.hp-footer-social button:hover{background:#2e7d52;border-color:#2e7d52;color:#fff}
+.hp-footer-social button,.hp-footer-social a{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#c8d8c0;font-size:13px;font-weight:700;transition:all .2s;padding:0}
+.hp-footer-social button:hover,.hp-footer-social a:hover{background:#2e7d52;border-color:#2e7d52;color:#fff}
 .hp-footer-col h4{font-size:13px;font-weight:700;color:#fff;letter-spacing:.5px;text-transform:uppercase;margin:0 0 14px}
 .hp-footer-col button{display:block;font-size:13px;color:#8aaa8a;padding:4px 0;transition:color .2s;text-align:left;width:100%}
 .hp-footer-col button:hover{color:#c8e6c0}
@@ -2475,12 +2475,12 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* Phone header, signed out: where row 1 has room beside the logo, the city name is shown as on desktop.
-   The logo, bell, Login and Signup come first, so that is from 436px up; narrower screens, and members
-   (who get the Buying/Selling switch and profile buttons there), keep the icon alone. The name may take
-   what the others leave free: the row is 92vw wide and they use 337px with their gaps. */
-@media(min-width:436px) and (max-width:600px){
+   The logo, Login and Signup come first (the bell is for members only), so that is from 400px up; narrower
+   screens, and members (who get the Buying/Selling switch and profile buttons there), keep the icon alone.
+   The name may take what the others leave free: the row is 92vw wide and they use 302px with their gaps. */
+@media(min-width:400px) and (max-width:600px){
   .pp-location-wrap.signed-out .pp-location-btn{padding:6px 8px;gap:4px;font-size:12px}
-  .pp-location-wrap.signed-out .pp-loc-text{display:inline;max-width:min(120px,calc(92vw - 337px))}
+  .pp-location-wrap.signed-out .pp-loc-text{display:inline;max-width:min(120px,calc(92vw - 302px))}
 }
 /* Under 350px Login and Signup are a little smaller so the logo keeps its size. */
 @media(max-width:349px){
@@ -3031,3 +3031,23 @@ div.pf-avatar svg{width:22px;height:22px}
 .msg-tick{display:flex;justify-content:flex-end;margin-top:2px;margin-bottom:-3px;color:rgba(255,255,255,.7);line-height:1}
 .msg-tick.read{color:#7dd3fc}
 .msg-tick svg{width:17px;height:17px;stroke-width:2.4}
+
+/* A list that has nothing for the city chosen in the header */
+.pp-city-empty{grid-column:1 / -1;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:36px 20px;background:#f5f8f2;border:1px dashed #cfe0c9;border-radius:14px;color:#6a8a6a}
+.pp-city-empty svg{color:#2d6a4f;opacity:.7}
+.pp-city-empty strong{font-size:16px;color:#1e3d2f}
+.pp-city-empty p{margin:0;font-size:13.5px;line-height:1.5;max-width:420px}
+.pp-city-empty button{margin-top:8px;background:#2d6a4f;color:#fff;border:0;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer}
+.pp-city-empty button:hover{background:#1e5038}
+
+/* Tablets: the city picker stays in the header, because the chosen city decides which products every
+   page shows. Members have more buttons in that row, so they get the pin alone; visitors see the name. */
+@media(min-width:601px) and (max-width:900px){
+  .pp-location-wrap{display:flex}
+  .pp-location-wrap .pp-loc-text{display:none}
+  .pp-location-wrap.signed-out .pp-loc-text{display:inline;max-width:96px}
+}
+@media(min-width:601px) and (max-width:680px){
+  .pp-location-wrap.signed-out .pp-location-btn{padding:6px 8px;gap:4px}
+  .pp-location-wrap.signed-out .pp-loc-text{max-width:70px}
+}

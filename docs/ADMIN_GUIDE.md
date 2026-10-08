@@ -37,7 +37,7 @@ The sections are tabs across the top. Each has a search box that searches that s
 | Promotions | Featured promotions | Cancel an active one |
 | Reviews | Seller reviews | Hide or restore |
 | Activity log | Every admin action, with time and target | Read only |
-| Settings | Limits, prices, promotions, payment instructions, categories | Edit |
+| Settings | Limits, prices, promotions, payment instructions, email, categories | Edit |
 
 ## 3. Members
 
@@ -52,7 +52,7 @@ The sections are tabs across the top. Each has a search box that searches that s
   | verify | Shows the Verified badge on the member's profile and products |
   | unverify | Removes the badge |
 
-- **Reset password** issues a one-time code for a member who forgot their password. Confirm who they are first, then give them the code. They enter it with their email and a new password on the Forgot Password page. The code works once, lasts 60 minutes, and issuing a new one cancels the old one.
+- **Reset password** issues a one-time code for a member who cannot reset their password by email (an account registered with a phone number, or an email that did not arrive). Members normally do this themselves: the Forgot Password page emails them a code. Confirm who they are first, then give them your code. They enter it through "Already have a code from support?" on the Forgot Password page. The code works once, lasts 60 minutes, and issuing a new one cancels the old one.
 
 ## 4. Listings and requests
 
@@ -110,15 +110,35 @@ Below the settings is the category list.
 
 ## 9. Activity log
 
-Every administrator action is recorded with what was done, what it was done to, and when: settings changes, category changes, moderation, payment decisions, reset codes and password changes. Use it to check what happened and when.
+Every administrator action is recorded with what was done, what it was done to, and when: settings changes, category changes, moderation, payment decisions, reset codes, password changes, and connecting or disconnecting the email account. Use it to check what happened and when.
 
-## 10. Notification emails (optional)
+## 10. Email
 
-Members always receive notifications inside the site. To also send them by email, set `RESEND_API_KEY` on the server, and `EMAIL_FROM` with a sender on a domain verified in Resend. Details are in [AUTH_SETUP.md](../AUTH_SETUP.md).
+Password reset codes and copies of notifications are emailed to members from a Gmail account that you connect once. Members always receive notifications inside the site whether or not email is working.
+
+### Connect the Gmail account
+
+1. Open **Settings** and scroll to **Email**.
+2. Press **Connect Gmail** and sign in with the Gmail address the emails should come from.
+3. Google shows a warning that the app is not verified, because it is your own. Choose **Advanced**, continue, tick **Send email on your behalf** and confirm. The site can send from that account; it cannot read the mailbox.
+4. Back in the panel, press **Send test email**. It goes to your admin email unless you type another address. Check that it arrives (look in the spam folder too).
+
+### What the Email section shows
+
+| Message | Meaning | What to do |
+|---|---|---|
+| Green: "Sending from ..." | Email is working | Nothing |
+| Yellow: "No Gmail account is connected" | Nothing is emailed | Press **Connect Gmail** |
+| Red: "Google no longer accepts the connection" | The permission was removed, has expired, or the Gmail password was changed. Nothing is emailed | Press **Connect again** |
+| Grey: "Email is switched off" | The server has no `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` | Follow [AUTH_SETUP.md](../AUTH_SETUP.md) |
+
+**Connect a different account** replaces the sending address. **Disconnect** removes it and cancels the permission at Google; no email is sent afterwards. While email is not working, members who forget their password are told to contact support, and you issue them a code from the Members tab.
+
+A Gmail account can send about 500 emails a day. The one-time server setup in Google Cloud is described in [AUTH_SETUP.md](../AUTH_SETUP.md).
 
 ## 11. Routine
 
 - **Daily**: check Payments and Reports until both show nothing pending.
 - **Weekly**: skim new Listings and Reviews for anything that breaks the rules; read the Activity log.
-- **After installing or moving the site**: enter the payment instructions, check the categories, and confirm sign-up, listing a product with a photo, and a test payment request all work.
+- **After installing or moving the site**: enter the payment instructions, connect the Gmail account and send a test email, check the categories, and confirm sign-up, listing a product with a photo, and a test payment request all work.
 - **Backups**: back up the PostgreSQL database and the uploads folder together; one without the other is incomplete.

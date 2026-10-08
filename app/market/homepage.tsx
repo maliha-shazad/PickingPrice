@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money, useLoad, Load, Pager } from './ui';
+import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity } from './ui';
 import { samples, sampleRequests } from '../samples';
 
 const categories = [
@@ -117,6 +117,8 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
   if (category !== 'all') params.set('category', category);
   if (condition !== 'all') params.set('condition', condition);
   if (kind !== 'all') params.set('type', kind);
+  const city = actions.location && actions.location !== 'all' ? actions.location : '';
+  if (city) params.set('city', city);
   if (applied.place) params.set('location', applied.place);
   if (applied.min) params.set('min', applied.min);
   if (applied.max) params.set('max', applied.max);
@@ -124,6 +126,7 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
 
   const term = q.toLowerCase();
   const sampleHits = !sampleMode ? [] : (samples as Item[]).filter(p =>
+    inCity(p.location, actions.location) &&
     (category === 'all' || String(p.category).toLowerCase() === category.toLowerCase()) &&
     (!term || `${p.title} ${p.description} ${p.category} ${p.brand || ''}`.toLowerCase().includes(term)) &&
     (condition === 'all' || p.condition === condition) &&
@@ -177,7 +180,7 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
         </label>
         <label>
           <span>Location</span>
-          <input id="hp-search-location" type="text" value={place} maxLength={80} placeholder="Any city" onChange={e => setPlace(e.target.value)} />
+          <input id="hp-search-location" type="text" value={place} maxLength={80} placeholder={city ? 'Any area in ' + city : 'Any city'} onChange={e => setPlace(e.target.value)} />
         </label>
         <label className="hp-search-price">
           <span>Price (Rs.)</span>
@@ -190,11 +193,12 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
       </div>
 
       <Load state={state}>
-        <p className="hp-search-count" id="hp-search-count">{total} {total === 1 ? 'result' : 'results'}{sampleMode ? ' in the sample products' : ''}</p>
+        <p className="hp-search-count" id="hp-search-count">{total} {total === 1 ? 'result' : 'results'}{city ? ' in ' + city : ''}{sampleMode ? ' (sample products)' : ''}</p>
         {items.length === 0 ? (
           <div className="hp-no-results">
             <Search size={32} />
-            <p>No results found{q ? <> for &ldquo;{q}&rdquo;</> : null}{category !== 'all' ? ` in ${category}` : ''}{filtered ? ' with these filters' : ''}.</p>
+            <p>No results found{q ? <> for &ldquo;{q}&rdquo;</> : null}{category !== 'all' ? ` in ${category}` : ''}{city ? ` in ${city}` : ''}{filtered ? ' with these filters' : ''}.</p>
+            {city && actions.setLocation ? <button className="hp-cta-secondary" id="hp-search-all-pakistan" style={{ marginRight: '8px' }} onClick={() => actions.setLocation!('all')}>Search all Pakistan</button> : null}
             {filtered
               ? <button className="hp-cta-secondary" onClick={resetFilters}>Reset filters</button>
               : <button className="hp-cta-secondary" onClick={onClear}>Clear search</button>}
@@ -213,21 +217,26 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
 }
 
 export function Homepage({ actions }: { actions: Actions }) {
+  // Products follow the city chosen in the header; a second small request tells whether any member has
+  // listed anything at all, so an empty city is not mistaken for an empty site (which shows the samples).
+  const city = actions.location && actions.location !== 'all' ? actions.location : '';
   const reqState = useLoad('requests?size=3', actions.revision);
-  const listState = useLoad('listings?size=14', actions.revision);
+  const listState = useLoad('listings?size=14' + (city ? '&city=' + encodeURIComponent(city) : ''), actions.revision);
+  const anyState = useLoad(city ? 'listings?size=1' : null, actions.revision);
 
   const realReqs = reqState.data?.items || [];
   const realLists = listState.data?.items || [];
   
   const hasRealReqs = reqState.data?.total > 0;
-  const hasRealLists = listState.data?.total > 0;
+  const hasRealLists = listState.data?.total > 0 || Number(anyState.data?.total) > 0;
+  const citySamples = samples.filter(p => inCity(p.location, actions.location));
 
   const liveRequests = hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
-  const recentDeals = hasRealLists ? realLists.slice(0, 6) : samples.slice(0, 6);
-  const freshArrivals = hasRealLists ? realLists.slice(6, 14) : samples.slice(6, 14);
+  const recentDeals = hasRealLists ? realLists.slice(0, 6) : citySamples.slice(0, 6);
+  const freshArrivals = hasRealLists ? realLists.slice(6, 14) : citySamples.slice(6, 14);
   // Spotlight: a promoted product when there is one, otherwise the newest; the sample only before any real product exists.
-  const spotlight: any = hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0]) : featuredSpotlight;
-  const spotlightFeatured = !!spotlight.featured || !!spotlight.sample;
+  const spotlight: any = hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0] || null) : (inCity(featuredSpotlight.location, actions.location) ? featuredSpotlight : null);
+  const spotlightFeatured = !!spotlight?.featured || !!spotlight?.sample;
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
@@ -410,7 +419,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         </section>
 
         {/* FEATURED SPOTLIGHT */}
-        <section className="hp-spotlight">
+        {spotlight && <section className="hp-spotlight">
           <div className="hp-spotlight-badges">
             <span className="hp-spotlight-badge">{spotlightFeatured ? 'Featured' : 'Just Listed'}</span>
           </div>
@@ -432,7 +441,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               </button>
             </div>
           </div>
-        </section>
+        </section>}
 
         {/* RECENT PRE-LOVED DEALS */}
         {!isSearching && (
@@ -450,17 +459,13 @@ export function Homepage({ actions }: { actions: Actions }) {
               <div key={item.id} className="hp-deal-card-wrap">
                 <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
               </div>
-            )) : recentDeals.map(item => (
-              <div key={item.id} className="hp-deal-card-wrap">
-                <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
-              </div>
-            ))}
+            )) : <NoneInCity actions={actions} />}
           </div>
         </section>
         )}
 
-        {/* FRESH ARRIVALS */}
-        {!isSearching && (
+        {/* FRESH ARRIVALS: only when there are more products than the row above already shows */}
+        {!isSearching && freshArrivals.length > 0 && (
         <section className="hp-section">
           <div className="hp-section-head">
             <div className="hp-section-title-wrap">
@@ -472,9 +477,7 @@ export function Homepage({ actions }: { actions: Actions }) {
           <div className="hp-arrivals-grid">
             {freshArrivals.length > 0 ? freshArrivals.map(item => (
               <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
-            )) : freshArrivals.map(item => (
-              <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
-            ))}
+            )) : null}
           </div>
         </section>
         )}
