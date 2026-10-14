@@ -131,7 +131,10 @@ try{
  r=await send('/api/market/profiles/'+(await (await read('/api/market/bootstrap',cookie)).json() as {user:{id:string}}).user.id+'/reviews',{rating:5,body:'Quick replies and an honest description.'},mailBuyer);equal(r.status,200);
  equal(await waitFor(()=>mailsTo(signup.email,'New review | Picking Price').length===1),true);equal(mailsTo(signup.email,'New message | Picking Price').length,1);
  // Nothing is emailed twice, and the buyer who caused the notifications gets none of them.
- r=await read('/api/market/notifications',cookie);equal(r.status,200);await new Promise(r=>setTimeout(r,300));equal(mailsTo(signup.email,'New review | Picking Price').length,1);equal(outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test').length,0);
+ r=await read('/api/market/notifications',cookie);equal(r.status,200);await new Promise(r=>setTimeout(r,300));equal(mailsTo(signup.email,'New review | Picking Price').length,1);equal(outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test'&&m.mail.subject!=='Welcome to Picking Price').length,0);
+ // A new account gets one welcome email, laid out from the left like every other email.
+ equal(await waitFor(()=>mailsTo('mailbuyer@example.test','Welcome to Picking Price').length===1),true);const welcome=mailsTo('mailbuyer@example.test','Welcome to Picking Price')[0];
+ assert(welcome.mail.text.includes('Hello Mail Buyer')&&welcome.mail.text.includes(config.origin)&&welcome.mail.html.includes('text-align:left')&&!welcome.mail.html.includes('margin:0 auto'));checks++;
  // Read receipts: your message is unread until the other member opens the chat.
  type Msg={body:string;read:boolean};const chat=async(c:string)=>((await (await read('/api/market/messages/'+mailChat.id,c)).json()) as {items:Msg[]}).items;
  equal((await chat(mailBuyer)).map(m=>m.read),[false,false]);
@@ -244,6 +247,9 @@ try{
  r=await send('/api/auth/reset/verify',{email:'mailbuyer@example.test',code:emailed});equal(r.status,200);
  r=await send('/api/auth/reset',{email:'mailbuyer@example.test',code:emailed,password:'Fresh-password-2026'});equal(r.status,200);equal(r.headers.get('set-cookie'),null);
  r=await send('/api/auth/reset/verify',{email:'mailbuyer@example.test',code:emailed});equal(r.status,400);   // used up
+ // The owner is told the password changed.
+ equal(await waitFor(()=>mailsTo('mailbuyer@example.test','Your Picking Price password was changed').length===1),true);const changed=mailsTo('mailbuyer@example.test','Your Picking Price password was changed')[0];
+ assert(changed.mail.text.includes('Hello Mail Buyer')&&changed.mail.text.includes(config.origin+'/login')&&changed.mail.html.includes('text-align:left'));checks++;
  r=await get('/api/market/me',mailBuyer);equal(r.status,401);                                                 // signed out everywhere
  r=await send('/api/auth/login',{email:'mailbuyer@example.test',password:'safe-http-password-123'});equal(r.status,401);
  r=await send('/api/auth/login',{email:'mailbuyer@example.test',password:'Fresh-password-2026'});equal(r.status,200);
@@ -255,7 +261,7 @@ try{
  google.withdrawn='access-'+google.issued;google.expired=true;r=await send('/api/admin/mail/test',{},panel);equal(r.status,502);
  ms=await mailState();equal([ms.service,ms.connected,ms.problem],['resend',true,'expired']);
  r=await send('/api/auth/signup',{email:'fallback@example.test',name:'Fall Back',phone:'+923021234567',password:'safe-http-password-123',role:'buyer',accepted:true});equal(r.status,200);
- r=await send('/api/auth/forgot',{email:'fallback@example.test'});equal(r.status,200);const viaOther=outbox.filter(m=>m.mail.to[0]==='fallback@example.test');equal(viaOther.length,1);equal(viaOther[0].auth,'Bearer re_test_key');equal(viaOther[0].mail.from,'Picking Price <notify@example.test>');
+ r=await send('/api/auth/forgot',{email:'fallback@example.test'});equal(r.status,200);const viaOther=outbox.filter(m=>m.mail.to[0]==='fallback@example.test'&&/reset code/.test(m.mail.subject));equal(viaOther.length,1);equal(viaOther[0].auth,'Bearer re_test_key');equal(viaOther[0].mail.from,'Picking Price <notify@example.test>');
  google.expired=false;link=await connect();r=await back('code=good&state='+link.consent.searchParams.get('state'),link.jar);equal(r.headers.get('location'),'/admin?mail=connected');ms=await mailState();equal([ms.service,ms.problem],['gmail','']);
  // Headers are encoded, so any language arrives intact and an address cannot smuggle in a second recipient.
  const viaGmail={gmail:{clientId:'mail-client',clientSecret:'mail-secret',endpoints:config.gmailEndpoints},from:'Picking Price <notify@example.test>',site:config.origin};

@@ -9,7 +9,7 @@ import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode, requestResetCode, checkResetCode } from '../lib/market/password-reset';
 import { legalHtml, legalTitle } from '../app/legal-content';
-import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail } from '../lib/market/email';
+import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail, accountEmail, welcomeEmail, passwordChangedEmail } from '../lib/market/email';
 import type { GmailClient } from '../lib/market/gmail';
 import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds } from '../lib/market/admin-auth';
 export type Config = {
@@ -74,7 +74,7 @@ export function createApp(db: Database, config: Config) {
         throw new MarketError('Unable to register with these details. Try signing in.', 409);
         // The number goes straight into the member's profile, where they can see and change it.
         await initialize(db); await run(db, 'INSERT INTO profiles (id,name,role,phone,created) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET phone=excluded.phone', key, name, role, phone, now());
-        await session(res, key); res.json({ ok: true }); });
+        await session(res, key); await accountEmail(db, email, name, welcomeEmail(name, config.origin)); res.json({ ok: true }); });
     app.post('/api/auth/login', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const a = await one(db, 'SELECT id,password_hash FROM accounts WHERE email=?', email); if (!await verifyPassword(password, a?.password_hash || null))
         throw new MarketError('Email or password is incorrect.', 401); const p = await one(db, 'SELECT suspended FROM profiles WHERE id=?', a!.id); if (p?.suspended)
         throw new MarketError('Your account is suspended.', 403); await session(res, a!.id); res.json({ ok: true }); });
@@ -87,7 +87,9 @@ export function createApp(db: Database, config: Config) {
         throw new MarketError('Password reset by email is not set up on this site yet. Contact support for a reset code.', 503); const issued = await requestResetCode(db, email); if (issued && !await sendMail(db, mail, { to: issued.email, name: issued.name, ...resetEmail(issued.name, issued.code, issued.minutes) }))
         throw new MarketError('The email could not be sent. Try again in a minute, or contact support for a reset code.', 502); res.json({ ok: true, minutes: 15 }); });
     app.post('/api/auth/reset/verify', async (req, res) => { const email = identity(req.body); await limit(req, email); res.json(await checkResetCode(db, email, req.body.code)); });
-    app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); await redeemResetCode(db, email, req.body.code, password); res.json({ ok: true }); });
+    app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const key = await redeemResetCode(db, email, req.body.code, password);
+        // Tell the owner, so a change they did not make does not go unnoticed.
+        const owner = await one(db, 'SELECT name FROM accounts WHERE id=?', key); await accountEmail(db, email, String(owner?.name || ''), passwordChangedEmail(String(owner?.name || ''), config.origin)); res.json({ ok: true }); });
     app.get('/api/auth/google', async (_req, res) => { if (!googleReady())
         return res.redirect('/?auth_error=google_not_configured'); const state = token(), verifier = token(); await run(db, 'INSERT INTO oauth_states (state_hash,verifier,expires) VALUES (?,?,?)', digest(state), verifier, new Date(Date.now() + 600000).toISOString()); setCookie(res, oauthName, state, 600); const url = new URL('https://accounts.google.com/o/oauth2/v2/auth'); url.search = new URLSearchParams({ client_id: config.googleClientId!, redirect_uri: config.origin + '/api/auth/google/callback', response_type: 'code', scope: 'openid email profile', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString(); res.redirect(url.toString()); });
     app.get('/api/auth/google/callback', async (req, res) => { const fail = (code: string) => { setCookie(res, oauthName, '', 0); return res.redirect('/?auth_error=' + code); }; if (!googleReady())
@@ -102,7 +104,7 @@ export function createApp(db: Database, config: Config) {
         const p: {sub: string; email: string; email_verified: boolean; name?: string} = await info.json();
         if (!info.ok || typeof p.sub !== 'string' || typeof p.email !== 'string' || p.email_verified !== true)
             return fail('unverified');
-        let a = await one(db, 'SELECT id FROM accounts WHERE google_sub=?', p.sub);
+        let a = await one(db, 'SELECT id FROM accounts WHERE google_sub=?', p.sub), created = false;
         if (!a) {
             if (await one(db, 'SELECT id FROM accounts WHERE email=?', p.email.toLowerCase()))
                 return fail('existing_email');
@@ -110,8 +112,13 @@ export function createApp(db: Database, config: Config) {
             a = await one(db, "INSERT INTO accounts (id,email,name,google_sub,role,created) VALUES (?,?,?,?,'both',?) ON CONFLICT DO NOTHING RETURNING id", key, p.email.toLowerCase(), typeof p.name === 'string' ? p.name.slice(0, 80) : p.email, p.sub, now());
             if (!a)
                 return fail('existing_email');
+            created = true;
         }
         await session(res, a.id);
+        if (created) {
+            const name = typeof p.name === 'string' ? p.name.slice(0, 80) : '';
+            await accountEmail(db, p.email.toLowerCase(), name, welcomeEmail(name, config.origin));
+        }
         setCookie(res, oauthName, '', 0);
         res.redirect('/?welcome=1');
     }

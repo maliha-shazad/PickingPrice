@@ -45,7 +45,7 @@ Requests for a code, code checks and password changes are all counted by the sam
 
 ## Outgoing email
 
-The site sends two kinds of email: password reset codes, and a copy of every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached). Email is sent over HTTPS, so it works on hosts that block SMTP.
+The site sends four kinds of email, all laid out from the left of the mail window: a **welcome email** when an account is created (with a password or with Google), **password reset codes**, a **"your password was changed"** notice after every reset, and a copy of every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached). Email is sent over HTTPS, so it works on hosts that block SMTP.
 
 ### Gmail (works without your own domain)
 

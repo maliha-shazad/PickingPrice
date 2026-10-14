@@ -111,6 +111,8 @@ The dashboard shows your profile, your requests and their status, your draft req
 
 You are notified when a seller sends an offer, when you receive a message, when your request expires, when a report you sent has been reviewed, and when the support team changes something on your account or content. If the site has email switched on, the same notifications are also sent to your email address.
 
+**Emails you receive** (when the site has email switched on): a welcome email when you create your account, the code when you use Forgot Password, a notice when your password has been changed (if you did not change it, reset it straight away), and a copy of your notifications. For chats you get at most one email per conversation every 15 minutes, so a busy chat does not fill your inbox.
+
 Opening the Notifications page marks them all as seen, so the number on the bell goes away; the ones that were new stay highlighted until you leave the page. Opening a chat also clears that chat's message notifications.
 
 ## 11. Report a problem

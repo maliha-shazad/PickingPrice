@@ -13,7 +13,7 @@ Live site: https://web-production-e86b77.up.railway.app
 - **Search**: keyword search over title, description, category and brand, with category, condition, city, area and price filters and four sort orders.
 - **Wishlist, chat, reviews, reports**: save products, message the other member about a product, request or offer (with read ticks), review a seller after contact, and report a listing, request, message, review or member.
 - **Listing slots and promotions**: every seller has a free listing allowance; extra slots and featured promotions are requested with a manual payment reference that the administrator approves.
-- **Notifications**: in-app for every important event, and by email once the administrator has connected a Gmail account. Opening a chat clears its message notifications; opening the Notifications page clears the rest.
+- **Notifications and emails**: in-app for every important event, and by email once the administrator has connected a Gmail account: a welcome email at sign-up, password reset codes, a password-changed notice, and a copy of each notification (new message, offer, review and so on). Opening a chat clears its message notifications; opening the Notifications page clears the rest.
 - **Password reset**: a code emailed to the account's address, checked, then a new password; the administrator can issue a code as a fallback.
 - **Admin panel** at `/admin`: members, listings, requests, payments, reports, promotions, reviews, activity log, categories and settings.
 

@@ -114,7 +114,7 @@ Every administrator action is recorded with what was done, what it was done to, 
 
 ## 10. Email
 
-Password reset codes and copies of notifications are emailed to members from a Gmail account that you connect once. Members always receive notifications inside the site whether or not email is working.
+Members are emailed from a Gmail account that you connect once: a welcome email when they sign up, password reset codes, a notice when their password is changed, and copies of their notifications. Members always receive notifications inside the site whether or not email is working.
 
 ### Connect the Gmail account
 

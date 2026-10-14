@@ -2,7 +2,7 @@ import { Database, Row, now } from './types';
 import { one, rows } from './core';
 import { GmailClient, gmailAccount, gmailSend } from './gmail';
 
-// Outgoing email: password reset codes and copies of in-app notifications.
+// Outgoing email: password reset codes, a welcome email, a password-changed notice and copies of in-app notifications.
 // Two ways to send, both over HTTPS (hosts such as Railway block SMTP):
 //   Gmail  - the site's own Gmail account, connected once in the admin panel (see gmail.ts). No domain needed.
 //   Resend - RESEND_API_KEY; needs a verified domain to reach anyone but the account owner.
@@ -51,6 +51,7 @@ const pages: Record<string, string> = { conversation: '/#messages', services: '/
 // Every email (reset codes and notifications) is aligned to the left of the mail window.
 const frame = (inner: string) => `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0;padding:8px 0;text-align:left;color:#1e3d2f">`
     + `<p style="font-size:20px;font-weight:700;margin:0 0 20px;color:#2d6a4f">Picking Price</p>${inner}</div>`;
+const button = (href: string, label: string) => `<p style="margin:0 0 26px"><a href="${escape(href)}" style="background:#2d6a4f;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:8px;display:inline-block">${label}</a></p>`;
 
 /** Sends one email, from the connected Gmail account or else through Resend. Returns whether it was accepted. */
 export async function sendMail(db: Database, mail: Mailer, message: { to: string; name?: string; subject: string; text: string; html: string }) {
@@ -78,7 +79,7 @@ export function emailFor(note: Row, site: string) {
     const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(String(note.name || 'there'))},</p>`
         + `<p style="font-size:17px;font-weight:700;margin:0 0 6px">${escape(title)}</p>`
         + `<p style="font-size:15px;line-height:1.6;margin:0 0 22px;color:#3c5446">${escape(body)}</p>`
-        + `<p style="margin:0 0 26px"><a href="${escape(link)}" style="background:#2d6a4f;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:8px;display:inline-block">Open Picking Price</a></p>`
+        + button(link, 'Open Picking Price')
         + `<p style="font-size:12px;color:#8aa08a;margin:0">You are receiving this email because you have an account on Picking Price.</p>`);
     return { subject: title + ' | Picking Price', text, html };
 }
@@ -92,6 +93,43 @@ export function resetEmail(name: string, code: string, minutes: number) {
         + `<p style="font-size:14px;line-height:1.6;margin:0 0 20px;color:#3c5446">Enter it on the Forgot Password page. It is valid for ${minutes} minutes and works once.</p>`
         + `<p style="font-size:12px;color:#8aa08a;margin:0">If you did not ask to reset your password, ignore this email; your password stays the same.</p>`);
     return { subject: `${code} is your Picking Price reset code`, text, html };
+}
+
+
+/** Sent once when a member creates an account (with a password or with Google). */
+export function welcomeEmail(name: string, site: string) {
+    const text = `Hello ${name || 'there'},\n\nWelcome to Picking Price. Your account is ready.\n\nWhat you can do now:\n- Browse new and pre-loved products from sellers across Pakistan.\n- Post a request for what you need and let sellers send you offers.\n- Sell your own items from Sell Now.\n\nOpen Picking Price: ${site}\n\nAlways inspect an item and meet in a safe public place before you pay.\n\nYou are receiving this email because you created an account on Picking Price.`;
+    const step = (s: string) => `<li style="font-size:15px;line-height:1.6;margin:0 0 6px;color:#3c5446">${s}</li>`;
+    const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(name || 'there')},</p>`
+        + `<p style="font-size:17px;font-weight:700;margin:0 0 6px">Welcome to Picking Price</p>`
+        + `<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3c5446">Your account is ready. What you can do now:</p>`
+        + `<ul style="margin:0 0 20px;padding-left:20px">${step('Browse new and pre-loved products from sellers across Pakistan.')}${step('Post a request for what you need and let sellers send you offers.')}${step('Sell your own items from <strong>Sell Now</strong>.')}</ul>`
+        + button(site, 'Open Picking Price')
+        + `<p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:#3c5446">Always inspect an item and meet in a safe public place before you pay.</p>`
+        + `<p style="font-size:12px;color:#8aa08a;margin:0">You are receiving this email because you created an account on Picking Price.</p>`);
+    return { subject: 'Welcome to Picking Price', text, html };
+}
+
+/** Sent after a password has been reset, so the owner hears about a change they did not make. */
+export function passwordChangedEmail(name: string, site: string) {
+    const text = `Hello ${name || 'there'},\n\nThe password of your Picking Price account has just been changed, and every device was signed out. Log in with your new password: ${site}/login\n\nIf you did not change it, reset your password straight away from the Forgot Password page (${site}/forgot-password) and contact Picking Price support.`;
+    const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(name || 'there')},</p>`
+        + `<p style="font-size:17px;font-weight:700;margin:0 0 6px">Your password was changed</p>`
+        + `<p style="font-size:15px;line-height:1.6;margin:0 0 20px;color:#3c5446">The password of your Picking Price account has just been changed, and every device was signed out. Log in with your new password.</p>`
+        + button(site + '/login', 'Log in')
+        + `<p style="font-size:13px;line-height:1.6;margin:0 0 14px;color:#3c5446"><strong>Did not change it?</strong> Reset your password straight away from the <a href="${escape(site + '/forgot-password')}" style="color:#2d6a4f">Forgot Password</a> page and contact Picking Price support.</p>`
+        + `<p style="font-size:12px;color:#8aa08a;margin:0">This is a security notice about your Picking Price account.</p>`);
+    return { subject: 'Your Picking Price password was changed', text, html };
+}
+
+/** Sends an account email (welcome, password changed) when email is ready; never fails the request that caused it. */
+export async function accountEmail(db: Database, to: string, name: string, message: { subject: string; text: string; html: string }) {
+    const mail = mailer;
+    if (!mail || !isEmail(to))
+        return;
+    const job = mailService(db, mail).then(ready => ready ? sendMail(db, mail, { to, name, ...message }) : false).catch(e => { console.error('Account email failed', e instanceof Error ? e.name : 'unknown'); return false; });
+    if (!mail.background)
+        await job;
 }
 
 /** What the admin panel's "Send test email" button sends. */
