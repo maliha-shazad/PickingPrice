@@ -1,6 +1,6 @@
-# Picking Price — Deployment Guide
+﻿# Picking Price â€” Deployment Guide
 
-Prepared for Ahsan Javaid • 14 October 2026
+Prepared for Ahsan Javaid â€¢ 14 October 2026
 
 ## 1. What is being deployed
 
@@ -8,24 +8,24 @@ Picking Price is one application: a React site built with Vite, served by a Node
 
 | Part | Where it is in the project |
 |---|---|
-| Browser app (React) | `client/`, `app/`, `components/`, `public/` — `pnpm build` compiles it into `server/public/` |
-| Server (Express) | `server/` — started with `node --import tsx server/index.ts` |
+| Browser app (React) | `client/`, `app/`, `components/`, `public/` â€” `pnpm build` compiles it into `server/public/` |
+| Server (Express) | `server/` â€” started with `node --import tsx server/index.ts` |
 | Marketplace rules | `lib/market/` |
-| Database tables | `drizzle/*.sql` — applied automatically every time the server starts |
-| Container image | `Dockerfile` — used by Railway and by Cloudflare Containers |
+| Database tables | `drizzle/*.sql` â€” applied automatically every time the server starts |
+| Container image | `Dockerfile` â€” used by Railway and by Cloudflare Containers |
 
 Every hosting option below needs three things:
 
 1. **Node.js 24.18 or newer** (the `Dockerfile` already uses Node 24).
 2. **A PostgreSQL database**, given to the server as `DATABASE_URL`.
-3. **A place where uploaded photos stay.** The server writes each photo as a file in `UPLOADS_DIR`. This works on Railway (with a volume) and on your own computer or server. It does **not** work on Vercel or Cloudflare Containers without a code change, because their disks are temporary — see Sections 5 and 6.
+3. **A place where uploaded photos stay.** The server writes each photo as a file in `UPLOADS_DIR`. This works on Railway (with a volume) and on your own computer or server. It does **not** work on Vercel or Cloudflare Containers without a code change, because their disks are temporary â€” see Sections 5 and 6.
 
 ### Environment variables
 
 | Variable | Needed | Purpose |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string, e.g. `postgresql://user:password@host:5432/picking_price`. A password containing `@`, `:` or `/` must be URL-encoded (`@` is `%40`) |
-| `APP_ORIGIN` | Yes, except on Railway's own domain | The exact address people open, e.g. `https://pickingprice.pk` — no trailing slash. Forms from any other address are rejected |
+| `APP_ORIGIN` | Yes, except on Railway's own domain | The exact address people open, e.g. `https://pickingprice.pk` â€” no trailing slash. Forms from any other address are rejected |
 | `ADMIN_SETUP_CODE` | Once | A private phrase of 16+ characters used to create the administrator at `/admin`. After that it can be removed |
 | `PORT` | No | Port to listen on; default `3000`. Railway sets it itself |
 | `UPLOADS_DIR` | No | Folder for uploaded photos; default `server/uploads` (on Railway: the volume, `/data/uploads`) |
@@ -33,7 +33,7 @@ Every hosting option below needs three things:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | No | Google sign-in (Section 8) |
 | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | No | Sending password-reset codes and notification emails from a Gmail account (see [AUTH_SETUP.md](AUTH_SETUP.md)) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | No | Email through Resend instead of Gmail; needs your own verified domain |
-| `GOOGLE_SITE_VERIFICATION` | No | Google Search Console ownership tag |
+| `GOOGLE_SITE_VERIFICATION` | No | Google Search Console ownership token(s). Several can be given, separated by commas; keep old ones so earlier verifications stay valid |
 | `GOOGLE_MAPS_KEY` | No | Detects the visitor's city. It is built into the page, so it must be present when `pnpm build` runs (rebuild after changing it) |
 
 Never commit real values. Locally they live in `.env`, which git ignores.
@@ -61,28 +61,28 @@ DATABASE_URL=... APP_ORIGIN=https://your-domain UPLOADS_DIR=/var/lib/picking-pri
 
 ## 3. Railway (where the live site runs)
 
-The live site is on Railway: project `picking-price`, a `web` service built from this repository's `Dockerfile` and a `Postgres` service. Every push to the `main` branch on GitHub redeploys it automatically (about 2–3 minutes).
+The live site is on Railway: project `picking-price`, a `web` service built from this repository's `Dockerfile` and a `Postgres` service. Every push to the `main` branch on GitHub redeploys it automatically (about 2â€“3 minutes).
 
 To set it up from scratch:
 
-1. In Railway choose **New Project → Deploy from GitHub repo** and pick this repository. Nothing needs to be typed into the build or start command boxes; the `Dockerfile` is used.
-2. In the same project choose **New → Database → PostgreSQL**.
-3. Open the app service → **Variables** and add:
+1. In Railway choose **New Project â†’ Deploy from GitHub repo** and pick this repository. Nothing needs to be typed into the build or start command boxes; the `Dockerfile` is used.
+2. In the same project choose **New â†’ Database â†’ PostgreSQL**.
+3. Open the app service â†’ **Variables** and add:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (use the reference picker so it points at the database service)
    - `ADMIN_SETUP_CODE` = a private phrase of your own, 16 characters or more
-4. App service → **Settings → Networking → Generate Domain**. The server reads the domain Railway assigns, so `APP_ORIGIN` is only needed for a custom domain.
-5. App service → **Volumes**: add a volume mounted at `/data`. Photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
+4. App service â†’ **Settings â†’ Networking â†’ Generate Domain**. The server reads the domain Railway assigns, so `APP_ORIGIN` is only needed for a custom domain.
+5. App service â†’ **Volumes**: add a volume mounted at `/data`. Photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
 6. When the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again and can be removed from Variables.
 
-Optional variables: `GOOGLE_MAPS_KEY` (it is passed to the build, so redeploy after changing it), the Google sign-in pair (Section 8) and the Gmail pair (then connect the Gmail account in `/admin` → Settings → Email). Changing a variable redeploys the service.
+Optional variables: `GOOGLE_MAPS_KEY` (it is passed to the build, so redeploy after changing it), the Google sign-in pair (Section 8) and the Gmail pair (then connect the Gmail account in `/admin` â†’ Settings â†’ Email). Changing a variable redeploys the service.
 
-**Custom domain on Railway:** app service → Settings → Networking → **Custom Domain**, enter the domain, and add the DNS record Railway shows at your DNS provider (for Cloudflare see Section 7). Then set `APP_ORIGIN` to `https://your-domain`.
+**Custom domain on Railway:** app service â†’ Settings â†’ Networking â†’ **Custom Domain**, enter the domain, and add the DNS record Railway shows at your DNS provider (for Cloudflare see Section 7). Then set `APP_ORIGIN` to `https://your-domain`.
 
 ## 4. Choosing between the other hosts
 
 | | Railway | Vercel | Cloudflare Containers |
 |---|---|---|---|
-| Runs the app as it is today | Yes | No — code changes needed (Section 5) | Yes, except photo storage |
+| Runs the app as it is today | Yes | No â€” code changes needed (Section 5) | Yes, except photo storage |
 | Uploaded photos kept | Yes, on a volume | No: read-only disk | No: disk is wiped when the container sleeps or restarts |
 | PostgreSQL | Built in | External (Neon from the Vercel Marketplace) | External (e.g. Neon) |
 | Cost to start | Railway plan | Free Hobby plan for testing | Workers Paid plan, $5 a month |
@@ -110,11 +110,11 @@ Facts from Vercel's documentation (checked 14 October 2026) that matter for this
 ### Deploying once those changes are made
 
 1. Push the project to GitHub.
-2. In Vercel: **Add New → Project**, import the repository. Vercel detects Express; no build command or output folder is needed for the server itself.
-3. **Storage / Marketplace → Neon (Postgres)**: create a database and connect it to the project. The integration adds the connection details as environment variables; make sure `DATABASE_URL` is set to the connection string (add it yourself if the integration uses another name).
-4. **Settings → Environment Variables**: add `APP_ORIGIN` (`https://your-project.vercel.app` or your domain), `ADMIN_SETUP_CODE`, and the optional variables from Section 1.
+2. In Vercel: **Add New â†’ Project**, import the repository. Vercel detects Express; no build command or output folder is needed for the server itself.
+3. **Storage / Marketplace â†’ Neon (Postgres)**: create a database and connect it to the project. The integration adds the connection details as environment variables; make sure `DATABASE_URL` is set to the connection string (add it yourself if the integration uses another name).
+4. **Settings â†’ Environment Variables**: add `APP_ORIGIN` (`https://your-project.vercel.app` or your domain), `ADMIN_SETUP_CODE`, and the optional variables from Section 1.
 5. Deploy, then open `/admin` and create the administrator with the setup code.
-6. **Settings → Domains** to add your own domain; then update `APP_ORIGIN` and redeploy.
+6. **Settings â†’ Domains** to add your own domain; then update `APP_ORIGIN` and redeploy.
 
 With the Vercel CLI (version 47.0.5 or newer): `vercel link`, `vercel env pull`, `vercel dev` to try it locally, and `vercel --prod` to deploy.
 
@@ -130,7 +130,7 @@ Cloudflare Containers run this project's `Dockerfile` behind a small Cloudflare 
 - **Disk is temporary.** When a container goes to sleep or restarts it starts again from the image with a fresh disk, so photos in `UPLOADS_DIR` are lost. Use R2 or another object store for photos before going live (Section 4).
 - Docker must be running on the computer that runs `wrangler deploy`; the image must run on `linux/amd64` (the `Dockerfile` does).
 - The database must be outside Cloudflare, for example Neon PostgreSQL.
-- A first request after the container has been asleep waits for it to start (often 1–3 seconds).
+- A first request after the container has been asleep waits for it to start (often 1â€“3 seconds).
 
 These files are not part of this repository; create them in a separate deployment folder next to a copy of the project, or in the project when you deploy.
 
@@ -184,7 +184,7 @@ Steps:
 3. Store the secrets: `npx wrangler secret put DATABASE_URL` and `npx wrangler secret put ADMIN_SETUP_CODE`. Add `GOOGLE_*`/`GMAIL_*` the same way and pass them in `envVars` like the others.
 4. Start Docker, then `npx wrangler deploy`. Wrangler builds the image and uploads it. Wait a few minutes after the first deploy before the site answers.
 5. Check with `npx wrangler containers list`. Open the Worker's address, then `/admin` to create the administrator.
-6. Your own domain: Workers & Pages → the Worker → Settings → **Domains & Routes → Add → Custom Domain** (the domain must be on Cloudflare, see 6B steps 1–4). Set `APP_ORIGIN` to it and deploy again.
+6. Your own domain: Workers & Pages â†’ the Worker â†’ Settings â†’ **Domains & Routes â†’ Add â†’ Custom Domain** (the domain must be on Cloudflare, see 6B steps 1â€“4). Set `APP_ORIGIN` to it and deploy again.
 
 A running container keeps the environment it started with; after changing a secret, the new value is used from the next start.
 
@@ -192,10 +192,10 @@ A running container keeps the environment it started with; after changing a secr
 
 This is free and changes nothing in the project.
 
-1. In the Cloudflare dashboard: **Domains → Onboard a domain**, enter the domain, pick the Free plan and let it import the existing DNS records. Check the list: the import can miss records.
+1. In the Cloudflare dashboard: **Domains â†’ Onboard a domain**, enter the domain, pick the Free plan and let it import the existing DNS records. Check the list: the import can miss records.
 2. At your domain registrar, **switch off DNSSEC first**, then replace the nameservers with the two Cloudflare shows. Copy them exactly. It can take up to 24 hours to become Active.
 3. In Railway (or Vercel), add the custom domain to the project. It shows the record to create, usually a `CNAME` to its own hostname.
-4. In Cloudflare **DNS**, add that record. Start with **DNS only** (grey cloud): Cloudflare advises DNS-only for hosting platforms that do not explicitly support its proxy, otherwise SSL errors and redirect loops can happen. Check Railway's or Vercel's own documentation before switching the record to **Proxied**; if you do proxy it, set **SSL/TLS → Full (strict)**.
+4. In Cloudflare **DNS**, add that record. Start with **DNS only** (grey cloud): Cloudflare advises DNS-only for hosting platforms that do not explicitly support its proxy, otherwise SSL errors and redirect loops can happen. Check Railway's or Vercel's own documentation before switching the record to **Proxied**; if you do proxy it, set **SSL/TLS â†’ Full (strict)**.
 5. Turn DNSSEC back on through Cloudflare.
 6. Set `APP_ORIGIN` on the host to `https://your-domain` and redeploy. Update the Google sign-in and Gmail redirect addresses to the new domain (Section 8).
 
@@ -206,7 +206,7 @@ Sign in at `/admin` (change the password there with **Change password**) and ope
 1. Enter the real payment instructions sellers should follow (bank or mobile wallet). Until they are saved, sellers cannot submit slot or promotion requests.
 2. Check the free listing allowance and the extra-slot price, and the three promotion lengths and prices.
 3. Review the categories.
-4. Connect the Gmail account under **Settings → Email** and send a test email (needs the Gmail variables).
+4. Connect the Gmail account under **Settings â†’ Email** and send a test email (needs the Gmail variables).
 
 While the database has no real listings or requests, the site shows clearly labelled sample products. They disappear as soon as the first real listing is published.
 

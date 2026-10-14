@@ -42,7 +42,7 @@ const mailServer=createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);re
 })}).listen(0,'127.0.0.1');
 await new Promise<void>(r=>mailServer.once('listening',r));
 const outside='http://127.0.0.1:'+(mailServer.address() as AddressInfo).port;
-const config={gmailClientId:'mail-client',gmailClientSecret:'mail-secret',gmailEndpoints:{auth:outside+'/consent',token:outside+'/token',profile:outside+'/profile',send:outside+'/send',revoke:outside+'/revoke'},resendKey:'re_test_key',emailFrom:'Picking Price <notify@example.test>',emailEndpoint:outside+'/emails',origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',googleSiteVerification:'test-verify_Code-123"><x',adminSetupCode:'test-setup-code-0123456789'};
+const config={gmailClientId:'mail-client',gmailClientSecret:'mail-secret',gmailEndpoints:{auth:outside+'/consent',token:outside+'/token',profile:outside+'/profile',send:outside+'/send',revoke:outside+'/revoke'},resendKey:'re_test_key',emailFrom:'Picking Price <notify@example.test>',emailEndpoint:outside+'/emails',origin:'http://127.0.0.1',uploadsDir:await mkdtemp(join(tmpdir(),'picking-http-')),publicDir:resolve('server/public'),googleClientId:'test-client',googleClientSecret:'test-secret',googleSiteVerification:'test-verify_Code-123"><x, second_Code-456',adminSetupCode:'test-setup-code-0123456789'};
 const db=new PgDatabase(pool);
 const server=createApp(db,config).listen(0,'127.0.0.1');
 await new Promise<void>(r=>server.once('listening',r));
@@ -280,7 +280,7 @@ try{
  r=await get('/admin');equal(r.status,200);r=await get('/login');equal(r.status,200);
  r=await send('/api/auth/logout',{},cookie);equal(r.status,200);r=await fetch(config.origin+'/api/market/me',{headers:{Cookie:cookie}});equal(r.status,401);
  r=await fetch(config.origin);equal(r.status,200);const home=await r.text();assert(home.includes('Picking Price'));checks++;
- assert(home.includes('<meta name="google-site-verification" content="test-verify_Code-123x"/></head>'));checks++;
+ assert(home.includes('<meta name="google-site-verification" content="test-verify_Code-123x"/><meta name="google-site-verification" content="second_Code-456"/></head>'));checks++;
  r=await get('/privacy');equal(r.status,200);const privacy=await r.text();assert(privacy.includes('<title>Privacy Policy — Picking Price</title>')&&privacy.includes('Information from your Google account')&&privacy.includes('We do not sell your personal information')&&privacy.includes('google-site-verification'));checks++;
  r=await get('/terms/');equal(r.status,200);const terms=await r.text();assert(terms.includes('<h1>Terms of Service</h1>')&&terms.includes('governed by the laws of Pakistan')&&!terms.includes('<div id="root"></div>'));checks++;
  console.log(checks+' Express HTTP assertions passed with embedded PostgreSQL.');

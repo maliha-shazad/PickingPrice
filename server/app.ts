@@ -149,8 +149,9 @@ export function createApp(db: Database, config: Config) {
     app.use(express.static(config.publicDir, { index: false }));
     // The page shell, read once. Google's ownership check looks for its tag in the home page's <head>.
     let shell: Promise<string> | undefined;
-    const verification = (config.googleSiteVerification || '').replace(/[^\w-]/g, '');
-    const indexHtml = () => shell ??= readFile(resolve(config.publicDir, 'index.html'), 'utf8').then(html => verification ? html.replace('</head>', '<meta name="google-site-verification" content="' + verification + '"/></head>') : html);
+    // One or more Search Console tokens, separated by commas; old tokens stay so earlier verifications keep working.
+    const verification = (config.googleSiteVerification || '').split(/[\s,]+/).map(v => v.replace(/[^\w-]/g, '')).filter(Boolean).map(v => '<meta name="google-site-verification" content="' + v + '"/>').join('');
+    const indexHtml = () => shell ??= readFile(resolve(config.publicDir, 'index.html'), 'utf8').then(html => verification ? html.replace('</head>', verification + '</head>') : html);
     // Privacy Policy and Terms of Service are sent with their full text in the HTML, so they can be read
     // without JavaScript (Google's app review reads them that way); the page script then draws the same thing.
     app.get(['/privacy', '/terms'], async (req, res) => { const kind = req.path.startsWith('/privacy') ? 'privacy' : 'terms';
