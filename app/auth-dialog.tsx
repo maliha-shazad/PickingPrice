@@ -186,7 +186,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                     <span>OR CONTINUE WITH</span>
                 </div>
 
-                <a className="pp-auth-google-btn" href={google ? "/api/auth/google" : "#"} onClick={(e) => { if (!google) e.preventDefault(); else if (tab === 'signup' && !accepted) { e.preventDefault(); setError(mustAccept); } }}>
+                <a className="pp-auth-google-btn" href={google ? "/api/auth/google" : "#"} onClick={(e) => { if (!google) e.preventDefault(); }}>
                     <img src="https://www.google.com/favicon.ico" alt="Google" className="pp-auth-google-icon" />
                     Google
                 </a>
