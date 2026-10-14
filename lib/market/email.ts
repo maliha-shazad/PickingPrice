@@ -48,7 +48,8 @@ const ago = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOStr
 const escape = (s: string) => s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
 export const isEmail = (s: unknown): s is string => typeof s === 'string' && /^\S+@\S+\.\S+$/.test(s);
 const pages: Record<string, string> = { conversation: '/#messages', services: '/#services', listing: '/#dashboard', request: '/#dashboard', offer: '/#dashboard', profile: '/#dashboard' };
-const frame = (inner: string) => `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1e3d2f">`
+// Every email (reset codes and notifications) is aligned to the left of the mail window.
+const frame = (inner: string) => `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0;padding:8px 0;text-align:left;color:#1e3d2f">`
     + `<p style="font-size:20px;font-weight:700;margin:0 0 20px;color:#2d6a4f">Picking Price</p>${inner}</div>`;
 
 /** Sends one email, from the connected Gmail account or else through Resend. Returns whether it was accepted. */
