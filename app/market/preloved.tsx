@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Timer, CheckCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
+import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading } from './ui';
 import { samples } from '../samples';
 
 
@@ -135,7 +135,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
       <div className="pl-hero-wrap">
         <div className="pl-hero">
           <div>
-            <h1 className="pl-hero-title">Discover Pre-Loved Deals {currentCity ? 'in ' + currentCity : 'Near You'}</h1>
+            <h1 className="pl-hero-title">Discover Pre-Loved Deals {currentCity ? 'in ' + currentCity : 'Across Pakistan'}</h1>
             <p className="pl-hero-sub">Explore pre-loved products with clear condition details, and inspect them in person before you pay.</p>
           </div>
           <div className="pl-hero-right">
@@ -240,6 +240,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
 
           {/* Main List */}
           <div>
+            <CityHeading actions={actions} />
             <div className="pl-feed-header pl-feed-inline">
               <div>
                 <h2 className="pl-feed-title">Explore Pre-Loved Deals</h2>

@@ -7,7 +7,7 @@ Picking Price connects buyers and sellers directly. You can browse products that
 ## 1. Create an account
 
 1. Open the site and choose **Signup**.
-2. Enter your name, your email address (or phone number), a password of at least 8 characters, and the same password again in **Confirm Password**.
+2. Enter your name, your mobile number, your email address, a password of at least 8 characters, and the same password again in **Confirm Password**. The mobile number is required and is saved in your profile, where you can change it later.
 3. Choose how you want to use the site: buying only, selling only, or buying and selling. You can change this later in your profile.
 4. You can also sign up with your Google account by pressing the **Google** button, when it is offered.
 
@@ -25,8 +25,9 @@ If you registered with a phone number, or the email does not arrive, contact sup
 
 | Part of the screen | What it does |
 |---|---|
+| Picking Price logo | Takes you back to the home page, from any page |
 | Search box | Searches every product by title, description, category and brand |
-| Location | Your city. Product lists show only this city (choose **All Pakistan** to see every city), and it is the default location for your requests |
+| Location | **All Pakistan** at first. Choose a city to see only its products; every product list shows which one, for example "Peshawar based products". The city you choose is remembered on your device and is the default location for your requests |
 | Buying / Selling switch | Shown when your account can do both; changes the dashboard and shortcuts you see |
 | Bell | Your notifications. A number appears only when something is unread; it goes away when you open the Notifications page |
 | **Discover** | Home page: categories, live buyer requests, recent products |

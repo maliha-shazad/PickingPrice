@@ -40,7 +40,7 @@ export default function Workspace() {
     const [searchTick, setSearchTick] = useState(0);
     const searchScroll = useRef(false);
     const [searchCategory, setSearchCategory] = useState('all');
-    const [location, setLocation] = useState('Peshawar');
+    const [location, setLocation] = useState('all'); // All Pakistan until the visitor picks a city
     const [locationOpen, setLocationOpen] = useState(false);
     const [mode, setMode] = useState<'Buying' | 'Selling'>('Buying');
     const locationRef = useRef<HTMLDivElement>(null);
@@ -49,10 +49,10 @@ export default function Workspace() {
     const chooseLocation = (city: string) => { setLocation(city); try { localStorage.setItem('pp_location', city); } catch { } };
     useEffect(() => { try { const saved = localStorage.getItem('pp_location'); if (saved) setLocation(saved); } catch { } }, []);
 
-    // Auto-detect live location once
+    // Detect the visitor's city once, only when a Google Maps key is built in (without one the lookup cannot work).
     useEffect(() => {
         const detected = localStorage.getItem('pp_location_detected');
-        if (!detected && !localStorage.getItem('pp_location') && navigator.geolocation) {
+        if (process.env.GOOGLE_MAPS_KEY && !detected && !localStorage.getItem('pp_location') && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     try {
@@ -509,6 +509,10 @@ export default function Workspace() {
 
                         {/* Auth / Account actions */}
                         <div className="pp-header-auth">
+                            {/* Desktop only (hidden on phones in styles.css): Sell Now comes before the account buttons. */}
+                            <button id="header-sell-btn" className="pp-sell-btn" onClick={() => open('listing-form')}>
+                                <Plus size={15} /> Sell Now
+                            </button>
                             {!user ? (
                                 <>
                                     <button id="header-login-btn" className="pp-login-btn" onClick={() => window.location.href = '/login'}>Login</button>
@@ -531,9 +535,6 @@ export default function Workspace() {
                                     </button>
                                 </>
                             )}
-                            <button id="header-sell-btn" className="pp-sell-btn" onClick={() => open('listing-form')}>
-                                <Plus size={15} /> Sell Now
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -655,7 +656,7 @@ export default function Workspace() {
             <footer className="hp-footer">
                 <div className="hp-footer-inner">
                     <div className="hp-footer-brand">
-                        <img src="/footer-logo.png" alt="Picking Price" style={{ width: '200px', height: 'auto', display: 'block', mixBlendMode: 'screen', marginBottom: '12px' }} />
+                        <a href="/" aria-label="Picking Price home" onClick={e => { e.preventDefault(); go('Explore'); }}><img src="/footer-logo.png" alt="Picking Price" style={{ width: '200px', height: 'auto', display: 'block', mixBlendMode: 'screen', marginBottom: '12px' }} /></a>
                         <p>Pakistan's trusted marketplace for new and pre-loved products. Buy smart, sell easy, or post a request and let sellers find you.</p>
                         <div className="hp-footer-social">
                             <a aria-label="Facebook" title="Facebook" href="https://www.facebook.com/profile.php?id=61594982798852" target="_blank" rel="noopener noreferrer">

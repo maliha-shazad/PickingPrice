@@ -39,7 +39,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
             const r = await fetch('/api/auth/' + tab, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email: email || phone, password, role })
+                body: JSON.stringify(tab === 'signup' ? { name, email, phone, password, role } : { email, password })
             });
             const d: { error?: string } = await r.json();
             if (!r.ok) throw Error(d.error || 'Please try again.');
@@ -58,7 +58,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
         <div className="pp-auth-modal">
             <div className="pp-auth-header">
                 <div className="pp-auth-logo-img">
-                    <img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} />
+                    <a href="/" aria-label="Picking Price home"><img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} /></a>
                 </div>
                 <h2 className="pp-auth-title">{tab === 'signup' ? 'Create an Account' : 'Welcome Back'}</h2>
             </div>
@@ -91,15 +91,12 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                                 </div>
                             </div>
                             <div className="pp-auth-field">
-                                <div className="pp-auth-label-row">
-                                    <label>Phone Number</label>
-                                    <span className="pp-auth-optional">Optional</span>
-                                </div>
+                                <label>Mobile Number <span className="req">*</span></label>
                                 <div className="pp-auth-input-wrap">
                                     <div className="pp-auth-phone-prefix">
                                         <span className="pk-badge">[PK]</span> +92
                                     </div>
-                                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone Number" style={{ paddingLeft: '85px' }} />
+                                    <input required type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={14} value={phone} onChange={e => setPhone(e.target.value)} placeholder="3001234567" style={{ paddingLeft: '85px' }} />
                                 </div>
                             </div>
                             <div className="pp-auth-field">

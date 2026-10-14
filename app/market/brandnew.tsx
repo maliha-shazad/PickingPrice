@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, ChevronDown, X, Shirt, Monitor, Camera, Package, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
+import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -302,6 +302,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
 
           {/* Main List */}
           <div style={{flex: 1}}>
+            <CityHeading actions={actions} />
             <div className="pl-feed-header">
               <div style={{display:'flex', alignItems: 'center', gap: '8px'}}>
                 <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#059669'}}></div>

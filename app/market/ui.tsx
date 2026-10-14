@@ -101,6 +101,11 @@ export function Pager({ page, total, size = 12, onChange }: {
     onChange: (p: number) => void;
 }) { const pages = Math.ceil(total / size); if (pages <= 1)
     return null; return <Pagination className="pager"><PaginationContent><PaginationItem><button className="btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button></PaginationItem><PaginationItem><span aria-live="polite">Page {page} of {pages}</span></PaginationItem><PaginationItem><button className="btn" disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button></PaginationItem></PaginationContent></Pagination>; }
+// Above every product list: whose products are shown, following the city chosen at the top of the page.
+export function CityHeading({ actions }: { actions: Actions }) {
+    const city = actions.location && actions.location !== 'all' ? actions.location : 'All Pakistan';
+    return <p className="pp-city-heading"><MapPin size={15} aria-hidden="true" /> {city} based products</p>;
+}
 // Shown where a list has nothing for the chosen city, with a way to see every city.
 export function NoneInCity({ actions, what = 'products' }: { actions: Actions; what?: string }) {
     const city = actions.location;

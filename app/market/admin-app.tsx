@@ -67,7 +67,7 @@ function Gate({ session, onDone }: { session: Session; onDone: () => void }) {
         <div className="pp-auth-page-container">
             <div className="pp-auth-modal">
                 <div className="pp-auth-header">
-                    <img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} />
+                    <a href="/" aria-label="Picking Price home"><img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} /></a>
                     <h1 className="pp-auth-title">{setup ? 'Create the Admin Account' : 'Admin Sign In'}</h1>
                 </div>
                 {setup && !session.setupAvailable ? (

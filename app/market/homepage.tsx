@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity } from './ui';
+import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading } from './ui';
 import { samples, sampleRequests } from '../samples';
 
 const categories = [
@@ -143,6 +143,7 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
 
   return (
     <section ref={anchor} className="hp-section hp-search-results">
+      <CityHeading actions={actions} />
       <div className="hp-section-head">
         <div className="hp-section-title-wrap">
           <Search size={18} className="hp-zap-icon" />
@@ -445,6 +446,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         {/* RECENT PRE-LOVED DEALS */}
         {!isSearching && (
         <section className="hp-section">
+          <CityHeading actions={actions} />
           <div className="hp-section-head">
             <h2 className="hp-section-title">Recent Pre-Loved Deals</h2>
             <div className="hp-scroll-btns">
@@ -466,6 +468,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         {/* FRESH ARRIVALS: only when there are more products than the row above already shows */}
         {!isSearching && freshArrivals.length > 0 && (
         <section className="hp-section">
+          <CityHeading actions={actions} />
           <div className="hp-section-head">
             <div className="hp-section-title-wrap">
               <Zap size={18} className="hp-zap-icon" />

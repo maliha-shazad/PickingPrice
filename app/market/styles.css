@@ -33,7 +33,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-auth-field label{font-size:13px;font-weight:600;color:#2c4033}
 .req{color:#d94436}
 .pp-auth-label-row{display:flex;align-items:center;justify-content:space-between}
-.pp-auth-optional{font-size:12px;color:#8fa395}
 
 .pp-auth-input-wrap{position:relative;display:flex;align-items:center}
 .pp-auth-input-icon{position:absolute;left:14px;color:#8fa395}
@@ -2524,14 +2523,14 @@ button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* Privacy Policy and Terms of Service pages */
-.pp-legal-page{min-height:100vh;background:#f5f7f2;padding:0 20px 56px;color:#294333}
-.pp-legal-top{max-width:820px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0}
+.pp-legal-page{min-height:100vh;background:#f5f7f2;padding:0 32px 56px;color:#294333}
+.pp-legal-top{max-width:none;margin:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0}
 .pp-legal-top img{height:34px;width:auto;display:block}
 .pp-legal-top nav{display:flex;gap:6px}
 .pp-legal-top nav a{font-size:13.5px;font-weight:600;color:#4a6a4a;text-decoration:none;padding:7px 12px;border-radius:7px;white-space:nowrap}
 .pp-legal-top nav a:hover{background:#e8f0e4}
 .pp-legal-top nav a.active{background:#2d6a4f;color:#fff}
-.pp-legal-card{max-width:820px;margin:0 auto;background:#fff;border:1px solid #e0e8d8;border-radius:16px;padding:40px 44px}
+.pp-legal-card{max-width:none;margin:0;background:#fff;border:1px solid #e0e8d8;border-radius:16px;padding:40px 44px}
 .pp-legal-card h1{font-size:30px;line-height:1.2;font-weight:700;color:#1e3d2f;margin:0 0 6px}
 .pp-legal-updated{font-size:13px;color:#7a9a7a;margin:0 0 28px}
 .pp-legal-card h2{font-size:17px;font-weight:700;color:#1e3d2f;margin:28px 0 8px}
@@ -3049,3 +3048,7 @@ div.pf-avatar svg{width:22px;height:22px}
   .pp-location-wrap.signed-out .pp-location-btn{padding:6px 8px;gap:4px}
   .pp-location-wrap.signed-out .pp-loc-text{max-width:70px}
 }
+
+/* "<city> based products" above every product list */
+.pp-city-heading{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:5px 12px;border-radius:999px;background:#e8f3ec;color:#1e5038;font-size:13px;font-weight:700;line-height:1.2}
+.pp-city-heading svg{color:#2d6a4f;flex-shrink:0}

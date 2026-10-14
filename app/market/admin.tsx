@@ -84,7 +84,7 @@ export function Admin({ actions }: { actions: Actions; }) {
                 {/* Left Sidebar */}
                 <aside className="bd-sidebar">
                     <div className="bd-profile-card">
-                        <div className="bd-profile-cover adm-logo-cover"><img src="/new-logo.png" alt="Picking Price" /></div>
+                        <div className="bd-profile-cover adm-logo-cover"><a href="/" aria-label="Picking Price home"><img src="/new-logo.png" alt="Picking Price" /></a></div>
                         <div className="bd-profile-info" style={{ marginTop: '0' }}>
                             <h2 style={{ fontSize: '18px' }}>Super Admin</h2>
                             <div className="bd-profile-meta">

@@ -2,7 +2,7 @@
 // Keep these in step with what the app really does: they are what Google and our members rely on.
 // No React or CSS here: the Express server also sends this as ready-made HTML, so that readers and
 // crawlers that do not run JavaScript still get the full text.
-export const UPDATED = '5 October 2026';
+export const UPDATED = '14 October 2026';
 
 export type Section = { heading: string; body: (string | string[])[] };
 
@@ -13,7 +13,7 @@ export const PRIVACY: Section[] = [
     { heading: 'Information we collect', body: [
         'Information you give us:',
         [
-            'Account details: your name, email address, phone number if you add one, and your password. Passwords are stored in hashed form; we cannot read them.',
+            'Account details: your name, email address, mobile number and password. Your mobile number is kept in your profile, where you can change it; other members do not see it, and see a number only if you add one to a listing. Passwords are stored in hashed form; we cannot read them.',
             'Profile details you choose to add, such as a photo, city and a short description.',
             'Listings and requests you post: titles, descriptions, prices, photos, category, condition, location and delivery options.',
             'Messages and offers you exchange with other members, items you save to your wishlist, reviews, and reports you send us.',

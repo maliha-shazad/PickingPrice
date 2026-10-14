@@ -65,9 +65,15 @@ export function createApp(db: Database, config: Config) {
         throw new MarketError('Enter a valid email address or phone number.'); if (password.length < 8 || password.length > 128)
         throw new MarketError('Use a password between 8 and 128 characters.'); return { email, password }; };
     app.get('/api/auth/options', (_req, res) => res.json({ email: true, google: googleReady(), recovery: false }));
+    // A Pakistani mobile number, typed with or without 0 / 92 / +92 in front, kept as +923001234567.
+    const mobile = (value: unknown) => { const m = /^(?:\+?92|0)?(3\d{9})$/.exec(String(value ?? '').replace(/[\s-]/g, '')); if (!m)
+        throw new MarketError('Enter a valid mobile number, for example 3001234567.'); return '+92' + m[1]; };
     app.post('/api/auth/signup', async (req, res) => { const { email, password } = credentials(req.body); const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''; if (name.length < 2 || name.length > 80)
-        throw new MarketError('Enter a name between 2 and 80 characters.'); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created) VALUES (?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now()); if (!inserted)
-        throw new MarketError('Unable to register with these details. Try signing in.', 409); await session(res, key); res.json({ ok: true }); });
+        throw new MarketError('Enter a name between 2 and 80 characters.'); const phone = mobile(req.body.phone); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created) VALUES (?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now()); if (!inserted)
+        throw new MarketError('Unable to register with these details. Try signing in.', 409);
+        // The number goes straight into the member's profile, where they can see and change it.
+        await initialize(db); await run(db, 'INSERT INTO profiles (id,name,role,phone,created) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET phone=excluded.phone', key, name, role, phone, now());
+        await session(res, key); res.json({ ok: true }); });
     app.post('/api/auth/login', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const a = await one(db, 'SELECT id,password_hash FROM accounts WHERE email=?', email); if (!await verifyPassword(password, a?.password_hash || null))
         throw new MarketError('Email or password is incorrect.', 401); const p = await one(db, 'SELECT suspended FROM profiles WHERE id=?', a!.id); if (p?.suspended)
         throw new MarketError('Your account is suspended.', 403); await session(res, a!.id); res.json({ ok: true }); });

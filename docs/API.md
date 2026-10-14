@@ -16,7 +16,7 @@ Developer documentation for the HTTP API served by the Express server (`server/a
 | Method and path | Purpose |
 |---|---|
 | `GET /api/auth/options` | Which sign-in methods are available: `{ email, google, recovery }` |
-| `POST /api/auth/signup` | Register: `{ name, email, password, role }`; signs the member in |
+| `POST /api/auth/signup` | Register: `{ name, email, phone, password, role }`; `phone` is a required Pakistani mobile number (`3001234567`, `03001234567` or `+923001234567`), saved to the profile as `+923001234567`. Signs the member in |
 | `POST /api/auth/login` | Sign in: `{ email, password }` |
 | `POST /api/auth/logout` | End the current session |
 | `POST /api/auth/forgot` | Email a 6-digit reset code to the account: `{ email }`. Same answer whether or not the address has an account; 503 when no email account is connected |

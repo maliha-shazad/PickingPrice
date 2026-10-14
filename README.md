@@ -6,7 +6,7 @@ Live site: https://web-production-e86b77.up.railway.app
 
 ## What it does
 
-- **Accounts**: registration and sign-in with email (or phone number) and password, optional Google sign-in, buyer / seller / both roles.
+- **Accounts**: registration with name, mobile number, email and password (the mobile number is saved to the profile), sign-in with email and password, optional Google sign-in, buyer / seller / both roles.
 - **Listings**: title, description, category, brand, price, quantity, condition (New, Like New, Good, Fair, Used), location, up to six photos, delivery and pickup options.
 - **Buyer requests**: what the buyer needs, budget, quantity, acceptable condition, location and an expiry date. Requests can be saved as drafts.
 - **Seller offers**: sellers answer a request with a price and details; the buyer compares offers and selects one.

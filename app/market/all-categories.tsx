@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea } from './ui';
+import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea, CityHeading } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -250,6 +250,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
           </aside>
 
           <div style={{flex:1}}>
+            <CityHeading actions={actions} />
             <div className="pl-feed-header pl-feed-inline">
               <div>
                 <h2 className="pl-feed-title">{selectedCategory === 'all' ? 'All Products' : selectedCategory}{selectedConditions.length === 1 ? ` - ${selectedConditions[0]}` : ''}</h2>

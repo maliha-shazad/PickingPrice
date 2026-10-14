@@ -8,6 +8,7 @@ import { ACCOUNT_TYPES } from './enable-selling';
 export function ProfileDialog({ profile, actions, onClose }: { profile: Item; actions: Actions; onClose: () => void }) {
     const [name, setName] = useState(String(profile.name || actions.user?.name || ''));
     const [location, setLocation] = useState(String(profile.location || ''));
+    const [phone, setPhone] = useState(String(profile.phone || ''));
     const [role, setRole] = useState(String(profile.role || actions.user?.role || 'buyer'));
     const [avatar, setAvatar] = useState(String(profile.avatar || ''));
     const [uploading, setUploading] = useState(false);
@@ -36,7 +37,7 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
         // The profile endpoint replaces the whole profile, so the fields not shown here are sent back unchanged.
         const saved = await actions.perform('profile', 'PATCH', {
             name: name.trim(), location: location.trim(), avatar,
-            bio: profile.bio || '', phone: profile.phone || '', whatsapp: profile.whatsapp || '',
+            bio: profile.bio || '', phone: phone.trim(), whatsapp: profile.whatsapp || '',
             meetup_spot: profile.meetup_spot || '', role,
         });
         setBusy(false);
@@ -65,6 +66,11 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
                     <div className="bd-form-group">
                         <label htmlFor="bd-profile-name">Name</label>
                         <input id="bd-profile-name" type="text" className="bd-input" required minLength={2} maxLength={80} placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div className="bd-form-group">
+                        <label htmlFor="bd-profile-phone">Mobile Number</label>
+                        <input id="bd-profile-phone" type="tel" className="bd-input" maxLength={20} value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. +923001234567" />
+                        <small className="bd-field-hint">Other members do not see this number.</small>
                     </div>
                     <div className="bd-form-group">
                         <label htmlFor="bd-profile-location">Location</label>

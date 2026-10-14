@@ -52,9 +52,13 @@ let checks=0;
 const equal=(a:unknown,b:unknown)=>{assert.deepEqual(a,b);checks++};
 const send=(path:string,body:unknown,cookie='',origin=config.origin)=>fetch(config.origin+path,{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
 try{
- const signup={email:'http@example.test',name:'HTTP Member',password:'safe-http-password-123',role:'both'};
+ const signup={email:'http@example.test',name:'HTTP Member',phone:'0300 1234567',password:'safe-http-password-123',role:'both'};
  let r=await send('/api/auth/signup',signup);equal(r.status,200);const cookie=r.headers.get('set-cookie')!.split(';')[0];
  r=await fetch(config.origin+'/api/market/bootstrap',{headers:{Cookie:cookie}});equal(r.status,200);
+ // The mobile number is required at sign-up and lands in the profile in one format.
+ r=await send('/api/auth/signup',{...signup,email:'nophone@example.test',phone:''});equal(r.status,400);
+ r=await send('/api/auth/signup',{...signup,email:'badphone@example.test',phone:'12345'});equal(r.status,400);
+ r=await fetch(config.origin+'/api/market/me',{headers:{Cookie:cookie}});equal(((await r.json()) as {profile:{phone:string}}).profile.phone,'+923001234567');
  r=await send('/api/auth/login',{email:signup.email,password:'incorrect-password-123'});equal(r.status,401);
  r=await send('/api/auth/signup',{...signup,email:'other@example.test'},'','https://wrong.example');equal(r.status,403);
  r=await fetch(config.origin+'/api/market/listings',{method:'POST',headers:{Origin:config.origin,'Content-Type':'application/json',Cookie:cookie},body:'{'});equal(r.status,400);
@@ -113,7 +117,7 @@ try{
  // Notification emails: each new notification is also emailed to its owner, once.
  const waitFor=async(test:()=>boolean)=>{for(let i=0;i<80&&!test();i++)await new Promise(r=>setTimeout(r,50));return test()};
  const mailsTo=(to:string,subject:string)=>outbox.filter(m=>m.mail.to[0]===to&&m.mail.subject===subject);
- r=await send('/api/auth/signup',{email:'mailbuyer@example.test',name:'Mail Buyer',password:'safe-http-password-123',role:'buyer'});equal(r.status,200);const mailBuyer=r.headers.get('set-cookie')!.split(';')[0];
+ r=await send('/api/auth/signup',{email:'mailbuyer@example.test',name:'Mail Buyer',phone:'3011234567',password:'safe-http-password-123',role:'buyer'});equal(r.status,200);const mailBuyer=r.headers.get('set-cookie')!.split(';')[0];
  r=await send('/api/market/conversations',{contextType:'listing',contextId:created.id},mailBuyer);equal(r.status,200);const mailChat=await r.json() as {id:string};
  r=await send('/api/market/messages/'+mailChat.id,{body:'Is this book <still> available?'},mailBuyer);equal(r.status,200);
  equal(await waitFor(()=>mailsTo(signup.email,'New message | Picking Price').length===1),true);
@@ -248,7 +252,7 @@ try{
  // When Google stops accepting the connection the panel says so, and Resend carries the emails until it is connected again.
  google.withdrawn='access-'+google.issued;google.expired=true;r=await send('/api/admin/mail/test',{},panel);equal(r.status,502);
  ms=await mailState();equal([ms.service,ms.connected,ms.problem],['resend',true,'expired']);
- r=await send('/api/auth/signup',{email:'fallback@example.test',name:'Fall Back',password:'safe-http-password-123',role:'buyer'});equal(r.status,200);
+ r=await send('/api/auth/signup',{email:'fallback@example.test',name:'Fall Back',phone:'+923021234567',password:'safe-http-password-123',role:'buyer'});equal(r.status,200);
  r=await send('/api/auth/forgot',{email:'fallback@example.test'});equal(r.status,200);const viaOther=outbox.filter(m=>m.mail.to[0]==='fallback@example.test');equal(viaOther.length,1);equal(viaOther[0].auth,'Bearer re_test_key');equal(viaOther[0].mail.from,'Picking Price <notify@example.test>');
  google.expired=false;link=await connect();r=await back('code=good&state='+link.consent.searchParams.get('state'),link.jar);equal(r.headers.get('location'),'/admin?mail=connected');ms=await mailState();equal([ms.service,ms.problem],['gmail','']);
  // Headers are encoded, so any language arrives intact and an address cannot smuggle in a second recipient.
