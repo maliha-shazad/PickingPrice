@@ -121,6 +121,8 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
     const data = live && live.path === path ? live.data : state.data;
     const messages: Item[] = data?.items || [];
     const conv = data?.conversation;
+    // Opening the chat marked its message notifications read on the server: update the bell's count.
+    useEffect(() => { if (Number(data?.cleared) > 0) actions.refresh(); }, [data]);
 
     useEffect(() => {
         // Scroll the message list itself, not the page: the page jumping down hid the chat's header.
@@ -241,6 +243,15 @@ export function Conversation({ actions, id }: { actions: Actions; id: string }) 
 export function Notifications({ actions }: { actions: Actions }) {
     const [page, setPage] = useState(1);
     const state = useLoad('notifications?page=' + page, actions.revision);
+    // Opening this page counts as seeing the notifications: they are marked read so the bell's count goes,
+    // and the ones that were new stay highlighted for the rest of this visit.
+    const [fresh, setFresh] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        const unseen = ((state.data?.items || []) as Item[]).filter(n => !n.read).map(n => String(n.id));
+        if (!unseen.length) return;
+        setFresh(prev => new Set([...prev, ...unseen]));
+        api('notifications/all', 'PATCH', {}).then(() => actions.refresh()).catch(() => { });
+    }, [state.data]);
 
     const follow = (n: Item) => {
         actions.perform('notifications/' + n.id, 'PATCH', {});
@@ -259,7 +270,7 @@ export function Notifications({ actions }: { actions: Actions }) {
             </div>
             <Load state={state}>
                 {state.data?.items?.map((n: Item) => (
-                    <article className={'notification ' + (!n.read ? 'unread' : '')} key={n.id}>
+                    <article className={'notification ' + (!n.read || fresh.has(String(n.id)) ? 'unread' : '')} key={n.id}>
                         <button onClick={() => follow(n)}>
                             <strong>{n.title}</strong>
                             <p>{n.body}</p>

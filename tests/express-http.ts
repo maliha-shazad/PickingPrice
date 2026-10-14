@@ -129,7 +129,10 @@ try{
  // Read receipts: your message is unread until the other member opens the chat.
  type Msg={body:string;read:boolean};const chat=async(c:string)=>((await (await read('/api/market/messages/'+mailChat.id,c)).json()) as {items:Msg[]}).items;
  equal((await chat(mailBuyer)).map(m=>m.read),[false,false]);
+ const bell=async()=>((await (await read('/api/market/bootstrap',cookie)).json()) as {unread:number}).unread;const unreadBefore=await bell();assert(unreadBefore>=3);checks++;
  equal((await chat(cookie)).map(m=>m.read),[false,false]);   // the seller opens the chat; the buyer's messages are not the seller's to tick
+ // Opening the chat clears its two "New message" notifications from the bell; the review notification stays.
+ equal(await bell(),unreadBefore-2);equal(((await (await read('/api/market/messages/'+mailChat.id,cookie)).json()) as {cleared:number}).cleared,0);
  equal((await chat(mailBuyer)).map(m=>m.read),[true,true]);
  await new Promise(r=>setTimeout(r,15));r=await send('/api/market/messages/'+mailChat.id,{body:'One more question.'},mailBuyer);equal(r.status,200);
  const later=await chat(mailBuyer);equal(later.find(m=>m.body==='One more question.')!.read,false);equal(later.find(m=>m.body==='I can collect it today.')!.read,true);

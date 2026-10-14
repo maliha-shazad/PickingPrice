@@ -3,6 +3,7 @@ node_modules
 .next
 .vinext
 .wrangler
+.postgres
 .pnpm-store
 dist
 server/public

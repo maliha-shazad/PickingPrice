@@ -406,7 +406,7 @@ export default function Workspace() {
         if (afterSwitch === 'request' && user.role !== 'seller') { setAfterSwitch(''); open('request-form'); }
     }, [afterSwitch, user?.role]);
     // Counts arrive as text from PostgreSQL, so "0" must not be treated as something to show.
-    const unread = Number(boot.data?.unread) || 0, openRequests = Number(boot.data?.openRequests) || 0;
+    const unread = Number(boot.data?.unread) || 0;
     const mobileSell = (
         <button id="mobile-sell-btn" className="pp-mobile-pill sell" onClick={() => open('listing-form')}>
             <Plus size={14} /> Sell Now
@@ -588,7 +588,6 @@ export default function Workspace() {
                         onClick={() => go('Requests')}
                     >
                         <ShoppingBag size={14} /> Requests
-                        {openRequests > 0 && <span className="pp-nav-badge" aria-label={openRequests + ' open requests'}>{openRequests > 99 ? '99+' : openRequests}</span>}
                     </button>
 
                     {/* Brand New */}

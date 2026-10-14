@@ -485,8 +485,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-cat-nav-item.active{color:#1e5038;font-weight:700;border-bottom-color:#2d6a4f}
 .pp-cat-discover.active{background:#f0f8f0}
 
-.pp-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e8621a;color:#fff;font-size:10px;font-weight:700;line-height:1;box-sizing:border-box}
-
 .pp-cat-all{color:#2d6a4f;font-weight:600}
 .pp-cat-all:hover{color:#1e5038}
 

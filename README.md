@@ -61,18 +61,31 @@ Requires Node.js 24.18 or newer (https://nodejs.org).
 ```bash
 npm install
 
-# Workers edition (no database server needed): http://127.0.0.1:8787
-npm run build
-npm start
+# Express + PostgreSQL edition, the same as the live site: http://localhost:3000
+npm run dev
 
-# Express + PostgreSQL edition: http://localhost:3000
-npm run build:postgres
-DATABASE_URL=postgresql://user:password@127.0.0.1:5432/picking_price npm run start:postgres
+# Workers edition (no database server needed): http://127.0.0.1:8787
+npm run dev:workers
 ```
+
+`npm run dev` builds the site, starts the project's own PostgreSQL server if it is not running, then starts the site with the settings in `.env`. Without a build step: `npm run start:local`.
 
 Settings are read from environment variables: `DATABASE_URL`, `APP_ORIGIN`, `PORT`, `UPLOADS_DIR`, `ADMIN_SETUP_CODE`, and the optional `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` (or `RESEND_API_KEY` with `EMAIL_FROM`). For the Workers edition copy `dev.vars.example` to `.dev.vars` in the project folder and edit it. Never commit real values.
 
 The Workers edition keeps its database and uploaded photos in the `.wrangler` folder. The first `npm start` creates the database tables by itself (`scripts/local-db.mjs`); delete the `.wrangler` folder to start empty again.
+
+#### Local PostgreSQL
+
+The Express edition uses its own PostgreSQL server kept in the `.postgres` folder, on port 5433, so it never touches a PostgreSQL installed on the computer (usually on 5432). It needs PostgreSQL 17 installed (only its programs are used; set `PG_BIN` if they are not in `C:\Program Files\PostgreSQL\17\bin`). To set it up on a new computer:
+
+```bash
+initdb -D .postgres/data -U picking -W --auth=scram-sha-256 -E UTF8 --locale=C
+# add "port = 5433" and "listen_addresses = 'localhost'" to .postgres/data/postgresql.conf
+pg_ctl start -D .postgres/data -l .postgres/server.log
+createdb -h 127.0.0.1 -p 5433 -U picking picking_price
+```
+
+Then put `DATABASE_URL=postgresql://picking:PASSWORD@127.0.0.1:5433/picking_price`, `APP_ORIGIN=http://localhost:3000` and `ADMIN_SETUP_CODE` in `.env`. The tables are created when the site first starts. Stop the server with `pg_ctl stop -D .postgres/data`; delete the `.postgres` folder to start empty again.
 
 ### With Docker
 

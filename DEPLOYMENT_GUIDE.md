@@ -37,7 +37,7 @@ Start:         pnpm start:postgres
 Create admin:  pnpm admin:postgres
 ```
 
-Do **not** substitute the default `pnpm build`, `pnpm start`, or `pnpm dev`: those belong to the Workers edition.
+Do **not** substitute the default `pnpm build` or `pnpm start` (they belong to the Workers edition), or `pnpm dev` (it runs the local development database).
 
 ## 3. Software and configuration
 

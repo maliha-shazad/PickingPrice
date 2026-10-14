@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev:hmr": "node scripts/run-framework.mjs dev",
-    "dev": "npm run build && npm start",
+    "dev": "npm run build:postgres && npm run start:local",
+    "dev:workers": "npm run build && npm start",
     "dev:prod": "npm run build && npm start",
     "build": "node scripts/run-framework.mjs build",
     "start": "node scripts/local-db.mjs && node --import ./scripts/local-env.mjs --import ./scripts/dev-vars.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
@@ -15,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "build:postgres": "vite build --config vite.postgres.config.ts",
     "start:postgres": "node --import tsx server/index.ts",
+    "start:local": "node scripts/local-postgres.mjs && node --env-file=.env --import tsx server/index.ts",
     "admin:postgres": "node --import tsx server/create-admin.ts",
     "test:market": "node --import tsx tests/market-integration.ts",
     "test:auth": "node tests/auth-smoke.mjs",
