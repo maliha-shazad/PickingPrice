@@ -1,7 +1,5 @@
-'use client';
 import { useEffect, useState } from 'react';
 import { Search, Heart, MapPin, Plus, ArrowUpRight, ShieldCheck } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { samples, sampleRequests } from '../samples';
 import { Actions, Item, useLoad, Load, Choice, Pager, Empty, Photo, money, date, Status } from './ui';
 const conditions = ['New', 'Like New', 'Good', 'Fair', 'Used'];

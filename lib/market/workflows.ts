@@ -1,7 +1,7 @@
 import { Context, MarketError, id, now, pageOf, Row } from './types';
 import { authenticated, permit, owned, one, rows, run, stmt, notice, pagination, uploadCheck } from './core';
 import { offerSchema, messageSchema, reviewSchema, profileSchema, validate, stringValue } from './validation';
-export async function requestStatus(c: Context, key: string, body: Record<string, unknown>) { const u = permit(c, 'buyer'), r = await owned(c, 'buyer_requests', key); const status = body.status; const allowed = ['Closed', 'Cancelled', 'Seller Selected']; if (!allowed.includes(String(status)))
+export async function requestStatus(c: Context, key: string, body: Record<string, unknown>) { permit(c, 'buyer'); const r = await owned(c, 'buyer_requests', key); const status = body.status; const allowed = ['Closed', 'Cancelled', 'Seller Selected']; if (!allowed.includes(String(status)))
     throw new MarketError('Choose close, cancel or select seller.'); if (['Closed', 'Cancelled', 'Expired', 'Hidden', 'Deleted'].includes(r.status) || (r.expiry <= now() && r.status!=='Seller Selected'))
     throw new MarketError('This request is no longer active.', 409); if (status === 'Seller Selected') {
     if (!['Open', 'Responses Received'].includes(r.status))

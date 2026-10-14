@@ -6,16 +6,9 @@ strictDepBuilds: true
 allowBuilds:
   esbuild: true
   fsevents: true
-  sharp: true
-  unrs-resolver: true
-  workerd: true
-storeDir: ${PNPM_STORE_DIR:-.pnpm-store}
-cacheDir: ${PNPM_STORE_DIR:-.pnpm-store}/policy-cache
 enableGlobalVirtualStore: false
 # Copy packages into node_modules instead of linking them to the store.
 packageImportMethod: clone-or-copy
 # Dependencies are installed explicitly, never as a side effect of running a script.
 verifyDepsBeforeRun: false
 optimisticRepeatInstall: false
-overrides:
-  miniflare>sharp: 0.35.4

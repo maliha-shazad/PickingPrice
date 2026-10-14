@@ -1,4 +1,3 @@
-'use client';
 import { Mail, Phone, MapPin, Clock } from 'lucide-react';
 import { legalBody, UPDATED } from '../legal-content';
 import type { Actions } from './ui';

@@ -1,6 +1,6 @@
 # Picking Price API Reference
 
-Developer documentation for the HTTP API. The same API is served by the Express + PostgreSQL edition (`server/app.ts`) and the Workers edition (`app/api/`); the rules behind it live in `lib/market/` and are routed in `lib/market/router.ts`.
+Developer documentation for the HTTP API served by the Express server (`server/app.ts`). The rules behind it live in `lib/market/` and are routed in `lib/market/router.ts`.
 
 ## Conventions
 
@@ -53,7 +53,7 @@ A listing, request, offer or profile may only reference images uploaded by the s
 | `GET /my-reviews` | Reviews you wrote | Yes |
 | `GET /favorites` | Ids of products you saved | Yes |
 | `GET /conversations` | Your chats, each with the item it is about | Yes |
-| `GET /messages/:conversationId` | Messages of one chat (participants only). Reading it marks the chat as seen; each of your own messages carries `read: true` once the other member has seen it | Yes |
+| `GET /messages/:conversationId` | Messages of one chat (participants only). Reading it marks the chat as seen and marks its "New message" notifications read (`cleared` is how many were cleared); each of your own messages carries `read: true` once the other member has seen it | Yes |
 | `GET /drafts` | Your saved request drafts | Yes |
 | `GET /notifications` | Your notifications | Yes |
 | `GET /services` | Slot usage, prices, payment instructions, your payment requests and promotions | Yes |
@@ -117,7 +117,7 @@ Approving a payment adds the slots or starts the promotion; nothing is activated
 
 ## Database
 
-PostgreSQL in the deployed edition; the schema is created by the migrations in `drizzle/` and `server/migrate.ts`. Main tables: `accounts`, `sessions`, `profiles`, `listings`, `categories`, `buyer_requests`, `seller_offers`, `favorites`, `reviews`, `promotions`, `payment_requests`, `conversations`, `chat_messages`, `reports`, `notifications`, `request_drafts`, `settings`, `uploads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`. There are no order, auction, bid, wallet or withdrawal tables: those functions are outside the project's scope.
+PostgreSQL; the schema is created by the migrations in `drizzle/` and `server/migrate.ts`. Main tables: `accounts`, `sessions`, `profiles`, `listings`, `categories`, `buyer_requests`, `seller_offers`, `favorites`, `reviews`, `promotions`, `payment_requests`, `conversations`, `chat_messages`, `reports`, `notifications`, `request_drafts`, `settings`, `uploads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`, plus `conversation_reads` (when each member last opened each chat), `notification_emails` (which notifications were emailed) and `schema_migrations` (which `drizzle/` files have been applied). There are no order, auction, bid, wallet or withdrawal tables: those functions are outside the project's scope.
 
 ## Testing
 

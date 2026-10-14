@@ -1,4 +1,3 @@
-'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
 import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity } from './ui';
@@ -251,7 +250,7 @@ export function Homepage({ actions }: { actions: Actions }) {
 
   const toggleSave = (id: string) => {
     if (!actions.user) { actions.open('login'); return; }
-    setSavedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSavedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
     actions.perform('favorites/' + id, 'PUT', { saved: !savedIds.has(id) });
   };
 

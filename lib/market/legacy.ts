@@ -1,4 +1,4 @@
-import { Context, Row, now, id } from './types';
+import { Context, Row, now } from './types';
 import { one, rows, run, stmt } from './core';
 // Bounded, idempotent data migration; original records are retained for administrator inspection.
 export async function migrateLegacy(c: Context) {

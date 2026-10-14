@@ -24,8 +24,8 @@ There is exactly one administrator. It is not a member account: its email and sc
 
 Creating the administrator (once):
 
-- Set the secret `ADMIN_SETUP_CODE` (16 characters or more), open `/admin`, and enter that code with the email and password you want. For local development put the code in a `.dev.vars` file in the project folder. Once the administrator exists the code can no longer be used, and with no code set, setup is switched off.
-- On the Express edition you can instead run `npm run admin:postgres` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` set.
+- Set the secret `ADMIN_SETUP_CODE` (16 characters or more), open `/admin`, and enter that code with the email and password you want. For local development the code goes in the `.env` file in the project folder. Once the administrator exists the code can no longer be used, and with no code set, setup is switched off.
+- Or, with access to the server, run `npm run admin:create` with `DATABASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` (16 characters or more) set.
 
 The administrator password (12 to 128 characters) is changed inside the panel with **Change password**, which signs out every other admin session. There is no forgotten-password flow for the administrator: if that password is lost, someone with database access must delete the row in `admin_auth` and run setup again. Sign-in, setup and password attempts are limited per IP address.
 
@@ -86,4 +86,4 @@ Email address confirmation at sign-up, multi-factor sign-in and member-managed a
 
 ## Checks
 
-`npm run test:password` covers password hashing, `npm run test:auth` covers sign-up, sign-in and sessions on the Workers runtime (build first), and `npm run test:http` covers the Express server, including password reset by email and notification emails against a stand-in mail server. All use throwaway databases.
+`npm run test:password` covers password hashing, and `npm run test:http` covers sign-up, sign-in, sessions, the administrator, password reset by email and notification emails against a stand-in mail server (build first with `npm run build`). Both use throwaway databases.

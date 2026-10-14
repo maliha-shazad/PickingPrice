@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, ArrowRight, Timer, CheckCheck, FileCheck, Plus, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Timer, CheckCheck, Plus, SlidersHorizontal } from 'lucide-react';
 import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
 import { samples } from '../samples';
 
@@ -84,7 +84,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
   const sourceData = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
-  let filtered = sourceData.filter((p: any) => p.condition !== 'New').filter((p: any) => {
+  const filtered = sourceData.filter((p: any) => p.condition !== 'New').filter((p: any) => {
     if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
     if (selectedConditions.length > 0 && !selectedConditions.includes(p.condition)) return false;
     if (minPrice && p.price < parseInt(minPrice)) return false;

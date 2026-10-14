@@ -1,4 +1,3 @@
-'use client';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, RotateCcw, Key, Lock, Eye, EyeOff, ShieldCheck, CheckCircle2, ArrowRight, Mail } from 'lucide-react';
 import '../market/styles.css';

@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { Actions, money, date, Item, useLoadAll, Status, Load } from './ui';
-import { Search, MapPin, Clock, ArrowUpRight, Plus } from 'lucide-react';
+import { MapPin, Clock, ArrowUpRight, Plus } from 'lucide-react';
 import { sampleRequests } from '../samples';
 
 export function MyRequests({ actions }: { actions: Actions }) {

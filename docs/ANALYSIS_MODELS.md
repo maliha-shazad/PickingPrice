@@ -252,6 +252,6 @@ erDiagram
 | Reports | `reports` |
 | Notifications | `notifications` |
 
-Supporting tables that are not marketplace entities: `sessions`, `auth_attempts`, `oauth_states`, `uploads`, `settings`, `admin_auth`, `admin_sessions`, `admin_audit` and `notification_emails`.
+Supporting tables that are not marketplace entities: `sessions`, `auth_attempts`, `oauth_states`, `uploads`, `settings`, `conversation_reads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`, `notification_emails` and `schema_migrations`.
 
 A listing or request stores its category by name; renaming a category in the admin panel updates the items that use it. A report points at its target (listing, request, message, review or member) through `target_type` and `target_id`.

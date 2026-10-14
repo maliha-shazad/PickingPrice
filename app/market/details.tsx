@@ -1,6 +1,5 @@
-'use client';
 import { useState } from 'react';
-import { MessageCircle, Star, Flag, ShieldCheck } from 'lucide-react';
+import { MessageCircle, ShieldCheck } from 'lucide-react';
 import { Actions, Item, useLoad, Load, Photo, Status, Pager, Choice, money, date, Empty } from './ui';
 export function ListingDetail({ item, actions }: {
     item: Item;

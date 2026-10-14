@@ -1,15 +1,10 @@
 import assert from 'node:assert/strict';
 import { PGlite } from '@electric-sql/pglite';
-import { readFile, readdir } from 'node:fs/promises';
 import { market } from '../lib/market/router';
 import { PgDatabase } from '../server/database';
 import { migrate } from '../server/migrate';
 import { one, run } from '../lib/market/core';
 import { MarketError } from '../lib/market/types';
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const wr = createRequire(require.resolve('wrangler/package.json'));
-const { Miniflare } = wr('miniflare');
 let checks = 0;
 async function suite(db: unknown, label: string) {
     const users = Object.fromEntries(['buyer', 'seller', 'other', 'admin'].map(role => [role, { userId: role, displayName: role + ' Name', email: role + '@example.test', role: role === 'other' ? 'both' : role }]));
@@ -184,14 +179,6 @@ async function suite(db: unknown, label: string) {
     await run(db,'UPDATE buyer_requests SET expiry=? WHERE id=?','2000-01-01T00:00:00.000Z',r.id);
     await call('buyer','POST','requests/'+r.id+'/status',{status:'Closed'});ok((await call('buyer','GET','requests/'+r.id)).status==='Closed');
     await call('admin','POST','admin/moderate',{type:'request',id:r.id,action:'restore',reason:'Repeated restoration must not reopen'});ok((await call('buyer','GET','requests/'+r.id)).status==='Closed');
-    // Retries and concurrency at the D1 transaction boundary cannot over-allocate.
-    if(label==='Cloudflare D1'){
-      await call('admin','POST','admin/settings',{...conf,freeListings:26});
-      const attempts=await Promise.allSettled([call('capacity','POST','listings',listing),call('capacity','POST','listings',listing)]);
-      ok(attempts.filter(x=>x.status==='fulfilled').length===1);ok((await call('capacity','GET','me')).counts.listings===26);
-      const references=await Promise.allSettled([call('seller','POST','payments',{purpose:'slots',quantity:1,reference:'RACE-REF'}),call('seller','POST','payments',{purpose:'slots',quantity:1,reference:'RACE-REF'})]);
-      ok(references.filter(x=>x.status==='fulfilled').length===1);
-    }
     const times = [];
     for (let n = 0; n < 30; n++) {
         const t = performance.now();
@@ -207,16 +194,4 @@ const pool: { query: (sql: string, args?: unknown[]) => Promise<{rows: unknown[]
 await migrate(pool);
 await suite(new PgDatabase(pool), 'PostgreSQL (PGlite)');
 await pg.close();
-const mf = new Miniflare({ modules: true, script: 'export default {fetch(){return new Response("test")}}', compatibilityDate: '2026-05-15', d1Databases: ['DB'], cf: false });
-try {
-    const db = await mf.getD1Database('DB');
-    for (const f of (await readdir('drizzle')).filter(f => f.endsWith('.sql')).sort()) {
-        for (const sql of (await readFile('drizzle/' + f, 'utf8')).split('--> statement-breakpoint').filter(x => x.trim()))
-            await db.prepare(sql).run();
-    }
-    await suite(db, 'Cloudflare D1');
-}
-finally {
-    await mf.dispose();
-}
-console.log(checks + ' assertions passed across both database engines.');
+console.log(checks + ' assertions passed on PostgreSQL.');

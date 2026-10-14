@@ -1,5 +1,5 @@
 import { Context, MarketError, id, now, pageOf } from './types';
-import { permit, one, rows, run, stmt, notice, configuration, pagination, log, parseImages } from './core';
+import { permit, one, rows, stmt, notice, configuration, pagination, log, parseImages } from './core';
 import { stringValue } from './validation';
 export async function adminData(c: Context, section: string, q: URLSearchParams) { permit(c, 'admin'); if (section === 'stats') {
     const [users, listings, requests, payments, reports, promotions] = await Promise.all(['SELECT COUNT(*) n FROM profiles', "SELECT COUNT(*) n FROM listings WHERE status!='Deleted'", "SELECT COUNT(*) n FROM buyer_requests WHERE status IN ('Open','Responses Received')", "SELECT COUNT(*) n FROM payment_requests WHERE status='Pending'", "SELECT COUNT(*) n FROM reports WHERE status='Open'", "SELECT COUNT(*) n FROM promotions WHERE status='Active' AND expires>'" + now() + "'"].map(sql => one(c.db, sql)));

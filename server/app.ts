@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { market } from '../lib/market/router';
 import { Database, MarketError, User, Context, now, id } from '../lib/market/types';
-import { one, run, stmt, ensureProfile, initialize } from '../lib/market/core';
+import { one, run, ensureProfile, initialize } from '../lib/market/core';
 import { imageMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode, requestResetCode, checkResetCode } from '../lib/market/password-reset';
@@ -60,7 +60,7 @@ export function createApp(db: Database, config: Config) {
         if (Number(r!.count) > max)
             throw new MarketError('Too many attempts. Try again in 15 minutes.', 429);
     } }
-    // Same rules as the Workers edition, so an account behaves identically on either.
+    // Sign-up and sign-in rules: an email (or phone number) and a password of 8 to 128 characters.
     const credentials = (body: Record<string, unknown> = {}) => { const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '', password = typeof body.password === 'string' ? body.password : ''; if (email.length > 254 || (!/^\S+@\S+\.\S+$/.test(email) && !/^\+?\d{7,15}$/.test(email.replace(/[\s-]/g, ''))))
         throw new MarketError('Enter a valid email address or phone number.'); if (password.length < 8 || password.length > 128)
         throw new MarketError('Use a password between 8 and 128 characters.'); return { email, password }; };

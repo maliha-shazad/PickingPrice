@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Heart, Star, ShieldCheck, MapPin, ChevronDown, X, Shirt, Monitor, Camera, Package, ArrowRight, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, RefreshCcw, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, Heart, Star, ShieldCheck, ChevronDown, X, Shirt, Monitor, Camera, Package, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
 import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity } from './ui';
 import { samples } from '../samples';
 
@@ -67,7 +67,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
   const sourceData = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
-  let filtered = sourceData.filter((p: any) => p.condition === 'New').filter((p: any) => {
+  const filtered = sourceData.filter((p: any) => p.condition === 'New').filter((p: any) => {
     if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
     if (minPrice && p.price < parseInt(minPrice)) return false;
     if (maxPrice && p.price > parseInt(maxPrice)) return false;

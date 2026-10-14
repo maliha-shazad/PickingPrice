@@ -1,4 +1,3 @@
-'use client';
 import { Suspense } from 'react';
 import AuthDialog, { afterAuthPath } from '../auth-dialog';
 import '../market/styles.css';

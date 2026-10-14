@@ -1,14 +1,12 @@
-'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, ShoppingBag, Heart, MessageCircle, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Toaster, toast } from 'sonner';
-import AuthDialog from '../auth-dialog';
 import { Actions, Item, api, useLoad, Load } from './ui';
 import { Catalogue } from './catalogue';
 import { Dashboard, SellerServices } from './dashboard';
-import { ListingDetail, RequestDetail, ProfileDetail } from './details';
+import { RequestDetail, ProfileDetail } from './details';
 import { ItemForm, OfferForm, ReportForm, PaymentForm } from './forms';
 import { Messages, Conversation, Notifications } from './communication';
 import { InfoContent, infoTitle, type InfoTopic } from './info';
@@ -28,15 +26,12 @@ const protectedViews = ['Saved', 'Messages', 'Notifications', 'Dashboard', 'Serv
 const VIEWS = ['Explore', 'Requests', 'Saved', 'Dashboard', 'Messages', 'Notifications', 'Services', 'PreLoved', 'BrandNew', 'AllCategories', 'PostRequest', 'SellNow', 'BuyerRequests'];
 
 const LOCATIONS = ['Peshawar', 'Lahore', 'Islamabad', 'Karachi', 'Rawalpindi', 'Faisalabad', 'Multan', 'Abbottabad', 'Quetta'];
-const CATEGORY_NAV = ['Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
 
 export default function Workspace() {
     const [view, setView] = useState('Explore');
     const [revision, setRevision] = useState(0);
     const [modal, setModal] = useState<{ type: string; item: Item } | null>(null);
-    const [auth, setAuth] = useState('');
     const [activeProduct, setActiveProduct] = useState<Item | null>(null);
-    const [pending, setPending] = useState<{ type: string; item: Item } | null>(null);
     const [confirmBusy, setConfirmBusy] = useState(false);
 
     // Header state
@@ -48,7 +43,6 @@ export default function Workspace() {
     const [location, setLocation] = useState('Peshawar');
     const [locationOpen, setLocationOpen] = useState(false);
     const [mode, setMode] = useState<'Buying' | 'Selling'>('Buying');
-    const [modeToggle, setModeToggle] = useState(false); // toggle switch
     const locationRef = useRef<HTMLDivElement>(null);
 
     // The city the visitor chose stays chosen on this device.
@@ -63,7 +57,7 @@ export default function Workspace() {
                 async (pos) => {
                     try {
                         const { latitude, longitude } = pos.coords;
-                        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''}`);
+                        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.GOOGLE_MAPS_KEY || ''}`);
                         const data = await res.json();
                         
                         let city = null;
@@ -80,7 +74,7 @@ export default function Workspace() {
                             setLocation(city);
                         }
                         localStorage.setItem('pp_location_detected', 'true');
-                    } catch (e) {
+                    } catch {
                         // ignore
                     }
                 },
@@ -244,7 +238,7 @@ export default function Workspace() {
     const [requestKey, setRequestKey] = useState(0);
     const switchMode = (next: 'Buying' | 'Selling') => {
         if (next === 'Selling' && buyingOnly) return askToEnableSelling();
-        setMode(next); setModeToggle(next === 'Selling');
+        setMode(next);
         // Remembered for this member on this device, so a reload keeps the side they chose.
         try { if (user?.id) window.localStorage.setItem('pp-mode:' + user.id, next); } catch { }
     };
@@ -255,7 +249,7 @@ export default function Workspace() {
         let saved = '';
         try { saved = (user?.id && window.localStorage.getItem('pp-mode:' + user.id)) || ''; } catch { }
         const next = user?.role === 'both' && (saved === 'Selling' || saved === 'Buying') ? saved : user?.role === 'seller' ? 'Selling' : 'Buying';
-        setMode(next); setModeToggle(next === 'Selling');
+        setMode(next);
     }, [user?.id, user?.role]);
 
     const open = (type: string, item: Item = {}) => {
@@ -276,7 +270,7 @@ export default function Workspace() {
 
         if (type === 'drafts') {
             // The Draft Requests section of the buyer dashboard.
-            setMode('Buying'); setModeToggle(false); setView('Dashboard'); setModal(null);
+            setMode('Buying'); setView('Dashboard'); setModal(null);
             pushPlace({ view: 'Dashboard' }, viewPath('Dashboard'));
             let tries = 0; const find = () => { const el = document.getElementById('bd-drafts'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 130, behavior: 'smooth' }); else if (++tries < 25) setTimeout(find, 120); }; setTimeout(find, 120);
             return;
@@ -360,12 +354,11 @@ export default function Workspace() {
             toast.error(q.get('auth_error') === 'google_not_configured'
                 ? 'Google sign-in is not configured yet.'
                 : 'Google sign-in could not be completed. Try email sign-in.');
-            setTimeout(() => setAuth('login'), 0);
-            history.replaceState({}, '', location.pathname);
+            history.replaceState({}, '', window.location.pathname);
         }
         if (q.has('welcome')) {
             toast.success('Welcome to Picking Price');
-            history.replaceState({}, '', location.pathname);
+            history.replaceState({}, '', window.location.pathname);
         }
     }, []);
 
@@ -387,7 +380,6 @@ export default function Workspace() {
         submitSearch(headerSearch);
     };
 
-    const handleModeToggle = () => switchMode(mode === 'Buying' ? 'Selling' : 'Buying');
 
     const title: Record<string, string> = {
         'listing': 'Product details', 'request': 'Buyer request', 'profile': 'Member profile',

@@ -1,4 +1,3 @@
-'use client';
 import { useState } from 'react';
 import { ShoppingBag, Store, ShoppingCart, Check } from 'lucide-react';
 import { type Actions, type Item, useLoad, Load } from './ui';

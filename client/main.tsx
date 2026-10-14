@@ -8,7 +8,7 @@ import ForgotPasswordPage from '../app/forgot-password/page';
 import LegalPage from '../app/legal';
 import '../app/globals.css';
 
-// The Workers edition has a real page per URL; this single-page build picks the same screen from the path.
+// One page for the whole site: the screen is picked from the address.
 const path = location.pathname.replace(/\/+$/, '') || '/';
 const product = path.match(/^\/product\/([^/]+)$/);
 if (product) location.replace('/?product=' + encodeURIComponent(decodeURIComponent(product[1])));

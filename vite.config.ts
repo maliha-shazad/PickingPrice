@@ -1,50 +1,7 @@
-import vinext from "vinext";
-import { defineConfig } from "vite";
-
-// Local Cloudflare bindings: a D1 database for the data and an R2 bucket for uploaded photos.
-const LOCAL_DATABASE_ID = "00000000-0000-4000-8000-000000000000";
-
-const localBindingConfig = {
-  main: "vinext/server/fetch-handler",
-  compatibility_flags: ["nodejs_compat"],
-  d1_databases: [
-    {
-      binding: "DB",
-      database_name: "picking-price-d1",
-      database_id: LOCAL_DATABASE_ID,
-    },
-  ],
-  r2_buckets: [
-    {
-      binding: "BUCKET",
-      bucket_name: "picking-price-r2",
-    },
-  ],
-};
-
-export default defineConfig(async () => {
-  // Use Miniflare's local Request.cf placeholder unless fetching is requested.
-  process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
-  process.env.WRANGLER_SEND_METRICS ??= "false";
-
-  // Keep Wrangler and Miniflare state project-local. These are non-secret tool
-  // settings; application environment belongs in ignored `.env*` files.
-  process.env.WRANGLER_WRITE_LOGS ??= "false";
-  process.env.WRANGLER_LOG_PATH ??= ".wrangler/logs";
-  process.env.WRANGLER_REGISTRY_PATH ??= ".wrangler/dev-registry";
-  process.env.MINIFLARE_REGISTRY_PATH ??= ".wrangler/registry";
-
-  // Wrangler snapshots its log path while the Cloudflare plugin is imported.
-  const { cloudflare } = await import("@cloudflare/vite-plugin");
-
-  return {
-    plugins: [
-      vinext(),
-      cloudflare({
-        viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        inspectorPort: false,
-        config: localBindingConfig,
-      }),
-    ],
-  };
-});
+import {defineConfig} from 'vite';
+import react from '@vitejs/plugin-react';
+import {resolve} from 'node:path';
+// Builds the browser app (client/) into server/public, which the Express server serves.
+// The optional Google Maps key for location detection is built into the page.
+const define={'process.env.GOOGLE_MAPS_KEY':JSON.stringify(process.env.GOOGLE_MAPS_KEY||'')};
+export default defineConfig({root:resolve('client'),publicDir:resolve('public'),plugins:[react()],define,resolve:{alias:{'@':resolve('.')}},build:{outDir:resolve('server/public'),emptyOutDir:true}});

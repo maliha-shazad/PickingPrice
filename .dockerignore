@@ -1,15 +1,7 @@
 .git
 node_modules
-.next
-.vinext
-.wrangler
 .postgres
 .pnpm-store
-dist
 server/public
 server/uploads
-server/data
 .env*
-.dev.vars*
-tsconfig.tsbuildinfo
-error.txt

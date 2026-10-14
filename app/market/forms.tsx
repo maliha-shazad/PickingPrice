@@ -1,6 +1,5 @@
-'use client';
 import { useState } from 'react';
-import { Upload, X, Plus } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { Actions, Item, Choice, Photo, money, useLoad, Load } from './ui';
 import { toast } from 'sonner';
 export function TextField({ label, value, onChange, type = 'text', required = true, maxLength = 120, min = 1, placeholder }: {

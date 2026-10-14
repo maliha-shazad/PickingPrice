@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Actions, Item, useLoad, useLoadAll, Load, money, Status, Photo, date } from './ui';
+import { Actions, useLoad, useLoadAll, Load, money, Photo, date } from './ui';
 import { ProfileDialog } from './profile-dialog';
 import { Bell, Bookmark, MessageCircle, Eye, CheckCircle2, ShieldCheck, Edit2, MapPin, Calendar, LayoutDashboard } from 'lucide-react';
 
@@ -11,7 +11,6 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
     const favorites = useLoadAll('listings?saved=1', actions.revision);
     const conversations = useLoad('conversations', actions.revision);
 
-    const [reqTab, setReqTab] = useState('active');
     const [editProfileOpen, setEditProfileOpen] = useState(false);
 
     if (!me.data) return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>;

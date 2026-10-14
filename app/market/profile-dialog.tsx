@@ -1,4 +1,3 @@
-'use client';
 import { useRef, useState } from 'react';
 import { UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';

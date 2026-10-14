@@ -1,497 +1,295 @@
-# Picking Price — cPanel and Local Server Deployment Guide
+# Picking Price — Deployment Guide
 
-Prepared for Ahsan Javaid • 27 September 2026
+Prepared for Ahsan Javaid • 14 October 2026
 
-## 1. Read this first
+## 1. What is being deployed
 
-Use the project's **portable React + Node.js + Express + PostgreSQL edition** for these deployments. The Cloudflare Workers edition (D1/R2) is used for local development; its compiled Worker archive is not a cPanel installation package.
+Picking Price is one application: a React site built with Vite, served by a Node.js + Express server that keeps its data in PostgreSQL.
 
-This guide is based on the current project source, including `server/index.ts`, `server/app.ts`, `server/create-admin.ts`, `server/migrate.ts`, and `package.json`. It is a deployment procedure, not a claim that your cPanel account or local server has already been configured or tested.
+| Part | Where it is in the project |
+|---|---|
+| Browser app (React) | `client/`, `app/`, `components/`, `public/` — `pnpm build` compiles it into `server/public/` |
+| Server (Express) | `server/` — started with `node --import tsx server/index.ts` |
+| Marketplace rules | `lib/market/` |
+| Database tables | `drizzle/*.sql` — applied automatically every time the server starts |
+| Container image | `Dockerfile` — used by Railway and by Cloudflare Containers |
 
-| Target | Requirements | Recommended approach |
-|---|---|---|
-| Windows 11 local computer | Node.js, pnpm, PostgreSQL | Run Express locally; suitable for demonstration and testing |
-| Linux local server | Same requirements, persistent disk, service manager | Run Express as a non-root systemd service |
-| cPanel hosting | Node.js application support, compatible runtime, PostgreSQL access, persistent uploads | Follow the cPanel section; confirm provider support first |
-| PHP/MySQL-only hosting or XAMPP alone | Missing this application's backend stack | Not compatible without a separate Node/PostgreSQL service |
+Every hosting option below needs three things:
 
-**Important:** Deploying the portable edition does not copy any other installation's database, uploaded photos or accounts. A new PostgreSQL database starts separately. Do not assume the new domain is private: restrict access during commissioning if required.
-
-## 2. Obtain the correct project files
-
-Obtain a source export or authorized Git checkout of Picking Price—not a download of the web page and not only the `dist` folder. This guide does not include the source archive.
-
-Keep the complete source, especially:
-
-- `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `vite.postgres.config.ts`
-- `client/`, `app/`, `components/`, `lib/`, `public/`
-- `server/`, `drizzle/`, and `tests/` for verification
-
-Do not transfer existing secrets, local test databases or `node_modules` from another machine. Install dependencies on the destination operating system. Preserve the lockfile. The root `public/` folder contains source assets; `pnpm build:postgres` produces the separately served `server/public/` folder.
-
-For these targets, use:
-
-```text
-Build:         pnpm build:postgres
-Start:         pnpm start:postgres
-Create admin:  pnpm admin:postgres
-```
-
-Do **not** substitute the default `pnpm build` or `pnpm start` (they belong to the Workers edition), or `pnpm dev` (it runs the local development database).
-
-## 3. Software and configuration
-
-### Runtime requirements
-
-- Node.js: the project's declared minimum is **22.13.0**. Use a maintained release compatible with the locked dependencies; verify the actual selected runtime, not only your desktop version.
-- pnpm: the project pins **11.25.0** in `package.json`. Use that version and the supplied lockfile. If it is unavailable from your configured registry, stop and resolve the installation rather than silently changing dependencies.
-- PostgreSQL: use a supported server release. The existing integration tests used embedded PostgreSQL/PGlite, not your external server; run the acceptance checklist against your installation.
-- A database account able to create and modify tables/indexes in the application database. Do not run the application as the PostgreSQL superuser.
-
-Example installation of the pinned package manager, where your account permits npm global installations:
-
-```bash
-npm install --global pnpm@11.25.0
-node --version
-pnpm --version
-```
-
-On managed hosting, use the provider's selected Node environment and approved package-manager installation method instead of attempting privileged installs.
+1. **Node.js 24.18 or newer** (the `Dockerfile` already uses Node 24).
+2. **A PostgreSQL database**, given to the server as `DATABASE_URL`.
+3. **A place where uploaded photos stay.** The server writes each photo as a file in `UPLOADS_DIR`. This works on Railway (with a volume) and on your own computer or server. It does **not** work on Vercel or Cloudflare Containers without a code change, because their disks are temporary — see Sections 5 and 6.
 
 ### Environment variables
 
-| Variable | Local example / purpose |
-|---|---|
-| `DATABASE_URL` | `postgresql://picking_user:ENCODED_PASSWORD@127.0.0.1:5432/picking_price` |
-| `APP_ORIGIN` | Exact browser origin, e.g. `http://localhost:3000` or `https://market.example.com`; no trailing slash or path |
-| `PORT` | `3000` for direct Node startup; use the hosting provider's routing configuration under Passenger |
-| `UPLOADS_DIR` | Absolute, persistent, writable directory outside the code release, e.g. `C:/PickingPriceData/uploads` |
-| `NODE_ENV` | `production` when running the built application |
-| `GOOGLE_CLIENT_ID` | Optional Google web application client ID |
-| `GOOGLE_CLIENT_SECRET` | Optional server-only Google client secret |
-| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | Optional. A Google OAuth client with the Gmail API enabled. With both set, the administrator connects a Gmail account in `/admin` → Settings → Email, and password reset codes and copies of notifications are emailed from it. Works without a domain of your own (see AUTH_SETUP.md) |
-| `RESEND_API_KEY` | Optional alternative (resend.com). Needs a verified domain to reach anyone but the account owner |
-| `EMAIL_FROM` | Sender for Resend, e.g. `Picking Price <notify@yourdomain.com>` on the verified domain. Gmail does not use it: it sends from the connected address |
-| `PGSSL` | `require` enables verified database TLS in `server/index.ts`; see the TLS caveat below |
-| `NODE_EXTRA_CA_CERTS` | Optional trusted database CA certificate file when required by the provider |
+| Variable | Needed | Purpose |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string, e.g. `postgresql://user:password@host:5432/picking_price`. A password containing `@`, `:` or `/` must be URL-encoded (`@` is `%40`) |
+| `APP_ORIGIN` | Yes, except on Railway's own domain | The exact address people open, e.g. `https://pickingprice.pk` — no trailing slash. Forms from any other address are rejected |
+| `ADMIN_SETUP_CODE` | Once | A private phrase of 16+ characters used to create the administrator at `/admin`. After that it can be removed |
+| `PORT` | No | Port to listen on; default `3000`. Railway sets it itself |
+| `UPLOADS_DIR` | No | Folder for uploaded photos; default `server/uploads` (on Railway: the volume, `/data/uploads`) |
+| `PGSSL` | No | `require` turns on verified TLS to the database |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | No | Google sign-in (Section 8) |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | No | Sending password-reset codes and notification emails from a Gmail account (see [AUTH_SETUP.md](AUTH_SETUP.md)) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | No | Email through Resend instead of Gmail; needs your own verified domain |
+| `GOOGLE_SITE_VERIFICATION` | No | Google Search Console ownership tag |
+| `GOOGLE_MAPS_KEY` | No | Detects the visitor's city. It is built into the page, so it must be present when `pnpm build` runs (rebuild after changing it) |
 
-Passwords inside a connection URL must be URL-encoded. For example, a literal `@` in a password is `%40`. Do not paste database URLs or secrets into support tickets, screenshots or source control.
+Never commit real values. Locally they live in `.env`, which git ignores.
 
-**Environment-file behavior:** `pnpm start:postgres` and `pnpm admin:postgres` read process environment variables; they do not automatically load a `.env` file. The explicit `node --env-file=...` commands below load it. Existing process variables can override values loaded from a file, so remove stale settings when troubleshooting.
+## 2. On your own computer
 
-**Remote PostgreSQL TLS caveat:** the admin creation script does not read `PGSSL`, although the main server does. For a remote database, use the provider's verified-TLS connection URL for both commands, such as its documented `sslmode=verify-full` configuration, with the correct CA trust. Avoid mixing conflicting URL SSL options with `PGSSL`; URL SSL parameters can override the pool SSL object. Never fix certificate errors by disabling certificate verification. Local loopback PostgreSQL can use the simple URL shown above when configured that way.
-
-The administrator is created with `pnpm admin:postgres` (below) and signs in at `/admin`; member accounts never have administrator rights. Email is optional: reset codes and notification copies are sent only when a Gmail account is connected in the admin panel (which needs `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET`) or `RESEND_API_KEY` is set (see the table above and AUTH_SETUP.md). Without it, members ask support for a reset code that the administrator issues from the admin panel.
-
-## 4. Windows 11 local installation
-
-### Step 1 — Install software and extract the source
-
-Install Node.js and PostgreSQL using their official Windows installers. Include PostgreSQL command-line tools and optionally pgAdmin. If commands are not found, open a new terminal and check PATH. Extract the project into:
-
-```text
-C:\Projects\picking-price
-```
-
-Use PowerShell from that folder:
-
-```powershell
-Set-Location C:\Projects\picking-price
-node --version
-pnpm --version
-pnpm install --frozen-lockfile --prod=false
-pnpm build:postgres
-```
-
-Keep development dependencies installed for this source-running deployment: `tsx`, required by the startup command, currently lives in `devDependencies`. Do not prune them after the build.
-
-### Step 2 — Create a dedicated database
-
-Open SQL Shell (`psql`) as the PostgreSQL administrator. Execute the following once for a new installation:
-
-```sql
-CREATE ROLE picking_user LOGIN;
-\password picking_user
-CREATE DATABASE picking_price OWNER picking_user;
-```
-
-The `\password` command prompts without putting the password directly into SQL history. Choose a unique password. If the role/database already exists, inspect and reuse the intended one; do not delete it to rerun these commands.
-
-### Step 3 — Create a private configuration file
-
-Create `C:\PickingPriceData\uploads` and a text file named `C:\PickingPriceData\picking-price.env` using an editor. Ensure it is not accidentally saved as `.env.txt`. Restrict access to your account and the service account, if any.
-
-```dotenv
-DATABASE_URL="postgresql://picking_user:REPLACE_WITH_URL_ENCODED_PASSWORD@127.0.0.1:5432/picking_price"
-APP_ORIGIN="http://localhost:3000"
-PORT=3000
-UPLOADS_DIR="C:/PickingPriceData/uploads"
-NODE_ENV=production
-```
-
-Replace the password placeholder before running anything. Never store this file under a publicly served folder.
-
-### Step 4 — Create the administrator
-
-Use an email address that has not already registered in this database. In PowerShell 7, from the project folder:
-
-```powershell
-$env:ADMIN_EMAIL = Read-Host 'Administrator email'
-$env:ADMIN_PASSWORD = Read-Host 'Unique admin password (at least 16 characters)' -MaskInput
-try {
-    node --env-file=C:/PickingPriceData/picking-price.env --import tsx server/create-admin.ts
-} finally {
-    Remove-Item Env:ADMIN_PASSWORD -ErrorAction SilentlyContinue
-    Remove-Item Env:ADMIN_EMAIL -ErrorAction SilentlyContinue
-}
-```
-
-`-MaskInput` requires PowerShell 7. If using Windows PowerShell 5.1, use a secure-input method or install PowerShell 7; do not put the password into a saved command script. The admin script applies migrations and creates the single administrator. If an administrator already exists it changes nothing.
-
-### Step 5 — Start and verify
-
-```powershell
-node --env-file=C:/PickingPriceData/picking-price.env --import tsx server/index.ts
-```
-
-Open **http://localhost:3000**. Keep the terminal open; Ctrl+C stops the server. Open **http://localhost:3000/admin** and sign in with the administrator account, then complete Section 9.
-
-Check the API in another PowerShell terminal:
-
-```powershell
-Invoke-RestMethod http://localhost:3000/api/auth/options
-```
-
-Expect email authentication enabled and Google disabled unless both Google variables are set. The server automatically applies unapplied migrations in `drizzle/` at startup. Do not manually run `drizzle-kit push` against this installation.
-
-### Optional — Access from another computer on your LAN
-
-Use a stable private IP for the server. For example, if its actual address is `192.168.1.20`, set `APP_ORIGIN=http://192.168.1.20:3000`, restart and browse that exact URL from all test clients. `localhost` and the IP address are different origins; mixing them can cause rejected form submissions.
-
-The current server binds to all interfaces. Allow port 3000 only from the trusted local subnet in Windows Firewall; do not open it to the internet. Local HTTP is for demonstrations with test data, not confidential production use. Google login needs internet access even when the application is local.
-
-## 5. Linux local server / production service
-
-Install the compatible Node/pnpm toolchain and PostgreSQL using the distribution's supported procedures. Use a dedicated non-root OS account, here called `pickingprice`. Place the project in `/opt/picking-price`, configuration in `/etc/picking-price.env`, and uploads in `/var/lib/picking-price/uploads`. Have the administrator grant the service account read access to the source/config and write access only where required, including uploads.
-
-Create the database and role as in Section 4. Install dependencies and build from `/opt/picking-price` as the application owner:
+This is what `npm run dev` does on the development machine. The full setup, including the project's own PostgreSQL server in `.postgres/` (port 5433), is in [README.md](README.md#running-it-locally).
 
 ```bash
-pnpm install --frozen-lockfile --prod=false
-pnpm build:postgres
+pnpm install
+npm run dev        # builds, starts the local PostgreSQL if needed, starts the site
 ```
 
-Use the same environment-file format as Section 4, changing paths and `APP_ORIGIN`. For initial local testing, use `http://localhost:3000`. Restrict the configuration file, for example to owner root/group pickingprice with mode `0640`.
+Open http://localhost:3000. Create the administrator at http://localhost:3000/admin with the `ADMIN_SETUP_CODE` from `.env`.
 
-Create the admin from the project root in Bash, as an account allowed to read the configuration:
+To run the built site against any other PostgreSQL (for example on a Linux server), set the variables in the environment and start it with:
 
 ```bash
-read -r -p 'Administrator email: ' ADMIN_EMAIL
-read -r -s -p 'Administrator password (16+ characters): ' ADMIN_PASSWORD
-export ADMIN_EMAIL ADMIN_PASSWORD
-node --env-file=/etc/picking-price.env --import tsx server/create-admin.ts
-unset ADMIN_EMAIL ADMIN_PASSWORD
+pnpm install --frozen-lockfile
+pnpm build
+DATABASE_URL=... APP_ORIGIN=https://your-domain UPLOADS_DIR=/var/lib/picking-price/uploads pnpm start
 ```
 
-For persistent operation, have the system administrator create `/etc/systemd/system/picking-price.service`:
+`pnpm start` does not read `.env`; either export the variables or use `node --env-file=/path/to/file --import tsx server/index.ts`. On a server, run it under a service manager (systemd, or a Windows service) so it restarts after a reboot, and put an HTTPS reverse proxy in front of it that allows request bodies of at least 5 MB.
 
-```ini
-[Unit]
-Description=Picking Price marketplace
-After=network-online.target
-Wants=network-online.target
+## 3. Railway (where the live site runs)
 
-[Service]
-Type=simple
-User=pickingprice
-Group=pickingprice
-WorkingDirectory=/opt/picking-price
-EnvironmentFile=/etc/picking-price.env
-ExecStart=/usr/bin/node --import tsx server/index.ts
-Restart=on-failure
-RestartSec=5
-UMask=0027
-NoNewPrivileges=true
+The live site is on Railway: project `picking-price`, a `web` service built from this repository's `Dockerfile` and a `Postgres` service. Every push to the `main` branch on GitHub redeploys it automatically (about 2–3 minutes).
 
-[Install]
-WantedBy=multi-user.target
-```
+To set it up from scratch:
 
-Replace `/usr/bin/node` with the actual absolute compatible Node executable, confirmed using `command -v node`. A shell-only version manager is not automatically available to systemd.
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now picking-price
-sudo systemctl status picking-price
-sudo journalctl -u picking-price -n 100 --no-pager
-```
-
-For production, put a correctly configured HTTPS reverse proxy in front of the service, set `APP_ORIGIN` to that HTTPS origin and prevent external access to port 3000. Forward the original host and protocol and allow photo bodies up to 5 MB. The Express adapter currently trusts one proxy hop: additional CDN/proxy layers require a review of that setting and client-IP handling. Do not publish a multi-proxy installation without checking rate limiting and forwarded headers.
-
-For a Windows unattended server, use an approved Windows service manager or a properly configured Task Scheduler task under a dedicated account. Set the working directory to the project root, preserve private environment-file access and configure restart/log retention. The foreground PowerShell procedure alone does not survive logoff or reboot.
-
-## 6. cPanel deployment
-
-### Step 1 — Confirm hosting compatibility before uploading
-
-Ask your host to confirm:
-
-- Node.js application support through Application Manager/Passenger, CloudLinux's Node.js selector, or a managed startup command.
-- A Node version satisfying this project and support for the pinned pnpm installation.
-- PostgreSQL database access, locally or to an allowed remote server.
-- Terminal/SSH or equivalent support for dependency installation, building and one-time admin setup.
-- Persistent writable storage, HTTPS, and outbound HTTPS to Google's OAuth endpoints if Google login is required.
-
-cPanel features vary by provider. If PostgreSQL or Node controls are absent, ask the host to enable them or use a compatible server. Do not choose MySQL in place of PostgreSQL. Official cPanel references are linked in Section 12.
-
-### Step 2 — Domain and directories
-
-Use a dedicated subdomain such as `market.example.com`, with the app at `/`, not `/picking-price`. The frontend currently uses root-relative assets and `/api/...` URLs; subdirectory deployment needs code changes.
-
-Example paths, replacing `CPUSER` with your actual cPanel account name:
-
-```text
-Application root: /home/CPUSER/picking-price
-Uploaded photos:  /home/CPUSER/picking-price-data/uploads
-Private config:   /home/CPUSER/picking-price-data/picking-price.env
-```
-
-Keep the source and private config outside `public_html`. Let the application manager route the domain to Node; do not expose the source tree as a static document root. Enable a valid HTTPS certificate before testing login on the production URL.
-
-Upload/extract the source into the application root. Do not upload desktop `node_modules`. If building on another computer, include the generated `server/public/`, but still install compatible server dependencies on the host.
-
-### Step 3 — PostgreSQL and configuration
-
-In **PostgreSQL Databases** or the PostgreSQL wizard, create the database and user, then associate the user with the database with the privileges needed for migrations. Copy the actual full names; cPanel may prefix them with the account name. Obtain the correct hostname and port from the host.
-
-Set the application variables through its environment-variable interface, or use the private environment file with the explicit startup method below:
-
-```dotenv
-DATABASE_URL="postgresql://CPUSER_dbuser:ENCODED_PASSWORD@DATABASE_HOST:5432/CPUSER_pickingprice"
-APP_ORIGIN="https://market.example.com"
-UPLOADS_DIR="/home/CPUSER/picking-price-data/uploads"
-NODE_ENV=production
-```
-
-These are placeholders, not real credentials. Apply verified database TLS for a remote database as described in Section 3. Do not leave `ADMIN_PASSWORD` permanently in the application's environment settings.
-
-### Step 4 — Activate the provider's Node environment and build
-
-If the panel shows an activation command, use that exact command first. Then change into the application root and check `node --version` and `pnpm --version`.
-
-```bash
-cd /home/CPUSER/picking-price
-pnpm install --frozen-lockfile --prod=false
-pnpm build:postgres
-```
-
-Do not rely on a panel's generic “Run npm install” button to reproduce this pnpm lockfile. Some CloudLinux environments manage `node_modules` themselves; ask the provider how to install the pinned dependencies there. Do not replace a provider-managed directory or symlink to force installation. If the host cannot support this workflow, use a compatible plan/server.
-
-### Step 5A — Hosting that accepts a startup command
-
-Choose this path when your host explicitly supports a managed command. Set the working directory to the application root. With panel-provided environment variables, use:
-
-```bash
-node --import tsx server/index.ts
-```
-
-With the private environment file, use:
-
-```bash
-node --env-file=/home/CPUSER/picking-price-data/picking-price.env --import tsx server/index.ts
-```
-
-Let the host supply/route the listening port. Do not run a second unmanaged copy from an SSH terminal once the managed application is running.
-
-### Step 5B — Passenger hosting that accepts a startup file
-
-Passenger deployments often expect a startup filename instead of a command. This project uses ES modules and TypeScript; simply entering `server/index.ts` or renaming it to `app.js` is not a complete adaptation.
-
-Create `passenger.cjs` in the application root using an editor:
-
-```javascript
-const { pathToFileURL } = require('node:url');
-const { tsImport } = require('tsx/esm/api');
-
-process.chdir(__dirname);
-
-// Use panel-provided variables by default. If using a private env file,
-// uncomment the following line and replace CPUSER with the real account:
-// process.loadEnvFile('/home/CPUSER/picking-price-data/picking-price.env');
-
-tsImport('./server/index.ts', pathToFileURL(__filename).href)
-  .catch((error) => {
-    console.error('Picking Price startup failed:', error.message);
-    process.exitCode = 1;
-  });
-```
-
-Set the application root to `/home/CPUSER/picking-price`, URL to `https://market.example.com/`, environment to Production, and custom startup file to `passenger.cjs`.
-
-This wrapper is an adaptation to validate on your host, not a certified Passenger deployment. If the UI only supports the default `app.js`, ask the provider to configure `PassengerStartupFile passenger.cjs`; do not put CommonJS `require()` code into a root `.js` file while `package.json` declares `type: module`. cPanel's Apache configuration changes require the hosting administrator. Do not attempt to edit system Apache files from a restricted shared account.
-
-Start/restart from the panel and check the application's logs. If Passenger does not intercept this server's listener correctly, ask the host to inspect Node/Passenger compatibility or use the supported startup-command route. Do not expose a spare port as an improvised bypass.
-
-### Step 6 — Create the admin and restart
-
-From the application root, run the Bash admin setup in Section 5, changing the environment-file path to your cPanel private file. Panel variables are not necessarily inherited by an SSH shell, so supply them explicitly or use that file.
-
-Run initial migrations/admin setup once, before enabling concurrent application workers. The current startup migration runner is not designed as a distributed migration coordinator. Coordinate later schema upgrades in a maintenance window.
-
-Restart using the panel's control. Where the provider uses Passenger's restart-file convention, run from the verified application root:
-
-```bash
-mkdir -p tmp
-touch tmp/restart.txt
-```
-
-Open the HTTPS domain and complete the acceptance checklist. cPanel Application Manager commonly places Node logs under the application's `logs/` directory; provider-specific interfaces may show a different log location.
-
-## 7. Google signup configuration
-
-Create a Google OAuth **Web application** client and configure the consent/audience settings. Use separate clients for development and production where practical. If the consent application is in testing, add the intended test users.
-
-Register the exact redirect URI for each deployment:
-
-```text
-Local:       http://localhost:3000/api/auth/google/callback
-Production:  https://market.example.com/api/auth/google/callback
-```
-
-Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only on the server, then restart. Ensure `APP_ORIGIN` matches the registered origin. Never reuse another domain's callback address. This application uses the server-side redirect flow; a JavaScript-origin setting is not a replacement for the callback URI.
-
-Test with an allowed Google account, sign out and sign in again. Existing email/password accounts are intentionally not auto-linked to Google by matching email; use a fresh test identity to verify new Google registration. LAN-IP HTTP deployment is not the recommended Google development setup; use localhost or an appropriate HTTPS test hostname.
-
-## Railway
-
-Railway runs this same portable edition from the repository's `Dockerfile`; nothing needs to be typed into Railway's build or start command boxes.
-
-1. In Railway choose **New Project → Deploy from GitHub repo** and pick this repository.
+1. In Railway choose **New Project → Deploy from GitHub repo** and pick this repository. Nothing needs to be typed into the build or start command boxes; the `Dockerfile` is used.
 2. In the same project choose **New → Database → PostgreSQL**.
 3. Open the app service → **Variables** and add:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (use the reference picker so it points at the database service)
    - `ADMIN_SETUP_CODE` = a private phrase of your own, 16 characters or more
-4. App service → **Settings → Networking → Generate Domain**. The app reads the domain Railway assigns, so `APP_ORIGIN` is only needed for a custom domain (set it to the exact `https://…` address, no trailing slash).
-5. App service → **Volumes**: add a volume mounted at `/data`. Uploaded photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
-6. After the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again afterwards and can be removed from Variables.
+4. App service → **Settings → Networking → Generate Domain**. The server reads the domain Railway assigns, so `APP_ORIGIN` is only needed for a custom domain.
+5. App service → **Volumes**: add a volume mounted at `/data`. Photos are stored in `/data/uploads`; without a volume every redeploy deletes them.
+6. When the deploy is live, open `https://<your-domain>/admin`, enter the setup code and choose the administrator email and password. The code cannot be used again and can be removed from Variables.
 
-The database starts empty: accounts and listings from a local copy are not transferred. `PORT` is supplied by Railway. Optional: `NEXT_PUBLIC_GOOGLE_MAPS_KEY` (location detection; it is built into the page, so redeploy after changing it) the Google sign-in variables from Section 7, and `GMAIL_CLIENT_ID` + `GMAIL_CLIENT_SECRET` for password reset and notification emails (then connect the Gmail account in `/admin` → Settings → Email).
+Optional variables: `GOOGLE_MAPS_KEY` (it is passed to the build, so redeploy after changing it), the Google sign-in pair (Section 8) and the Gmail pair (then connect the Gmail account in `/admin` → Settings → Email). Changing a variable redeploys the service.
 
-## 8. First administrator configuration
+**Custom domain on Railway:** app service → Settings → Networking → **Custom Domain**, enter the domain, and add the DNS record Railway shows at your DNS provider (for Cloudflare see Section 7). Then set `APP_ORIGIN` to `https://your-domain`.
 
-After signing in at `/admin` (the password can be changed there with **Change password**):
+## 4. Choosing between the other hosts
 
-1. Review categories and subcategories.
-2. Check the free listing allowance (default 25) and extra-slot price (default Rs. 50).
-3. Enter your real external payment instructions. Do not invent account numbers or enable real payments using test instructions.
-4. Check the three promotion durations/prices and placement behavior.
-5. Confirm that sample listings/requests are clearly labelled examples, not real seller inventory.
-6. Create separate buyer/seller test accounts. Do not test ordinary-user permissions while signed in as the administrator.
+| | Railway | Vercel | Cloudflare Containers |
+|---|---|---|---|
+| Runs the app as it is today | Yes | No — code changes needed (Section 5) | Yes, except photo storage |
+| Uploaded photos kept | Yes, on a volume | No: read-only disk | No: disk is wiped when the container sleeps or restarts |
+| PostgreSQL | Built in | External (Neon from the Vercel Marketplace) | External (e.g. Neon) |
+| Cost to start | Railway plan | Free Hobby plan for testing | Workers Paid plan, $5 a month |
 
-Only manually approved seller-service payments activate slots/promotions. Product purchase payments and delivery remain outside the platform.
+**Before moving the live site to Vercel or Cloudflare Containers, photo uploads must be changed to use object storage** (for example Vercel Blob, Cloudflare R2 or any S3-compatible service) instead of the `UPLOADS_DIR` folder. Until then, photos uploaded there disappear.
 
-## 9. Post-deployment acceptance checklist
+## 5. Vercel
 
-Use staging/test accounts and fictitious references for workflow tests. Do not approve a real service request without verifying the external transfer.
+Facts from Vercel's documentation (checked 14 October 2026) that matter for this project:
 
-- [ ] Homepage, product images, menus and built assets load without 404/500 errors.
-- [ ] Email registration, login, logout and rejected incorrect passwords work.
-- [ ] Administrator can access admin sections; ordinary users cannot.
-- [ ] Listing create/edit/remove, request lifecycle and seller offer/select flows work.
-- [ ] Search, filters, sort and independent pagination return expected results.
-- [ ] Wishlist, messages, reviews, reports and notifications work with two accounts.
-- [ ] JPEG/PNG/WebP uploads work; photos remain after an application restart and code update.
-- [ ] Unsupported/oversized uploads are rejected and never executed.
-- [ ] Slot limits, manual payment rejection/approval and promotion expiry work in staging.
-- [ ] Google signup succeeds with configured credentials and exact callback.
-- [ ] HTTPS cookies persist; origin checks do not reject valid forms.
-- [ ] Desktop, tablet, mobile, keyboard navigation and zoom are tested manually.
-- [ ] Service restarts after reboot or provider restart and logs are accessible.
-- [ ] Database and uploaded-media backups can be restored into an isolated environment.
+- Vercel runs an Express app as one Vercel Function. It finds the app only in a file named `app`, `index` or `server` (`.ts`, `.js` and similar) **in the project root or in `src/`**. This project's entry is `server/index.ts`, so a root file such as `server.ts` is needed that creates the app and either exports it (`export default app`) or calls `app.listen`.
+- `express.static()` is ignored on Vercel. Static files must be in the `public/` folder, which Vercel serves from its CDN. This project's build writes the browser app to `server/public/`, and the root `public/` folder holds source images, so the build output has to be arranged for Vercel.
+- The disk is read-only except a temporary `/tmp` (up to 500 MB) that is not kept. Photos written to `UPLOADS_DIR` are lost.
+- A request body can be at most **4.5 MB**; larger requests fail with `413 FUNCTION_PAYLOAD_TOO_LARGE`. This app accepts photos up to 5 MB, so either lower the app's limit below 4.5 MB or upload photos directly to object storage.
+- There is no long-running process. After each request this server sends pending notification emails in the background; on Vercel that work must be handed to `waitUntil` from `@vercel/functions`, or it may be cut off.
+- Functions run for up to 300 seconds on the Hobby plan. Environment variable changes apply only to new deployments.
 
-Available local automated checks:
+### Code changes needed first
+
+1. A root entry file for Vercel that imports `createApp` from `server/app.ts`, runs `migrate()` and exports the app.
+2. Photos stored in Vercel Blob (or another object store) instead of `UPLOADS_DIR`, with the upload limit under 4.5 MB.
+3. The built browser app placed where Vercel serves static files, plus a rewrite of unknown paths to `index.html` (the site is a single-page app).
+4. Background email sending wrapped in `waitUntil`.
+
+### Deploying once those changes are made
+
+1. Push the project to GitHub.
+2. In Vercel: **Add New → Project**, import the repository. Vercel detects Express; no build command or output folder is needed for the server itself.
+3. **Storage / Marketplace → Neon (Postgres)**: create a database and connect it to the project. The integration adds the connection details as environment variables; make sure `DATABASE_URL` is set to the connection string (add it yourself if the integration uses another name).
+4. **Settings → Environment Variables**: add `APP_ORIGIN` (`https://your-project.vercel.app` or your domain), `ADMIN_SETUP_CODE`, and the optional variables from Section 1.
+5. Deploy, then open `/admin` and create the administrator with the setup code.
+6. **Settings → Domains** to add your own domain; then update `APP_ORIGIN` and redeploy.
+
+With the Vercel CLI (version 47.0.5 or newer): `vercel link`, `vercel env pull`, `vercel dev` to try it locally, and `vercel --prod` to deploy.
+
+## 6. Cloudflare
+
+There are two different ways to use Cloudflare. Pick one.
+
+### 6A. Run the whole site on Cloudflare Containers
+
+Cloudflare Containers run this project's `Dockerfile` behind a small Cloudflare Worker. Facts from Cloudflare's documentation (checked 14 October 2026):
+
+- Needs the **Workers Paid plan ($5 a month)**, which includes 25 GiB-hours of memory, 375 vCPU-minutes and 200 GB-hours of disk a month; more is billed per use.
+- **Disk is temporary.** When a container goes to sleep or restarts it starts again from the image with a fresh disk, so photos in `UPLOADS_DIR` are lost. Use R2 or another object store for photos before going live (Section 4).
+- Docker must be running on the computer that runs `wrangler deploy`; the image must run on `linux/amd64` (the `Dockerfile` does).
+- The database must be outside Cloudflare, for example Neon PostgreSQL.
+- A first request after the container has been asleep waits for it to start (often 1–3 seconds).
+
+These files are not part of this repository; create them in a separate deployment folder next to a copy of the project, or in the project when you deploy.
+
+`wrangler.jsonc`:
+
+```jsonc
+{
+  "name": "picking-price",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-14",
+  "containers": [
+    { "class_name": "PickingPrice", "image": "./Dockerfile", "max_instances": 1, "instance_type": "basic" }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "APP", "class_name": "PickingPrice" }]
+  },
+  "exports": {
+    "PickingPrice": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "vars": { "APP_ORIGIN": "https://your-domain" },
+  "observability": { "enabled": true }
+}
+```
+
+`src/index.ts`:
+
+```ts
+import { Container, getContainer } from "@cloudflare/containers";
+
+export class PickingPrice extends Container {
+  defaultPort = 3000;   // the port the Express server listens on
+  sleepAfter = "15m";   // stop after 15 minutes without requests
+}
+
+export default {
+  async fetch(request: Request, env: { APP: DurableObjectNamespace<PickingPrice>; DATABASE_URL: string; ADMIN_SETUP_CODE: string; APP_ORIGIN: string }) {
+    const app = getContainer(env.APP); // one instance for the whole site
+    await app.startAndWaitForPorts({
+      ports: [3000],
+      startOptions: { envVars: { DATABASE_URL: env.DATABASE_URL, ADMIN_SETUP_CODE: env.ADMIN_SETUP_CODE, APP_ORIGIN: env.APP_ORIGIN, PORT: "3000" } },
+    });
+    return app.fetch(request);
+  },
+};
+```
+
+Steps:
+
+1. Create a Neon (or other) PostgreSQL database and copy its connection string.
+2. `npm i -D wrangler` and `npm i @cloudflare/containers` in the deployment folder; `npx wrangler login`.
+3. Store the secrets: `npx wrangler secret put DATABASE_URL` and `npx wrangler secret put ADMIN_SETUP_CODE`. Add `GOOGLE_*`/`GMAIL_*` the same way and pass them in `envVars` like the others.
+4. Start Docker, then `npx wrangler deploy`. Wrangler builds the image and uploads it. Wait a few minutes after the first deploy before the site answers.
+5. Check with `npx wrangler containers list`. Open the Worker's address, then `/admin` to create the administrator.
+6. Your own domain: Workers & Pages → the Worker → Settings → **Domains & Routes → Add → Custom Domain** (the domain must be on Cloudflare, see 6B steps 1–4). Set `APP_ORIGIN` to it and deploy again.
+
+A running container keeps the environment it started with; after changing a secret, the new value is used from the next start.
+
+### 6B. Use Cloudflare only for the domain (site stays on Railway or Vercel)
+
+This is free and changes nothing in the project.
+
+1. In the Cloudflare dashboard: **Domains → Onboard a domain**, enter the domain, pick the Free plan and let it import the existing DNS records. Check the list: the import can miss records.
+2. At your domain registrar, **switch off DNSSEC first**, then replace the nameservers with the two Cloudflare shows. Copy them exactly. It can take up to 24 hours to become Active.
+3. In Railway (or Vercel), add the custom domain to the project. It shows the record to create, usually a `CNAME` to its own hostname.
+4. In Cloudflare **DNS**, add that record. Start with **DNS only** (grey cloud): Cloudflare advises DNS-only for hosting platforms that do not explicitly support its proxy, otherwise SSL errors and redirect loops can happen. Check Railway's or Vercel's own documentation before switching the record to **Proxied**; if you do proxy it, set **SSL/TLS → Full (strict)**.
+5. Turn DNSSEC back on through Cloudflare.
+6. Set `APP_ORIGIN` on the host to `https://your-domain` and redeploy. Update the Google sign-in and Gmail redirect addresses to the new domain (Section 8).
+
+## 7. After any deployment: first settings
+
+Sign in at `/admin` (change the password there with **Change password**) and open **Settings**:
+
+1. Enter the real payment instructions sellers should follow (bank or mobile wallet). Until they are saved, sellers cannot submit slot or promotion requests.
+2. Check the free listing allowance and the extra-slot price, and the three promotion lengths and prices.
+3. Review the categories.
+4. Connect the Gmail account under **Settings → Email** and send a test email (needs the Gmail variables).
+
+While the database has no real listings or requests, the site shows clearly labelled sample products. They disappear as soon as the first real listing is published.
+
+## 8. Google sign-in and Gmail addresses
+
+Register the exact address of each deployment in Google Cloud:
+
+```text
+Google sign-in:  https://your-domain/api/auth/google/callback
+Gmail sending:   https://your-domain/api/admin/mail/callback
+Local:           http://localhost:3000/api/auth/google/callback
+```
+
+Set the client ID and secret only on the server, then redeploy. `APP_ORIGIN` must match the registered address exactly. The full steps are in [AUTH_SETUP.md](AUTH_SETUP.md).
+
+## 9. Acceptance checklist
+
+Use test accounts and made-up payment references.
+
+- [ ] Homepage, product images and menus load without errors, on phone, tablet and desktop.
+- [ ] Sign-up, login, logout and a wrong password all behave correctly.
+- [ ] Listing create/edit/remove with a photo; the photo is still there after a redeploy.
+- [ ] Buyer request, seller offer and selecting an offer work with two accounts.
+- [ ] Search, filters, sort and the city choice return the expected products.
+- [ ] Chat between two accounts; opening the chat clears its count on the bell, and opening Notifications clears the rest.
+- [ ] Wishlist, reviews and reports work.
+- [ ] Slot and promotion requests can be approved and rejected in `/admin`.
+- [ ] Google sign-in (if configured) and a Gmail test email (if connected) work.
+- [ ] Forms are not rejected as "invalid origin" (`APP_ORIGIN` is right).
+
+Automated checks to run before every release, on a development machine:
 
 ```bash
-pnpm exec tsc --noEmit
-pnpm test:password
-pnpm test:market
-pnpm build:postgres
-pnpm test:http
 pnpm lint
+pnpm build
+pnpm test        # password, marketplace rules and HTTP server tests on throwaway databases
 ```
 
-The market suite also uses a local D1 emulator and may need tooling unavailable on restrictive shared hosting. Run it on a suitable workstation/CI environment. The Express HTTP suite uses an isolated embedded database; it does not prove connectivity to your production PostgreSQL database.
+## 10. Backups and updates
 
-Run these suites again after every change and before every release; a passing run on a workstation does not replace the checklist above on the real server.
-
-## 10. Backups, updates and recovery
-
-Back up three separate things: **PostgreSQL data, uploaded files, and private configuration**. Keep source releases/version identifiers as well. A source-code archive alone is not a data backup.
-
-Use PostgreSQL's `pg_dump` in custom format, with a protected password file or interactive password prompt rather than putting credentials in the command line. Example for the local names above:
+Back up three things: the **PostgreSQL database**, the **uploaded photos** (`UPLOADS_DIR`, on Railway the `/data` volume) and the **private settings**. Source code alone is not a backup.
 
 ```bash
-pg_dump -h 127.0.0.1 -U picking_user -d picking_price -W -Fc -f picking-price-backup.dump
+pg_dump "$DATABASE_URL" -Fc -f picking-price-backup.dump
 ```
 
-Store backups outside the publicly served directory, encrypt off-server copies, and limit access. Take a matching copy/snapshot of `UPLOADS_DIR` while writes are paused so the media files and database references stay consistent. Arrange a daily schedule and retention suited to your data; no scheduled backup is installed by this guide.
-
-For a restore rehearsal, have the DBA create a **new empty test database** owned by the restore user, then restore into that database—not production:
+Restore a backup into a new, empty test database first, never straight over the live one:
 
 ```bash
-pg_restore -h 127.0.0.1 -U picking_user -W --no-owner --no-privileges -d picking_price_restore_test picking-price-backup.dump
+pg_restore --no-owner --no-privileges -d "$TEST_DATABASE_URL" picking-price-backup.dump
 ```
 
-Restore media to a separate test directory and use a separate origin/configuration. Check accounts, listings and images before relying on the backup. Retain compatible PostgreSQL client tools for the server/dump version.
-
-For an update:
-
-1. Review changes and test the new release against an isolated database.
-2. Put the live installation into a maintenance window and stop writes.
-3. Back up database, uploads and configuration; record the previous release.
-4. Install the new source without overwriting external uploads or secrets.
-5. Install locked dependencies and run `pnpm build:postgres`.
-6. Start one application process to apply new migrations, then enable the normal service.
-7. Complete smoke tests and reopen access.
-
-Never edit an already-applied migration to change the schema. Use a new migration. Rolling back code does not roll back a schema change; restore only after assessing data written since the backup and the compatibility of the old release.
+For an update: test the change locally (`pnpm test`), back up, then push to `main` (Railway deploys it) or deploy on the other host. New database changes go in a new file in `drizzle/`; never edit a file that has already been applied, because the server applies each file only once.
 
 ## 11. Troubleshooting
 
-| Symptom | Check / action |
+| Symptom | Check |
 |---|---|
-| Node.js/PostgreSQL menu missing | Provider feature unavailable; request support or a compatible plan |
-| `Set DATABASE_URL` error | Private env file was not loaded or panel variables were not inherited |
-| `ERR_MODULE_NOT_FOUND: tsx` | Dependencies were pruned/installed production-only; reinstall locked dependencies including dev packages |
-| `ERR_REQUIRE_ESM` / unknown `.ts` extension | Wrong startup path; use `--import tsx` or the validated `.cjs` wrapper |
-| Database authentication failure | Full prefixed username/database, password URL encoding, host, port and grants |
-| Database certificate error | Correct CA and verified TLS settings; do not disable verification |
-| Missing `drizzle` or `server/public/index.html` | Wrong working directory, missing source migrations or missing portable build |
-| Page opens but CSS/API fails | Subdirectory deployment or wrong static routing; use a dedicated hostname at `/` |
-| Form submission returns invalid origin | `APP_ORIGIN` must exactly match scheme, hostname and port used in the browser |
-| Login loops / no session | HTTPS origin, secure-cookie behavior, stale cookies and proxy routing |
-| Upload permission error / photos disappear | Use a persistent absolute directory writable by the application account |
-| Photos above a smaller size fail | Check proxy/provider body-size limit as well as the application's 5 MB limit |
-| Google button disabled | Both Google environment variables must be present; restart the service |
-| Google `redirect_uri_mismatch` | Register the exact callback, including scheme, hostname, port and path |
-| An administrator already exists | The script changes nothing; sign in at `/admin` and use **Change password** |
-| cPanel 503 / Passenger startup timeout | Inspect app logs for runtime, module, database or migration failures; request host assistance |
-| Multiple workers fail during upgrade | Coordinate migrations through one process before starting concurrent workers |
+| `Set DATABASE_URL` error at start | The variable is missing in the host's settings (or `.env` was not loaded) |
+| Database authentication failure | User name, password URL-encoding, host, port |
+| Database certificate error | Use the provider's TLS connection string or `PGSSL=require` with the right CA; never switch verification off |
+| Page opens but forms say "invalid origin" | `APP_ORIGIN` must exactly match the address in the browser (scheme, host, port) |
+| Login does not stick | HTTPS address and `APP_ORIGIN` mismatch, or old cookies |
+| Photos disappear after a redeploy | No persistent folder: add a Railway volume at `/data`; on Vercel/Cloudflare use object storage (Section 4) |
+| Photo upload fails with 413 | The host's body-size limit (Vercel 4.5 MB, or a proxy) is below the app's 5 MB |
+| Google button missing | Both Google variables must be set; redeploy |
+| Google `redirect_uri_mismatch` | Register the exact callback address (Section 8) |
+| `/admin` asks for a setup code that is not set | Set `ADMIN_SETUP_CODE`, redeploy, create the administrator |
 
-Share sanitized error messages when requesting help. Remove passwords, tokens, full connection URLs and personal data from logs first.
+Remove passwords, tokens and connection strings from any log you share.
 
-## 12. Official references and verification scope
+## 12. References
 
-Consulted 27 September 2026. Commands and application-specific caveats were checked against the current source. Provider controls can vary, and no access to your cPanel account was used.
+Checked 14 October 2026.
 
-- [cPanel: Application Manager](https://docs.cpanel.net/cpanel/software/application-manager/)
-- [cPanel: Installing a Node.js application and Passenger startup/restart](https://docs.cpanel.net/knowledge-base/web-services/how-to-install-a-node.js-application/)
-- [cPanel: PostgreSQL Databases](https://docs.cpanel.net/cpanel/databases/postgresql-databases/)
-- [CloudLinux: Manager and Node.js selector](https://docs.cloudlinux.com/cloudlinuxos/lve_manager/)
-- [Node.js: Environment files](https://nodejs.org/api/environment_variables.html)
-- [tsx: TypeScript import API](https://tsx.is/dev-api/ts-import)
-- [node-postgres: TLS/SSL configuration](https://node-postgres.com/features/ssl)
-- [Google: OAuth for web-server applications](https://developers.google.com/identity/protocols/oauth2/web-server)
-- [PostgreSQL downloads](https://www.postgresql.org/download/)
-
-No application code, production deployment, hosting account, database or firewall was changed while preparing this guide.
+- Railway: https://docs.railway.com
+- Vercel, Express: https://vercel.com/docs/frameworks/backend/express
+- Vercel, function limits: https://vercel.com/docs/functions/limitations
+- Vercel, Postgres (moved to Neon): https://vercel.com/docs/postgres
+- Cloudflare Containers: https://developers.cloudflare.com/containers/get-started/
+- Cloudflare Containers pricing and limits: https://developers.cloudflare.com/containers/pricing/ , https://developers.cloudflare.com/containers/platform/limits/
+- Cloudflare, adding a domain: https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/
+- Cloudflare, proxy status: https://developers.cloudflare.com/dns/proxy-status/
+- Neon: https://neon.com/docs
+- node-postgres TLS: https://node-postgres.com/features/ssl
+- Google OAuth for web servers: https://developers.google.com/identity/protocols/oauth2/web-server

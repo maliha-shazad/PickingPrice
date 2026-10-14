@@ -1,7 +1,6 @@
-'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Actions, Item, money, useLoad, Load, Photo, Status, DELIVERY_OPTIONS, api } from './ui';
-import { ShieldCheck, CheckCircle2, UploadCloud, Image as ImageIcon, Video, Star, Zap, Lock, RefreshCw, X, Plus, Package, MessageSquare, Info, ChevronRight, Headphones, Smartphone, Laptop, Watch, Shirt, Home, Gamepad, Book, Camera, Car, Coffee, Gem, Baby, Palette, Briefcase, Phone, MapPin } from 'lucide-react';
+import { Actions, Item, money, useLoad, Load, DELIVERY_OPTIONS, api } from './ui';
+import { CheckCircle2, UploadCloud, Image as ImageIcon, Star, Zap, RefreshCw, X, Package, Smartphone, Watch, Shirt, Home, Gamepad, Book, Camera, Car, Coffee, Gem, Baby, Palette, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 
 const getCatIcon = (name: string) => {
@@ -26,7 +25,6 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
     const me = useLoad('me', actions.revision);
     const services = useLoad('services?page=1&promotionPage=1', actions.revision);
 
-    const profileData = me.data?.profile || {};
 
     const [f, setF] = useState<Partial<Item>>(() => ({
         id: initialItem?.id || '',
@@ -47,7 +45,6 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
     }));
     const [busy, setBusy] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     // Saved with the listing: a new one starts open to offers, an edited one keeps what the seller chose.
     const [allowOffers, setAllowOffers] = useState(initialItem?.id ? !!initialItem.negotiable : true);
     const [exchange, setExchange] = useState(!!initialItem?.exchange);
@@ -90,7 +87,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 const r = await fetch('/api/files', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
                 const d = await r.json();
                 if (r.ok && d.url) newImages.push(d.url);
-            } catch (err) { }
+            } catch { }
         }
         set('images', newImages);
         setUploading(false);

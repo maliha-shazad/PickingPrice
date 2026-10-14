@@ -1,4 +1,4 @@
-import { Context, Database, MarketError, Row, User, id, now, Statement } from './types';
+import { Context, Database, MarketError, Row, id, now } from './types';
 export const defaults = { freeListings: 10, extraListingPrice: 50, promotion24h: 150, promotion3d: 350, promotion7d: 700, paymentInstructions: '', promotionDurations: [1, 3, 7], promotionPlacement: 'featured-first' };
 export const initialCategories = [['Clothes', []], ['Electronics', []], ['Furniture', []], ['Sports', []], ['Books', []], ['Cameras', []], ['Automobiles', []], ['Kitchen', []], ['Jewelry', []], ['Kids', []], ['Art', []], ['Accessories', []]] as const;
 export const one = (db: Database, sql: string, ...args: unknown[]) => db.prepare(sql).bind(...args).first<Row>();

@@ -1,4 +1,3 @@
-'use client';
 import { useEffect, useId, useState, ReactNode } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Eye, EyeOff, KeyRound, Lock, LogOut, Mail, ShieldCheck, ArrowRight } from 'lucide-react';

@@ -1,4 +1,3 @@
-'use client';
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, RefreshCcw, Flag, ArrowLeft, Search, Package, Check, CheckCheck } from 'lucide-react';
 import { Actions, Item, useLoad, Load, date, money, api } from './ui';
@@ -241,7 +240,7 @@ export function Conversation({ actions, id }: { actions: Actions; id: string }) 
 }
 
 export function Notifications({ actions }: { actions: Actions }) {
-    const [page, setPage] = useState(1);
+    const page = 1;
     const state = useLoad('notifications?page=' + page, actions.revision);
     // Opening this page counts as seeing the notifications: they are marked read so the bell's count goes,
     // and the ones that were new stay highlighted for the rest of this visit.

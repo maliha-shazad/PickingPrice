@@ -1,31 +1,31 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
+import globals from "globals";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "dist/**",
-    "server/public/**",
-    ".pnpm-store/**",
-    "next-env.d.ts",
-  ]),
+export default defineConfig([
+  globalIgnores(["server/public/**", ".postgres/**", ".pnpm-store/**"]),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
+    plugins: { "react-hooks": reactHooks },
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
     rules: {
-      // These files are vendored verbatim from shadcn@4.17.0. Keep the
-      // registry source intact while applying the stricter rules to Site code.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
+      // Express recognises an error handler by its four parameters, so `_next` stays even though it is unused.
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      // `catch {}` deliberately ignores a step that may already have been done (an existing column, a closed socket).
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+  {
+    files: ["components/ui/**/*.{ts,tsx}"],
+    rules: {
+      // These files are vendored verbatim from shadcn; the stricter rules apply to the site's own code.
       "@typescript-eslint/no-unused-vars": "off",
-      "react-hooks/purity": "off",
-      "react-hooks/set-state-in-effect": "off",
     },
   },
 ]);
-
-export default eslintConfig;

@@ -1,4 +1,3 @@
-'use client';
 import { useEffect, useState, ReactNode } from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination';

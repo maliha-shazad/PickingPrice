@@ -26,9 +26,9 @@ If you registered with a phone number, or the email does not arrive, contact sup
 | Part of the screen | What it does |
 |---|---|
 | Search box | Searches every product by title, description, category and brand |
-| Location | Your city. It is used as the default location for your requests |
+| Location | Your city. Product lists show only this city (choose **All Pakistan** to see every city), and it is the default location for your requests |
 | Buying / Selling switch | Shown when your account can do both; changes the dashboard and shortcuts you see |
-| Bell | Your notifications. A number appears only when something is unread |
+| Bell | Your notifications. A number appears only when something is unread; it goes away when you open the Notifications page |
 | **Discover** | Home page: categories, live buyer requests, recent products |
 | **Requests** | Every open buyer request |
 | **New Products** | Products listed in New condition |
@@ -108,6 +108,8 @@ The dashboard shows your profile, your requests and their status, your draft req
 ## 10. Notifications
 
 You are notified when a seller sends an offer, when you receive a message, when your request expires, when a report you sent has been reviewed, and when the support team changes something on your account or content. If the site has email switched on, the same notifications are also sent to your email address.
+
+Opening the Notifications page marks them all as seen, so the number on the bell goes away; the ones that were new stay highlighted until you leave the page. Opening a chat also clears that chat's message notifications.
 
 ## 11. Report a problem
 
