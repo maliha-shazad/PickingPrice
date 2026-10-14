@@ -79,11 +79,13 @@ export function useLoadAll(path: string | null, revision = 0) {
     }, [path, key]);
     return { data: path && result.path === path ? result.data : null, error: result.key === key ? result.error : '', loading: !!path && result.key !== key, retry: () => setRetry(v => v + 1) };
 }
+/** Placeholder while a list loads, so neither samples nor an empty message flash before the real data arrives. */
+export function ListLoading() { return <div className="loading" role="status" aria-label="Loading"><Skeleton className="h-12 w-full"/><Skeleton className="h-36 w-full"/></div>; }
 export function Load({ state, children }: {
     state: ReturnType<typeof useLoad>;
     children: ReactNode;
 }) { if (state.loading)
-    return <div className="loading" role="status" aria-label="Loading"><Skeleton className="h-12 w-full"/><Skeleton className="h-36 w-full"/></div>; if (state.error)
+    return <ListLoading />; if (state.error)
     return <div className="error" role="alert">{state.error} <button onClick={state.retry}>Retry</button></div>; return <>{children}</>; }
 export function Choice({ value, onChange, options, label }: {
     value: string;

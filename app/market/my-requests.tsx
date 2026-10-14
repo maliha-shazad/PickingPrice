@@ -55,7 +55,7 @@ export function MyRequests({ actions }: { actions: Actions }) {
                 )}
             </Load>
 
-            {!hasRealData && (
+            {!!state.data && !hasRealData && (
                 <div className="br-notice">
                     Showing sample data. Once a real request is posted, these samples will automatically disappear.
                 </div>

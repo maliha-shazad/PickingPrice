@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Timer, CheckCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading } from './ui';
+import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading, ListLoading } from './ui';
 import { samples } from '../samples';
 
 
@@ -80,8 +80,10 @@ export function PreLoved({ actions }: { actions: Actions }) {
   const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
   const hasRealData = state.data?.total > 0;
+  const loaded = !!state.data || !!state.error;
+  // Samples only once the site is known to have no real listing; nothing (a placeholder) while that is still loading.
   // Only the chosen city's products, whether they are members' listings or the samples.
-  const sourceData = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  const sourceData = (!loaded ? [] : hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const filtered = sourceData.filter((p: any) => p.condition !== 'New').filter((p: any) => {
@@ -327,7 +329,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            {filtered.length === 0 && (sourceData.some((p: any) => p.condition !== 'New')
+            {!loaded ? <ListLoading /> : filtered.length === 0 && (sourceData.some((p: any) => p.condition !== 'New')
               ? <div className="pp-city-empty"><strong>No pre-loved products match these filters</strong><button type="button" onClick={resetFilters}>Reset filters</button></div>
               : <NoneInCity actions={actions} what="pre-loved products" />)}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading } from './ui';
+import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading, ListLoading } from './ui';
 import { samples, sampleRequests } from '../samples';
 
 const categories = [
@@ -217,25 +217,33 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
 }
 
 export function Homepage({ actions }: { actions: Actions }) {
-  // Products follow the city chosen in the header; a second small request tells whether any member has
-  // listed anything at all, so an empty city is not mistaken for an empty site (which shows the samples).
+  // Products follow the city chosen in the header. Pre-Loved Deals hold only used conditions and Fresh Arrivals
+  // only New, like their own pages. A small extra request tells whether any member has listed anything at all,
+  // so an empty city is not mistaken for an empty site (which shows the samples).
   const city = actions.location && actions.location !== 'all' ? actions.location : '';
+  const cityQuery = city ? '&city=' + encodeURIComponent(city) : '';
   const reqState = useLoad('requests?size=3', actions.revision);
-  const listState = useLoad('listings?size=14' + (city ? '&city=' + encodeURIComponent(city) : ''), actions.revision);
-  const anyState = useLoad(city ? 'listings?size=1' : null, actions.revision);
+  const usedState = useLoad('listings?type=preloved&size=6' + cityQuery, actions.revision);
+  const newState = useLoad('listings?type=new&size=8' + cityQuery, actions.revision);
+  const anyState = useLoad('listings?size=1', actions.revision);
 
+  // Until the answers arrive nothing is shown, so samples never flash before real products and requests.
+  const ready = (s: { data: unknown; error: string }) => !!s.data || !!s.error;
+  const reqsReady = ready(reqState), listsReady = ready(usedState) && ready(newState) && ready(anyState);
   const realReqs = reqState.data?.items || [];
-  const realLists = listState.data?.items || [];
-  
+  const realUsed: Item[] = usedState.data?.items || [];
+  const realNew: Item[] = newState.data?.items || [];
+
   const hasRealReqs = reqState.data?.total > 0;
-  const hasRealLists = listState.data?.total > 0 || Number(anyState.data?.total) > 0;
+  const hasRealLists = Number(anyState.data?.total) > 0;
   const citySamples = samples.filter(p => inCity(p.location, actions.location));
 
-  const liveRequests = hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
-  const recentDeals = hasRealLists ? realLists.slice(0, 6) : citySamples.slice(0, 6);
-  const freshArrivals = hasRealLists ? realLists.slice(6, 14) : citySamples.slice(6, 14);
+  const liveRequests = !reqsReady ? [] : hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
+  const recentDeals: Item[] = !listsReady ? [] : hasRealLists ? realUsed : citySamples.filter(p => p.condition !== 'New').slice(0, 6);
+  const freshArrivals: Item[] = !listsReady ? [] : hasRealLists ? realNew : citySamples.filter(p => p.condition === 'New').slice(0, 8);
   // Spotlight: a promoted product when there is one, otherwise the newest; the sample only before any real product exists.
-  const spotlight: any = hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0] || null) : (inCity(featuredSpotlight.location, actions.location) ? featuredSpotlight : null);
+  const realLists = [...realNew, ...realUsed].sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  const spotlight: any = !listsReady ? null : hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0] || null) : (inCity(featuredSpotlight.location, actions.location) ? featuredSpotlight : null);
   const spotlightFeatured = !!spotlight?.featured || !!spotlight?.sample;
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -385,7 +393,7 @@ export function Homepage({ actions }: { actions: Actions }) {
 
         {/* ── LIVE SEARCH RESULTS (shown when searching) ── */}
         {isSearching && (
-          <SearchResults actions={actions} q={searchQ.trim()} category={searchCategory} sampleMode={!listState.loading && !hasRealLists}
+          <SearchResults actions={actions} q={searchQ.trim()} category={searchCategory} sampleMode={listsReady && !hasRealLists}
             saved={savedIds} onSave={toggleSave} onClear={() => { setSearchQ(''); setSearchCategory('all'); }} anchor={searchResultsRef} />
         )}
 
@@ -412,6 +420,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             <button className="hp-see-all" onClick={() => actions.go('BuyerRequests')}>View All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-requests-list">
+            {!reqsReady && <ListLoading />}
             {liveRequests.map(req => (
               <RequestCard key={req.id} item={req} onOffer={() => actions.open('offer-form', req)} />
             ))}
@@ -460,12 +469,12 @@ export function Homepage({ actions }: { actions: Actions }) {
               <div key={item.id} className="hp-deal-card-wrap">
                 <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
               </div>
-            )) : <NoneInCity actions={actions} />}
+            )) : listsReady ? <NoneInCity actions={actions} what="pre-loved products" /> : <ListLoading />}
           </div>
         </section>
         )}
 
-        {/* FRESH ARRIVALS: only when there are more products than the row above already shows */}
+        {/* FRESH ARRIVALS: products in New condition only; hidden when there are none */}
         {!isSearching && freshArrivals.length > 0 && (
         <section className="hp-section">
           <CityHeading actions={actions} />

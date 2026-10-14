@@ -1036,7 +1036,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: radial-gradient(circle at 65% 50%, rgba(234, 88, 12, 0.12) 0%, transparent 45%), linear-gradient(to right, #1e2433 0%, #111827 100%);
+  /* The same green as the Pre-Loved hero (.pl-hero). */
+  background: linear-gradient(135deg, #0d5c45 0%, #0e7559 60%, #0a5038 100%);
   border-radius: 12px;
   padding: 40px;
   color: white;
@@ -1060,7 +1061,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .bn-hero-sub {
   font-size: 14px;
-  color: #94a3b8;
+  color: rgba(255,255,255,0.78);
   line-height: 1.5;
   max-width: 460px;
 }
@@ -1085,8 +1086,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   align-self: center;
 }
 .bn-hero-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1108,7 +1109,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .bn-hero-card p {
   font-size: 12px;
-  color: #94a3b8;
+  color: rgba(255,255,255,0.75);
   margin: 0;
 }
 .bn-filter-section {
@@ -3052,3 +3053,9 @@ div.pf-avatar svg{width:22px;height:22px}
 /* "<city> based products" above every product list */
 .pp-city-heading{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:5px 12px;border-radius:999px;background:#e8f3ec;color:#1e5038;font-size:13px;font-weight:700;line-height:1.2}
 .pp-city-heading svg{color:#2d6a4f;flex-shrink:0}
+
+/* Sign-up: accept the Privacy Policy and Terms of Service */
+.pp-auth-terms{align-items:flex-start;margin:4px 0 2px;line-height:1.45}
+.pp-auth-terms .pp-auth-checkbox{flex-shrink:0;margin-top:1px}
+.pp-auth-terms a{color:#1c694a;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.pp-auth-terms a:hover{color:#14513a}

@@ -9,7 +9,8 @@ Picking Price connects buyers and sellers directly. You can browse products that
 1. Open the site and choose **Signup**.
 2. Enter your name, your mobile number, your email address, a password of at least 8 characters, and the same password again in **Confirm Password**. The mobile number is required and is saved in your profile, where you can change it later.
 3. Choose how you want to use the site: buying only, selling only, or buying and selling. You can change this later in your profile.
-4. You can also sign up with your Google account by pressing the **Google** button, when it is offered.
+4. Tick **I accept the Privacy Policy and Terms of Service** (both are links you can open and read first). The account cannot be created until the box is ticked.
+5. You can also sign up with your Google account by pressing the **Google** button, when it is offered (after ticking the same box).
 
 You can browse products and requests without an account. You need to sign in to save products, chat, post a request, send an offer, write a review or report something. When you try one of these while signed out, the site takes you to the login page and brings you back afterwards.
 

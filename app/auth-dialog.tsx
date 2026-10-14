@@ -3,6 +3,8 @@ import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Chec
 import { toast } from 'sonner';
 
 /** Where to send someone after they sign in: the page they were heading to (`?next=`), or home. Only paths on this site are accepted. */
+const mustAccept = 'Please accept the Privacy Policy and Terms of Service to create an account.';
+
 export function afterAuthPath() {
     const next = new URLSearchParams(window.location.search).get('next') || '/';
     return /^\/(?![/\\])/.test(next) ? next : '/';
@@ -22,6 +24,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
     const [confirm, setConfirm] = useState('');
     const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
     const [remember, setRemember] = useState(false);
+    const [accepted, setAccepted] = useState(false); // sign-up needs the Privacy Policy and Terms of Service accepted
 
     useEffect(() => {
         fetch('/api/auth/options')
@@ -34,12 +37,13 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
         e.preventDefault();
         setError('');
         if (tab === 'signup' && password !== confirm) { setError('The two passwords do not match.'); return; }
+        if (tab === 'signup' && !accepted) { setError(mustAccept); return; }
         setBusy(true);
         try {
             const r = await fetch('/api/auth/' + tab, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(tab === 'signup' ? { name, email, phone, password, role } : { email, password })
+                body: JSON.stringify(tab === 'signup' ? { name, email, phone, password, role, accepted } : { email, password })
             });
             const d: { error?: string } = await r.json();
             if (!r.ok) throw Error(d.error || 'Please try again.');
@@ -130,6 +134,13 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                                     <input required type={show ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat your password" autoComplete="new-password" maxLength={128} />
                                 </div>
                             </div>
+                            <label className="pp-auth-remember pp-auth-terms">
+                                <input id="signup-accept" type="checkbox" required checked={accepted} onChange={e => { setAccepted(e.target.checked); setError(''); }} className="sr-only" />
+                                <div className={`pp-auth-checkbox ${accepted ? 'checked' : ''}`}>
+                                    {accepted && <Check size={12} strokeWidth={3} />}
+                                </div>
+                                <span>I accept the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms" target="_blank" rel="noopener">Terms of Service</a></span>
+                            </label>
                         </>
                     ) : (
                         <>
@@ -165,7 +176,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
 
                     {error && <div className="pp-auth-error">{error}</div>}
 
-                    <button type="submit" className="pp-auth-submit-btn" disabled={busy}>
+                    <button type="submit" className="pp-auth-submit-btn" disabled={busy || (tab === 'signup' && !accepted)}>
                         {busy ? 'Please wait…' : (tab === 'signup' ? 'Create Free Account' : 'Log In to Picking Price')}
                         <ArrowRight size={18} />
                     </button>
@@ -175,7 +186,7 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                     <span>OR CONTINUE WITH</span>
                 </div>
 
-                <a className="pp-auth-google-btn" href={google ? "/api/auth/google" : "#"} onClick={(e) => !google && e.preventDefault()}>
+                <a className="pp-auth-google-btn" href={google ? "/api/auth/google" : "#"} onClick={(e) => { if (!google) e.preventDefault(); else if (tab === 'signup' && !accepted) { e.preventDefault(); setError(mustAccept); } }}>
                     <img src="https://www.google.com/favicon.ico" alt="Google" className="pp-auth-google-icon" />
                     Google
                 </a>

@@ -2,7 +2,7 @@
 
 ## Member accounts
 
-Members register with their name, a Pakistani mobile number, an email address and a password of 8 to 128 characters, and sign in with the email and password. The mobile number is required at sign-up and saved to the member's profile as `+923001234567`. Older accounts registered with a phone number instead of an email still sign in with it. Passwords are stored only as salted scrypt hashes. A sign-in creates a server-side session kept in a secure, HttpOnly cookie; it expires after seven days and signing out ends it immediately. Sign-up, sign-in and reset attempts are limited per email address and per IP address, and every form request is checked against the site's own origin.
+Members register with their name, a Pakistani mobile number, an email address and a password of 8 to 128 characters, and sign in with the email and password. The mobile number is required at sign-up and saved to the member's profile as `+923001234567`, and the member must tick that they accept the Privacy Policy and Terms of Service (checked again by the server). Older accounts registered with a phone number instead of an email still sign in with it. Passwords are stored only as salted scrypt hashes. A sign-in creates a server-side session kept in a secure, HttpOnly cookie; it expires after seven days and signing out ends it immediately. Sign-up, sign-in and reset attempts are limited per email address and per IP address, and every form request is checked against the site's own origin.
 
 The role chosen at sign-up (buying, selling, or both) only decides which features the member sees first. It can be changed later in the profile, and it never gives administrator rights.
 

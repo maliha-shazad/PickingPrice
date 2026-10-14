@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea, CityHeading } from './ui';
+import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea, CityHeading, ListLoading } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -67,8 +67,10 @@ export function AllCategories({ actions }: { actions: Actions }) {
   const state = useLoadAll('listings', actions.revision);
   const realListings = (state.data?.items || []) as any[];
   const hasRealData = Number(state.data?.total) > 0;
+  const loaded = !!state.data || !!state.error;
+  // Samples only once the site is known to have no real listing; nothing (a placeholder) while that is still loading.
   // Only the chosen city's products, whether they are members' listings or the samples.
-  const sourceData: any[] = (hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  const sourceData: any[] = (!loaded ? [] : hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const options = (field: string) => Array.from(new Set(sourceData.map(p => p[field]).filter(Boolean) as string[]))
@@ -321,7 +323,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
               ))}
             </div>
 
-            {items.length === 0 && (
+            {!loaded ? <ListLoading /> : items.length === 0 && (
               <div style={{textAlign:'center',padding:'60px 20px',color:'#94a3b8'}}>
                 <Package size={48} style={{opacity:0.3,marginBottom:'16px'}} />
                 <p style={{fontSize:'16px',fontWeight:600}}>No products found{currentCity ? ' in ' + currentCity : ''}</p>
