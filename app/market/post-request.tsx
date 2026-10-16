@@ -20,7 +20,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Footwear & Khussas': return <Svg><path d="M4 16v-2.38C4 11.5 5.11 9.52 7 8v0a2 2 0 012-2h4a2 2 0 012 2v0c1.89 1.52 3 3.5 3 5.62V16 M4 16h16v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4z"></path></Svg>;
     case 'Activewear & Gym': return <Svg><path d="M7 4h10 M7 20h10 M4 8h16v8H4z"></path></Svg>;
     case 'Sleepwear & Loungewear': return <Svg><path d="M4 12a8 8 0 0 1 16 0 M12 4v8 M12 20v-2"></path></Svg>;
-    
+
     // Electronics
     case 'Smartphones': return <Svg><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></Svg>;
     case 'Laptops & Computers': return <Svg><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></Svg>;
@@ -28,7 +28,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Gaming Consoles': return <Svg><rect x="2" y="6" width="20" height="12" rx="2" ry="2"></rect><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"></path></Svg>;
     case 'Smartwatches': return <Svg><rect x="6" y="6" width="12" height="12" rx="3"></rect><path d="M8 2v4 M16 2v4 M8 18v4 M16 18v4"></path></Svg>;
     case 'Tablets & E-Readers': return <Svg><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></Svg>;
-    
+
     // Furniture
     case 'Living Room Sets': return <Svg><path d="M20 9V5a2 2 0 00-2-2H6a2 2 0 00-2 2v4 M4 9h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2V9z M10 21v-2 M14 21v-2"></path></Svg>;
     case 'Bedroom Furniture': return <Svg><path d="M2 4v16M22 4v16M2 8h20M2 17h20M6 8v9M18 8v9"></path></Svg>;
@@ -36,7 +36,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Dining Tables': return <Svg><path d="M2 16V8a2 2 0 012-2h16a2 2 0 012 2v8M6 6v14M18 6v14"></path></Svg>;
     case 'Storage & Wardrobes': return <Svg><rect x="4" y="2" width="16" height="20" rx="1"></rect><line x1="12" y1="2" x2="12" y2="22"></line><circle cx="10" cy="12" r="1"></circle><circle cx="14" cy="12" r="1"></circle></Svg>;
     case 'Outdoor Furniture': return <Svg><path d="M4 12h16 M6 12v8 M18 12v8 M10 12v4 M14 12v4 M8 12V8a4 4 0 0 1 8 0v4"></path></Svg>;
-    
+
     // Sports
     case 'Gym Equipment': return <Svg><path d="M14.4 14.4l3.6 3.6 M5.6 5.6l3.6 3.6 M16.2 9.8l1.8 1.8a2.5 2.5 0 010 3.6l-3.6 3.6a2.5 2.5 0 01-3.6 0l-1.8-1.8 M2 14a2.5 2.5 0 000 3.6l3.6 3.6a2.5 2.5 0 003.6 0l1.8-1.8 M9.8 16.2l-1.8-1.8 M2 10a2.5 2.5 0 010-3.6l3.6-3.6a2.5 2.5 0 013.6 0l1.8 1.8"></path></Svg>;
     case 'Cricket Gear': return <Svg><path d="M14 14l6-6M8 20L2 14M22 2l-8 8M14 10l-4 4M22 22l-6-6M10 14l-4 4"></path></Svg>;
@@ -44,7 +44,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Outdoor & Camping': return <Svg><path d="M12 2L2 22h20L12 2z M12 22V12"></path></Svg>;
     case 'Fitness Accessories': return <Svg><rect x="6" y="8" width="12" height="8" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></Svg>;
     case 'Tennis & Rackets': return <Svg><circle cx="12" cy="8" r="5"></circle><line x1="12" y1="13" x2="12" y2="22"></line><line x1="9" y1="18" x2="15" y2="18"></line></Svg>;
-    
+
     // Books
     case 'Fiction & Literature': return <Svg><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></Svg>;
     case 'Academic & Textbooks': return <Svg><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z M10 2v8l3-3 3 3V2"></path></Svg>;
@@ -52,7 +52,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Childrens Books': return <Svg><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z M8 10h.01 M16 10h.01 M10 14c.5.5 1.5.5 2 0"></path></Svg>;
     case 'Biographies': return <Svg><path d="M4 4h16v16H4z M8 8h8 M8 12h8 M8 16h4"></path></Svg>;
     case 'Cookbooks': return <Svg><path d="M4 4h16v16H4z M12 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></Svg>;
-    
+
     // Cameras
     case 'DSLR & Mirrorless': return <Svg><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></Svg>;
     case 'Lenses': return <Svg><rect x="5" y="4" width="14" height="16" rx="2"></rect><line x1="5" y1="8" x2="19" y2="8"></line><line x1="5" y1="16" x2="19" y2="16"></line></Svg>;
@@ -60,7 +60,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Studio Equipment': return <Svg><path d="M12 2l-4 4h8z M12 6v16 M8 22h8 M6 10l6 4 6-4"></path></Svg>;
     case 'Lighting & Flashes': return <Svg><circle cx="12" cy="8" r="4"></circle><line x1="12" y1="12" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line></Svg>;
     case 'Tripods & Mounts': return <Svg><line x1="12" y1="4" x2="12" y2="8"></line><line x1="12" y1="8" x2="6" y2="20"></line><line x1="12" y1="8" x2="18" y2="20"></line><line x1="12" y1="8" x2="12" y2="20"></line></Svg>;
-    
+
     // Automobiles
     case 'Car Accessories': return <Svg><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="15" x2="12" y2="22"></line><line x1="9.5" y1="10.5" x2="3.5" y2="6.5"></line><line x1="14.5" y1="10.5" x2="20.5" y2="6.5"></line></Svg>;
     case 'Motorbike Parts': return <Svg><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="8"></line><line x1="12" y1="16" x2="12" y2="22"></line><line x1="2" y1="12" x2="8" y2="12"></line><line x1="16" y1="12" x2="22" y2="12"></line></Svg>;
@@ -68,7 +68,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Helmets': return <Svg><path d="M12 2a10 10 0 0 0-10 10v6h20v-6a10 10 0 0 0-10-10z"></path><path d="M2 12h20"></path><path d="M8 12v6"></path><path d="M16 12v6"></path></Svg>;
     case 'Car Cleaning': return <Svg><circle cx="12" cy="12" r="6"></circle><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line></Svg>;
     case 'Tools & Garage': return <Svg><path d="M14 6l6 6 M14 6L6 14a2.83 2.83 0 0 0 4 4l8-8z"></path></Svg>;
-    
+
     // Kitchen
     case 'Small Appliances': return <Svg><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M8 8V4h8v4"></path><circle cx="8" cy="14" r="2"></circle><line x1="14" y1="14" x2="16" y2="14"></line></Svg>;
     case 'Cookware Sets': return <Svg><path d="M4 8h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path><path d="M2 10h20"></path><path d="M9 4h6v4H9z"></path></Svg>;
@@ -76,7 +76,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Storage Containers': return <Svg><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M4 6h16 M6 4h12v2H6z"></path></Svg>;
     case 'Bakeware': return <Svg><rect x="4" y="8" width="16" height="8" rx="2"></rect><line x1="4" y1="12" x2="20" y2="12"></line></Svg>;
     case 'Cutlery & Knives': return <Svg><path d="M12 2l-2 12h4z M12 14v8"></path></Svg>;
-    
+
     // Jewelry
     case 'Necklaces & Pendants': return <Svg><path d="M7 2v2a5 5 0 0 0 10 0V2 M12 10l2 4-2 4-2-4z"></path></Svg>;
     case 'Earrings & Rings': return <Svg><circle cx="12" cy="14" r="6"></circle><path d="M10 8l2-4 2 4z"></path></Svg>;
@@ -84,7 +84,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Luxury Watches': return <Svg><circle cx="12" cy="12" r="7"></circle><path d="M9 5L10 2h4l1 3 M9 19l1 3h4l1-3 M12 8v4l2 2"></path></Svg>;
     case 'Wedding Sets': return <Svg><circle cx="9" cy="12" r="4"></circle><circle cx="15" cy="12" r="4"></circle></Svg>;
     case 'Mens Jewelry': return <Svg><rect x="6" y="8" width="12" height="8" rx="1"></rect><line x1="12" y1="8" x2="12" y2="16"></line></Svg>;
-    
+
     // Kids
     case 'Toys & Games': return <Svg><circle cx="12" cy="12" r="6"></circle><circle cx="6" cy="6" r="3"></circle><circle cx="18" cy="6" r="3"></circle><circle cx="12" cy="14" r="2"></circle></Svg>;
     case 'Baby Clothing': return <Svg><path d="M7 2l-4 4 2 2 2-2v14h10V6l2 2 2-2-4-4z M10 22v-4h4v4"></path></Svg>;
@@ -92,7 +92,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Nursery Furniture': return <Svg><rect x="3" y="8" width="18" height="12" rx="1"></rect><line x1="3" y1="4" x2="3" y2="22"></line><line x1="21" y1="4" x2="21" y2="22"></line><line x1="7" y1="8" x2="7" y2="20"></line><line x1="11" y1="8" x2="11" y2="20"></line><line x1="15" y1="8" x2="15" y2="20"></line></Svg>;
     case 'School Supplies': return <Svg><path d="M4 20h16 M6 20V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14 M12 10v4"></path></Svg>;
     case 'Kids Footwear': return <Svg><path d="M6 16v-2c0-2 2-4 4-4h4c2 0 4 2 4 4v2 M6 16h12v4H6z"></path></Svg>;
-    
+
     // Art
     case 'Paints & Canvases': return <Svg><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.16-.6-1.58-.33-.36-.55-.86-.55-1.42 0-1.1.9-2 2-2h1.65c2.97 0 5.5-2.47 5.5-5.5C22 6.48 17.52 2 12 2z M8 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm4-3a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm4 3a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"></path></Svg>;
     case 'Craft Supplies': return <Svg><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></Svg>;
@@ -100,7 +100,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Easels & Brushes': return <Svg><path d="M21 3l-6 6 M21 3a2.828 2.828 0 0 0-4-4L6 10l4 4L21 3z M6 10l-4 8 4 4 8-4-8-8z"></path></Svg>;
     case 'Digital Art Tablets': return <Svg><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="6" y1="20" x2="18" y2="20"></line></Svg>;
     case 'Sculpture & Modeling': return <Svg><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="17" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line></Svg>;
-    
+
     // Accessories
     case 'Bags & Purses': return <Svg><path d="M8 8V6a4 4 0 0 1 8 0v2"></path><rect x="4" y="8" width="16" height="12" rx="2"></rect></Svg>;
     case 'Belts': return <Svg><rect x="2" y="10" width="20" height="4" rx="1"></rect><rect x="8" y="8" width="4" height="8" rx="1"></rect><circle cx="15" cy="12" r="1"></circle></Svg>;
@@ -108,7 +108,7 @@ const SubIcon = ({ name }: { name: string }) => {
     case 'Sunglasses': return <Svg><rect x="2" y="12" width="8" height="6" rx="2"></rect><rect x="14" y="12" width="8" height="6" rx="2"></rect><path d="M10 14h4 M2 12L4 6 M22 12L20 6"></path></Svg>;
     case 'Scarves & Wraps': return <Svg><path d="M6 6c0-2 2-4 6-4s6 2 6 4v12H6z M12 6v12"></path></Svg>;
     case 'Umbrellas & Rainwear': return <Svg><path d="M12 2a10 10 0 0 0-10 10h20A10 10 0 0 0 12 2z M12 12v8a2 2 0 0 0 4 0"></path></Svg>;
-    
+
     default: return <IconCheck />;
   }
 };
@@ -136,8 +136,9 @@ const CONDITIONS = [
   { id: 'fair', api: 'Fair', label: 'Fair', desc: 'Noticeable wear, still works as it should' },
   { id: 'used', api: 'Used', label: 'Used', desc: 'Well used, any state is fine at the right price' }
 ];
-// A request stays open for 14 days unless the buyer picks another date (up to a year ahead).
-const dayFromNow = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+// Every request takes offers for 30 days (the server sets the end date).
+const REQUEST_DAYS = 30;
+const endDate = () => new Date(Date.now() + REQUEST_DAYS * 86400000).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item | null }) {
   // Opened from a saved draft: every field starts with what was saved.
@@ -159,9 +160,8 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
   const [notes, setNotes] = useState(String(saved.notes || ''));
   const [handover, setHandover] = useState(String(saved.handover || 'in-person'));
   const [place, setPlace] = useState(String(saved.location || (actions.location !== 'all' ? actions.location : '') || ''));
-  const [expiry, setExpiry] = useState(saved.expiry && String(saved.expiry) >= dayFromNow(1) ? String(saved.expiry) : dayFromNow(14));
   const [step, setStep] = useState(1);
-  
+
   const [domain, setDomain] = useState(String(saved.domain || 'Accessories'));
   const [images, setImages] = useState<string[]>(Array.isArray(saved.images) ? saved.images : []);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,15 +174,15 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
   const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const f = e.target.files[0];
-      if (f.size > 5 * 1024 * 1024) return alert('Photo must be under 5 MB.');
+      if (f.size > 5 * 1024 * 1024) { toast.error('Photo must be under 5 MB.'); return; }
       setBusy(true);
       try {
           const r = await fetch('/api/files', { method: 'POST', headers: { 'Content-Type': f.type }, body: f });
           const d = await r.json();
           if (r.ok && d.url) setImages(prev => [...prev, d.url]);
-          else alert(d.error || 'Upload failed');
+          else toast.error(d.error || 'Upload failed. Try another photo.');
       } catch {
-          alert('Upload failed');
+          toast.error('Upload failed. Check your connection and try again.');
       }
       setBusy(false);
     }
@@ -198,7 +198,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
     if (!title.trim() && !notes.trim() && !budget && images.length === 0) { toast.error('Add a title, a budget or a note before saving a draft.'); return; }
     setSavingDraft(true);
     try {
-      const r = await api('drafts', 'POST', { id: draftId || undefined, data: { title, quantity, domain, subcategory: selectedCat, size: selectedSize, condition: selectedCondition, budget, negotiable, notes, handover, images, location: place, expiry } });
+      const r = await api('drafts', 'POST', { id: draftId || undefined, data: { title, quantity, domain, subcategory: selectedCat, size: selectedSize, condition: selectedCondition, budget, negotiable, notes, handover, images, location: place } });
       setDraftId(String(r.id));
       actions.refresh?.();
       toast.success(draftId ? 'Draft updated' : 'Draft saved', { description: 'You will find it under Draft Requests in your Buyer Dashboard.', action: { label: 'View drafts', onClick: () => actions.open('drafts') } });
@@ -230,13 +230,12 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         actions.open('login');
         return;
     }
-    
+
     const early = firstStepProblem();
     if (early) { setStep(1); return complain(early); }
     const amount = Number(budget);
     if (!Number.isInteger(amount) || amount < 1) return complain(['#pr-budget', 'Enter your budget in rupees (whole number, at least Rs. 1).']);
     if (place.trim().length < 2) return complain(['#pr-location', 'Enter the city or area where you need the item.']);
-    if (!expiry || expiry < dayFromNow(1) || expiry > dayFromNow(365)) { toast.error('Choose an expiry date between tomorrow and one year from now.'); return; }
     setBusy(true);
     const apiCondition = CONDITIONS.find(c => c.id === selectedCondition)?.api || 'Good';
 
@@ -251,11 +250,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         location: place.trim(),
         condition: apiCondition,
         quantity: quantity || 1,
-        expiry,
         image: images.length > 0 ? images[0] : ''
-    });
+    }, true);
     setBusy(false);
-    
+
     if (result) {
         // A request posted from a draft no longer needs the draft.
         if (draftId) { try { await api('drafts/' + encodeURIComponent(draftId), 'DELETE'); } catch { } }
@@ -280,7 +278,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
         .pr-btn-draft:hover { background: #f1f5f9; border-color: #94a3b8; }
         .pr-btn-draft:disabled { opacity: .6; cursor: not-allowed; }
         .pr-footer-left { display: flex; align-items: center; gap: 16px; }
-        .pr-btn-draft-link { background: none; border: 0; color: #0f766e; font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 4px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+        .pr-btn-draft-link { background: none; border: 0; color: #0d5c45; font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 4px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
         .pr-btn-draft-link:disabled { opacity: .6; cursor: not-allowed; }
         .pr-btn-submit { background: #ea580c; color: white; padding: 14px 32px; border-radius: 100px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3); transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
         .pr-btn-submit:hover { background: #c2410c; box-shadow: 0 6px 16px rgba(234, 88, 12, 0.4); transform: translateY(-1px); }
@@ -310,16 +308,16 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
       `}</style>
       <div className="pr-header" style={{ background: 'white', padding: '16px 5%', borderBottom: '1px solid #f1f5f9' }}>
         <div className="pl-breadcrumb" style={{ fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => actions.go('Explore')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>Browse Deals</button> 
+          <button onClick={() => actions.go('Explore')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>Browse Deals</button>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <button onClick={() => actions.go('BuyerRequests')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>All Requests</button> 
+          <button onClick={() => actions.go('BuyerRequests')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>All Requests</button>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <button onClick={() => actions.open('listing-form')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>Sell an item (10 Free)</button> 
+          <button onClick={() => actions.open('listing-form')} style={{ border: 'none', cursor: 'pointer', fontWeight: 600, color: '#3b82f6', padding: '4px 12px', borderRadius: '100px', backgroundColor: '#eff6ff' }}>Sell an item (10 Free)</button>
         </div>
       </div>
 
       <div className="pr-layout">
-        
+
         {/* LEFT COLUMN - FORM */}
         <div className="pr-left">
           <div className="pr-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', gap: '16px', flexWrap: 'wrap' }}>
@@ -330,27 +328,29 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '100px', padding: '4px', flexShrink: 0 }}>
                 <div
                   onClick={() => setStep(1)}
-                  style={{ cursor: 'pointer', background: step === 1 ? 'white' : 'transparent', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: 600, color: step === 1 ? '#0f766e' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: step === 1 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  style={{ cursor: 'pointer', background: step === 1 ? 'white' : 'transparent', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: 600, color: step === 1 ? '#0d5c45' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: step === 1 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                 >
-                  <span style={{ width: '18px', height: '18px', background: step === 1 ? '#0f766e' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>1</span> Style Brief
+                  <span style={{ width: '18px', height: '18px', background: step === 1 ? '#0d5c45' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>1</span> Style Brief
                 </div>
                 <div
                   onClick={goToStep2}
-                  style={{ cursor: 'pointer', background: step === 2 ? 'white' : 'transparent', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: step === 2 ? 600 : 500, color: step === 2 ? '#0f766e' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: step === 2 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  style={{ cursor: 'pointer', background: step === 2 ? 'white' : 'transparent', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: step === 2 ? 600 : 500, color: step === 2 ? '#0d5c45' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: step === 2 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                 >
-                  <span style={{ width: '18px', height: '18px', background: step === 2 ? '#0f766e' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>2</span> Fitting & Handoff
+                  <span style={{ width: '18px', height: '18px', background: step === 2 ? '#0d5c45' : '#cbd5e1', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', flexShrink: 0 }}>2</span> Fitting & Handoff
                 </div>
               </div>
             </div>
 
           <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
+
+            <p className="pr-live-banner"><strong>Live for {REQUEST_DAYS} days.</strong> Sellers can send offers for {REQUEST_DAYS} days. If no offer is selected by then, the request is taken down automatically.</p>
+
             {step === 1 && (
               <>
                 <div className="pr-section">
               <div className="pr-field-head" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label className="pr-field-label" htmlFor="pr-title" style={{ fontWeight: 600, color: '#0f172a' }}>What specific piece are you hunting for? <span className="pr-req">*</span></label>
-                <span className="pr-field-tag" style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Active Demand Tag</span>
+                <span className="pr-field-tag" style={{ fontSize: '11px', color: '#0d5c45', fontWeight: 600 }}>Active Demand Tag</span>
               </div>
               <input
                 id="pr-title"
@@ -387,10 +387,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               {(actions.categories && actions.categories.length > 0 ? actions.categories : [{id:1, name:'Clothes'}, {id:2, name:'Electronics'}, {id:3, name:'Furniture'}, {id:4, name:'Sports'}]).map(cat => {
                 const isSelected = domain === cat.name;
                 return (
-                  <button 
+                  <button
                     key={cat.id || cat.name}
-                    type="button" 
-                    onClick={() => { setDomain(cat.name); setSelectedCat(''); }} 
+                    type="button"
+                    onClick={() => { setDomain(cat.name); setSelectedCat(''); }}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '100px', border: 'none', background: isSelected ? '#0f172a' : '#e2e8f0', color: isSelected ? 'white' : '#64748b', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                   >
                     <IconTag /> {cat.name}
@@ -406,15 +406,15 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               </div>
               <div className="pr-subcats">
                 {displayCats.map((cat) => (
-                  <div 
+                  <div
                     key={cat}
                     onClick={() => setSelectedCat(cat)}
-                    style={{ padding: '16px', border: selectedCat === cat ? '2px solid #0f766e' : '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: selectedCat === cat ? '#f0fdf4' : 'white' }}
+                    style={{ padding: '16px', border: selectedCat === cat ? '2px solid #0d5c45' : '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: selectedCat === cat ? '#f0fdf4' : 'white' }}
                   >
-                    <div style={{ marginBottom: '8px', color: selectedCat === cat ? '#0f766e' : '#64748b' }}>
+                    <div style={{ marginBottom: '8px', color: selectedCat === cat ? '#0d5c45' : '#64748b' }}>
                       <SubIcon name={cat} />
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: selectedCat === cat ? '#0f766e' : '#334155' }}>{cat}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: selectedCat === cat ? '#0d5c45' : '#334155' }}>{cat}</div>
                     <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                       Tap to select
                     </div>
@@ -436,7 +436,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                         type="button"
                         key={s}
                         onClick={() => setSelectedSize(s)}
-                        style={{ padding: s.length > 2 ? '8px 16px' : '8px 12px', border: selectedSize === s ? 'none' : '1px solid #e2e8f0', borderRadius: '6px', background: selectedSize === s ? '#0f766e' : 'white', color: selectedSize === s ? 'white' : '#475569', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ padding: s.length > 2 ? '8px 16px' : '8px 12px', border: selectedSize === s ? 'none' : '1px solid #e2e8f0', borderRadius: '6px', background: selectedSize === s ? '#0d5c45' : 'white', color: selectedSize === s ? 'white' : '#475569', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                       >
                         {s}
                       </button>
@@ -456,20 +456,20 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               <div className="pr-section" style={{ flex: 1, background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <label id="pr-condition" style={{ fontWeight: 600, color: '#0f172a' }}>Item State <span className="pr-req">*</span></label>
-                  <span style={{ fontSize: '11px', color: '#0f766e' }}>Condition you accept</span>
+                  <span style={{ fontSize: '11px', color: '#0d5c45' }}>Condition you accept</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {CONDITIONS.map(cond => (
-                    <div 
-                      key={cond.id} 
+                    <div
+                      key={cond.id}
                       onClick={() => setSelectedCondition(cond.id)}
-                      style={{ padding: '12px', border: selectedCondition === cond.id ? '1px solid #10b981' : '1px solid transparent', borderRadius: '8px', background: selectedCondition === cond.id ? '#ecfdf5' : 'transparent', display: 'flex', gap: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+                      style={{ padding: '12px', border: selectedCondition === cond.id ? '1px solid #0d5c45' : '1px solid transparent', borderRadius: '8px', background: selectedCondition === cond.id ? '#ecfdf5' : 'transparent', display: 'flex', gap: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
                     >
                       <div style={{ marginTop: '2px' }}>
-                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: selectedCondition === cond.id ? '5px solid #10b981' : '2px solid #cbd5e1', background: 'white' }}></div>
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: selectedCondition === cond.id ? '5px solid #0d5c45' : '2px solid #cbd5e1', background: 'white' }}></div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: selectedCondition === cond.id ? '#065f46' : '#334155', marginBottom: '2px' }}>{cond.label}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: selectedCondition === cond.id ? '#0a5038' : '#334155', marginBottom: '2px' }}>{cond.label}</div>
                         <div style={{ fontSize: '11px', color: '#64748b' }}>{cond.desc}</div>
                       </div>
                     </div>
@@ -507,7 +507,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>{isFashion ? 'Fabric, Craft & Style Notes' : 'Specs, Model & Condition Details'}</label>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Optional details</span>
               </div>
-              <textarea 
+              <textarea
                 id="pr-notes"
                 maxLength={3000}
                 placeholder="e.g. Colour, size, model year, what must be included, anything you do not want"
@@ -520,10 +520,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
             <div className="pr-section" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>Reference Photos & Inspiration</label>
-                <span style={{ fontSize: '11px', color: '#0f766e', fontWeight: 600 }}>Optional</span>
+                <span style={{ fontSize: '11px', color: '#0d5c45', fontWeight: 600 }}>Optional</span>
               </div>
               <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>Helps sellers match the exact model or style.</p>
-              
+
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {images.map((img, idx) => (
                   <div key={idx} style={{ position: 'relative', width: '120px', height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
@@ -533,10 +533,10 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                     </button>
                   </div>
                 ))}
-                
+
                 <input type="file" accept="image/*" ref={fileInputRef} onChange={handleAddImage} style={{ display: 'none' }} />
-                
-                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '120px', height: '120px', borderRadius: '8px', border: '1px dashed #cbd5e1', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#0f766e', cursor: 'pointer' }}>
+
+                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '120px', height: '120px', borderRadius: '8px', border: '1px dashed #cbd5e1', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#0d5c45', cursor: 'pointer' }}>
                   <IconCamera />
                   <div style={{ fontSize: '11px', fontWeight: 600 }}>Add Image</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8' }}>JPG/PNG</div>
@@ -546,7 +546,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
 
             <div className="pr-section" id="pr-where-when" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <label style={{ fontWeight: 600, color: '#0f172a' }}>Location & Expiry <span className="pr-req">*</span></label>
+                <label style={{ fontWeight: 600, color: '#0f172a' }}>Location & Duration <span className="pr-req">*</span></label>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Required</span>
               </div>
               <div className="pr-where-when">
@@ -555,30 +555,30 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
                   <input id="pr-location" type="text" value={place} maxLength={80} onChange={e => setPlace(e.target.value)} placeholder="e.g. Peshawar, University Town" />
                 </label>
                 <label>
-                  <span>Request open until</span>
-                  <input id="pr-expiry" type="date" value={expiry} min={dayFromNow(1)} max={dayFromNow(365)} onChange={e => setExpiry(e.target.value)} />
+                  <span>Request open for</span>
+                  <div id="pr-duration" className="pr-duration">{REQUEST_DAYS} days · until {endDate()}</div>
                 </label>
               </div>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '12px 0 0' }}>Sellers can send offers until this date. After it the request closes on its own.</p>
+              <p className="pr-duration-note">Your request stays live for {REQUEST_DAYS} days. If no offer is selected in that time it is taken down automatically and you get a notification; you can post it again from your Buyer Dashboard.</p>
             </div>
 
             <div className="pr-section" style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label style={{ fontWeight: 600, color: '#0f172a' }}>Preferred Handover Method</label>
-                <span style={{ fontSize: '11px', color: '#0f766e', display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Stay safe</span>
+                <span style={{ fontSize: '11px', color: '#0d5c45', display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Stay safe</span>
               </div>
               <div className="pr-handover">
-                <div 
+                <div
                   onClick={() => setHandover('in-person')}
-                  style={{ flex: 1, padding: '16px', border: handover === 'in-person' ? '1px solid #10b981' : '1px solid transparent', background: handover === 'in-person' ? '#ecfdf5' : '#f8fafc', borderRadius: '8px', display: 'flex', gap: '12px', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '16px', border: handover === 'in-person' ? '1px solid #0d5c45' : '1px solid transparent', background: handover === 'in-person' ? '#ecfdf5' : '#f8fafc', borderRadius: '8px', display: 'flex', gap: '12px', cursor: 'pointer' }}
                 >
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: handover === 'in-person' ? '5px solid #10b981' : '1px solid #94a3b8', background: 'white', marginTop: '4px', flexShrink: 0, transition: 'all 0.2s' }} />
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: handover === 'in-person' ? '5px solid #0d5c45' : '1px solid #94a3b8', background: 'white', marginTop: '4px', flexShrink: 0, transition: 'all 0.2s' }} />
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#065f46', marginBottom: '4px' }}>In-Person Inspection</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0a5038', marginBottom: '4px' }}>In-Person Inspection</div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>Meet in a busy public place and inspect the item before you pay.</div>
                   </div>
                 </div>
-                <div 
+                <div
                   onClick={() => setHandover('courier')}
                   style={{ flex: 1, padding: '16px', border: handover === 'courier' ? '1px solid #3b82f6' : '1px solid transparent', background: handover === 'courier' ? '#eff6ff' : '#f8fafc', borderRadius: '8px', display: 'flex', gap: '12px', cursor: 'pointer' }}
                 >
@@ -619,7 +619,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
 
         {/* RIGHT COLUMN - PREVIEW */}
         <div className="pr-right">
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.05em' }}>
               <span style={{ width: '8px', height: '8px', background: '#ea580c', borderRadius: '50%' }}></span> LIVE REQUEST PREVIEW
@@ -634,27 +634,27 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '13px', background: '#e2e8f0' }}>No image uploaded</div>
               )}
-              <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'white', color: '#0f766e', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '100px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'white', color: '#0d5c45', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '100px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 {CONDITIONS.find(c => c.id === selectedCondition)?.label || 'Good'}
               </div>
             </div>
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <div style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700, letterSpacing: '0.05em' }}>WANTED BY BUYER</div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f766e' }}>Rs. {Number(budget || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0d5c45' }}>Rs. {Number(budget || 0).toLocaleString()}</div>
               </div>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>{title || 'Request Title'} {isFashion && selectedSize ? `(Size ${selectedSize})` : ''}</h3>
               <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {notes}
               </p>
-              
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#64748b', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconMapPin /> {place.trim() || 'Your city'}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> {negotiable ? 'Negotiable' : 'Fixed budget'} • {handover === 'courier' ? 'Courier' : 'In person'}</div>
               </div>
 
               <div style={{ background: '#ecfdf5', borderRadius: '8px', padding: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#065f46', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '11px', color: '#0a5038', lineHeight: 1.4 }}>
                   <span style={{ fontWeight: 700 }}>Open to every seller.</span> Sellers in {place.trim() || 'your city'} and across Pakistan can see this {domain} request and send you offers.
                 </div>
               </div>
@@ -666,7 +666,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               <IconShieldCheck size={20} />
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>How Requests Work</h3>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</div>
@@ -691,7 +691,7 @@ export function PostRequest({ actions, draft }: { actions: Actions; draft?: Item
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '10px', fontWeight: 600, color: '#0f766e' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '10px', fontWeight: 600, color: '#0d5c45' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconCheck /> Free to post</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><IconShieldCheck /> Report any problem</div>
             </div>

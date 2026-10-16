@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { Actions, useLoad, useLoadAll, Load, money, Photo, date } from './ui';
+import { Actions, useLoad, useLoadAll, Load, money, Photo, date, DaysLeft } from './ui';
+import { toast } from 'sonner';
 import { ProfileDialog } from './profile-dialog';
 import { Bell, Bookmark, MessageCircle, Eye, CheckCircle2, ShieldCheck, Edit2, MapPin, Calendar, LayoutDashboard } from 'lucide-react';
 
 export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode: (m: 'Buying' | 'Selling') => void }) {
     const me = useLoad('me', actions.revision);
     const requests = useLoadAll('requests?mine=1', actions.revision);
+    // A request takes offers for 30 days; after that it can be posted again as a new one.
+    const live = (r: any) => ['Open', 'Responses Received'].includes(r.status) && Date.parse(r.expiry) > Date.now();
+    const repost = async (r: any) => { if (await actions.perform('requests/' + r.id + '/repost', 'POST', {}, true)) toast.success('Posted again: live for the next 30 days'); };
     const drafts = useLoad('drafts', actions.revision);
     const reviews = useLoad('my-reviews?size=60', actions.revision);
     const favorites = useLoadAll('listings?saved=1', actions.revision);
@@ -46,7 +50,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                             </button>
                         </div>
                         <div className="bd-profile-info">
-                            <h2>{profile.name || actions.user?.name} {!!profile.verified && <CheckCircle2 size={16} color="#10b981" />}</h2>
+                            <h2>{profile.name || actions.user?.name} {!!profile.verified && <CheckCircle2 size={16} color="#0d5c45" />}</h2>
                             <div className="bd-profile-meta">
                                 <span><MapPin size={12}/> {profile.location || 'Location not set'}</span>
                                 <span><Calendar size={12}/> Joined {new Date(profile.created || Date.now()).getFullYear()}</span>
@@ -80,7 +84,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                     </div>
 
                     <div className="bd-safety-tip">
-                        <div className="bd-safety-icon"><ShieldCheck size={20} color="#059669" /></div>
+                        <div className="bd-safety-icon"><ShieldCheck size={20} color="#0d5c45" /></div>
                         <div>
                             <strong>Safe-Trade Promise</strong>
                             <p>Always inspect items thoroughly in safe, public meeting places before transferring cash.</p>
@@ -108,10 +112,10 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                     {/* My Requests Section */}
                     <div className="bd-section bd-glass-panel">
                         <div className="bd-section-header">
-                            <h3>My Active Requests <span className="bd-badge">{requests.data?.total || 0} Total</span></h3>
+                            <h3>My Requests <span className="bd-badge">{requests.data?.total || 0} Total</span></h3>
                             <button className="bd-view-all" onClick={() => actions.go('BuyerRequests')}>Go to Live Board</button>
                         </div>
-                        
+
                         <Load state={requests}>
                             {requests.data?.total === 0 ? (
                                 <div className="bd-empty-state">
@@ -132,10 +136,19 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                                             <div className="bd-req-meta">
                                                 <span>Condition: {req.condition || 'Any'}</span>
                                                 <span>{req.location || 'Anywhere'}</span>
+                                                <span className="bd-req-dates"><span>Posted: <strong>{date(req.created)}</strong></span><span>Expires: <strong>{date(req.expiry)}</strong></span></span>
                                             </div>
+                                            <DaysLeft item={req} />
                                             <div className="bd-req-actions">
-                                                <button className="bd-btn-primary" onClick={() => actions.open('request-form', req)}>Edit Request</button>
+                                                {live(req)
+                                                    ? <button className="bd-btn-primary" onClick={() => actions.open('request-form', req)}>Edit Request</button>
+                                                    : ['Expired', 'Closed', 'Cancelled'].includes(req.status) && <button className="bd-btn-primary" onClick={() => repost(req)}>Post again</button>}
                                                 <button className="bd-btn-secondary" onClick={() => actions.open('request', req)}>Offers</button>
+                                            </div>
+                                            <div className="bd-req-manage">
+                                                {(live(req) || req.status === 'Seller Selected') && <button onClick={() => actions.open('confirm', { title: 'Close this request?', text: 'Mark it as done: sellers can no longer send offers.', path: 'requests/' + req.id + '/status', method: 'POST', body: { status: 'Closed' } })}>Close</button>}
+                                                {live(req) && <button onClick={() => actions.open('confirm', { title: 'Cancel this request?', text: 'Sellers will no longer be able to send offers.', path: 'requests/' + req.id + '/status', method: 'POST', body: { status: 'Cancelled' } })}>Cancel</button>}
+                                                <button className="bd-req-delete" onClick={() => actions.open('confirm', { title: 'Delete this request?', text: 'It is removed for good, and sellers with an open offer are told.', path: 'requests/' + req.id, method: 'DELETE' })}>Delete</button>
                                             </div>
                                         </div>
                                     ))}
@@ -265,23 +278,23 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
 
             <style dangerouslySetInnerHTML={{__html: `
                 .bd-container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; font-family: 'Inter', sans-serif; }
-                
+
                 .bd-header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
                 .bd-header-title { display: flex; align-items: center; gap: 12px; }
-                .bd-header-icon { color: #059669; }
+                .bd-header-icon { color: #0d5c45; }
                 .bd-header-title h1 { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
 
                 .bd-mode-toggle { background: #f1f5f9; border-radius: 50px; padding: 4px; display: inline-flex; }
                 .bd-mode-toggle button { background: transparent; border: 0; padding: 8px 20px; font-size: 14px; font-weight: 600; color: #64748b; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
-                .bd-mode-toggle button.active { background: #fff; color: #059669; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+                .bd-mode-toggle button.active { background: #fff; color: #0d5c45; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
                 .free-badge { background: #f59e0b; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; }
-                
+
                 .bd-layout { display: flex; gap: 32px; align-items: flex-start; }
                 .bd-sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
                 .bd-main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
 
                 .bd-profile-card { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.04); position: relative; border: 1px solid #f1f5f9; }
-                .bd-profile-cover { height: 80px; background: linear-gradient(135deg, #115e59, #059669); }
+                .bd-profile-cover { height: 80px; background: linear-gradient(135deg, #0d5c45, #0d5c45); }
                 .bd-profile-avatar-wrap { position: relative; width: 80px; height: 80px; margin: -40px auto 12px; }
                 .bd-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 4px solid #fff; background: #fff; }
                 .bd-edit-icon-btn { position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; background: #1e293b; color: #fff; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background 0.2s; }
@@ -296,7 +309,7 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                 .bd-v-stat:hover { transform: translateY(-2px); }
                 .bd-v-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
                 .bd-v-stat-icon.orange { background: #ffedd5; color: #ea580c; }
-                .bd-v-stat-icon.green { background: #dcfce7; color: #059669; }
+                .bd-v-stat-icon.green { background: #dcfce7; color: #0d5c45; }
                 .bd-v-stat-icon.blue { background: #e0f2fe; color: #0284c7; }
                 .bd-v-stat-text { display: flex; flex-direction: column; gap: 2px; }
                 .bd-v-stat-text strong { font-size: 16px; font-weight: 700; color: #1e293b; }
@@ -304,8 +317,8 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
 
                 .bd-safety-tip { background: linear-gradient(to right, #ecfdf5, #dcfce7); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #bbf7d0; }
                 .bd-safety-icon { width: 36px; height: 36px; background: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1); }
-                .bd-safety-tip strong { display: block; font-size: 14px; color: #065f46; margin-bottom: 6px; }
-                .bd-safety-tip p { font-size: 12.5px; color: #047857; margin: 0; line-height: 1.5; font-weight: 500; }
+                .bd-safety-tip strong { display: block; font-size: 14px; color: #0a5038; margin-bottom: 6px; }
+                .bd-safety-tip p { font-size: 12.5px; color: #0a5038; margin: 0; line-height: 1.5; font-weight: 500; }
 
                 .bd-banner { background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 20px; padding: 32px; color: #fff; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15); }
                 .bd-banner-content { position: relative; z-index: 2; max-width: 400px; }
@@ -320,8 +333,8 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                 .bd-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
                 .bd-section-header h3 { font-size: 18px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
                 .bd-badge { background: #f1f5f9; color: #475569; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-                .bd-view-all { background: transparent; border: 0; color: #059669; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-                .bd-view-all:hover { color: #047857; text-decoration: underline; }
+                .bd-view-all { background: transparent; border: 0; color: #0d5c45; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+                .bd-view-all:hover { color: #0a5038; text-decoration: underline; }
 
                 .bd-request-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
                 .bd-req-card { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -330,28 +343,32 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                 .bd-req-cat { font-size: 12px; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 12px; }
                 .bd-req-status { font-size: 12px; font-weight: 600; color: #ea580c; background: #ffedd5; padding: 4px 10px; border-radius: 12px; }
                 .bd-req-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 8px; line-height: 1.4; }
-                .bd-req-price { font-size: 15px; font-weight: 800; color: #059669; margin-bottom: 12px; }
+                .bd-req-price { font-size: 15px; font-weight: 800; color: #0d5c45; margin-bottom: 12px; }
                 .bd-req-meta { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #64748b; margin-bottom: 20px; }
-                
+
                 .bd-req-actions { display: flex; gap: 12px; }
                 .bd-btn-primary { flex: 1; background: #1e293b; color: #fff; border: 0; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
                 .bd-btn-primary:hover { background: #0f172a; }
                 .bd-btn-secondary { background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
                 .bd-btn-secondary:hover { background: #f8fafc; }
-                
-                .bd-btn-primary-save { flex: 1; background: #115e59; color: #fff; border: 0; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 
-                .bd-two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-                
+                .bd-btn-primary-save { flex: 1; background: #0d5c45; color: #fff; border: 0; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+
+                /* Saved Wishlist, then Recent Inquiries under it: one column, so long chat titles never push the page wider. */
+                .bd-two-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+                .bd-two-cols > * { min-width: 0; }
+                .bd-req-dates { display: flex; flex-wrap: wrap; gap: 4px 14px; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
+                .bd-req-dates strong { color: #334155; font-weight: 600; }
+
                 .bd-wishlist-scroll { display: flex; flex-direction: column; gap: 12px; }
                 .bd-wish-card { display: flex; gap: 16px; align-items: center; padding: 12px; border-radius: 12px; border: 1px solid #f1f5f9; transition: background 0.2s; cursor: pointer; }
                 .bd-wish-card:hover { background: #f8fafc; }
                 .bd-wish-img { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f1f5f9; }
-                .bd-wish-img img { width: 100%; height: 100%; object-fit: cover; }
+                .bd-wish-img img { width: 100%; height: 100%; object-fit: contain; }
                 .bd-wish-info { flex: 1; min-width: 0; }
                 .bd-wish-info h4 { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .bd-wish-info p { font-size: 13px; font-weight: 700; color: #059669; margin: 0; }
-                .bd-wish-contact { background: #ecfdf5; color: #059669; border: 0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-left: auto; }
+                .bd-wish-info p { font-size: 13px; font-weight: 700; color: #0d5c45; margin: 0; }
+                .bd-wish-contact { background: #ecfdf5; color: #0d5c45; border: 0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-left: auto; }
 
                 .bd-chat-list { display: flex; flex-direction: column; gap: 8px; }
                 .bd-chat-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; transition: background 0.2s; border: 1px solid transparent; }
@@ -381,11 +398,11 @@ export function BuyerDashboard({ actions, setMode }: { actions: Actions, setMode
                 .bd-form-group { display: flex; flex-direction: column; gap: 8px; }
                 .bd-form-group label { font-size: 13px; font-weight: 600; color: #334155; }
                 .bd-input { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.2s; }
-                .bd-input:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1); }
+                .bd-input:focus { border-color: #0d5c45; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1); }
                 .bd-upload-area { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f8fafc; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-                .bd-upload-area:hover { border-color: #059669; background: #ecfdf5; }
+                .bd-upload-area:hover { border-color: #0d5c45; background: #ecfdf5; }
                 .bd-upload-area span { font-size: 13px; font-weight: 600; color: #475569; }
-                
+
                 @media (max-width: 900px) {
                     .bd-layout { flex-direction: column; }
                     .bd-sidebar { width: 100%; }

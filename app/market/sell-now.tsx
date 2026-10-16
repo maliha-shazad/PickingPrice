@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Actions, Item, money, useLoad, Load, DELIVERY_OPTIONS, api } from './ui';
+import { Actions, Item, money, useLoad, Load, DELIVERY_OPTIONS } from './ui';
 import { CheckCircle2, UploadCloud, Image as ImageIcon, Star, Zap, RefreshCw, X, Package, Smartphone, Watch, Shirt, Home, Gamepad, Book, Camera, Car, Coffee, Gem, Baby, Palette, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,6 +22,8 @@ const getCatIcon = (name: string) => {
 };
 
 export function SellNow({ actions, initialItem = null }: { actions: Actions, initialItem?: Item | null }) {
+    // "About this item": 1000 characters, or as long as an existing listing's description already is.
+    const descriptionLimit = Math.max(1000, String(initialItem?.description || '').length);
     const me = useLoad('me', actions.revision);
     const services = useLoad('services?page=1&promotionPage=1', actions.revision);
 
@@ -49,8 +51,9 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
     const [allowOffers, setAllowOffers] = useState(initialItem?.id ? !!initialItem.negotiable : true);
     const [exchange, setExchange] = useState(!!initialItem?.exchange);
     const [profileLoaded, setProfileLoaded] = useState(false);
-    // A Spotlight (featured) request chosen on this page; it is sent for approval right after the listing is published.
-    const [boost, setBoost] = useState<{ duration: number; reference: string; amount: number } | null>(null);
+    // A Spotlight (featured) chosen on this page, with its payment details. It is sent together with the new listing,
+    // which then waits, seen only by the seller, until the payment is verified.
+    const [boost, setBoost] = useState<({ duration: number; reference: string; amount: number } & Record<string, unknown>) | null>(null);
     const [invalid, setInvalid] = useState('');
     const promo = services.data?.settings;
     const promoPrices: number[] = promo ? [promo.promotion24h, promo.promotion3d, promo.promotion7d] : [];
@@ -135,20 +138,12 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
         payload.quantity = Number(payload.quantity) || 1;
         payload.negotiable = allowOffers;
         payload.exchange = exchange;
+        if (boost && !f.id) payload.spotlight = boost;
 
-        const result = await actions.perform('listings' + (f.id ? '/' + f.id : ''), f.id ? 'PATCH' : 'POST', payload);
+        const result = await actions.perform('listings' + (f.id ? '/' + f.id : ''), f.id ? 'PATCH' : 'POST', payload, true);
         setBusy(false);
         if (result) {
-            let featured = '';
-            if (boost && !f.id) {
-                // The product is live already; it becomes featured only when the admin approves this payment.
-                try {
-                    await api('payments', 'POST', { purpose: 'promotion', quantity: 1, duration: boost.duration, listingId: result.id, reference: boost.reference });
-                    featured = 'sent';
-                } catch (err) { featured = err instanceof Error ? err.message : 'failed'; }
-            }
-            if (featured === 'sent') toast.success('Listing published', { description: 'Your Spotlight request was sent for approval. The product is featured once the payment is confirmed.' });
-            else if (featured) toast.warning('Listing published, but the Spotlight request was not sent', { description: featured + ' You can request it again with Promote in your Seller Dashboard.' });
+            if ((result as Item).status === 'Awaiting payment') toast.success('Listing saved, waiting for payment verification', { description: 'It goes live as a Premium Listing once our team confirms your payment. You will get a notification.' });
             else toast.success(f.id ? 'Listing updated successfully!' : 'Listing published successfully!');
             actions.go('Dashboard');
         }
@@ -174,49 +169,49 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-section { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
                 .sn-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
                 .sn-section-head h2 { font-size: 18px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
-                .sn-section-head .step-num { width: 24px; height: 24px; background: #ecfdf5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+                .sn-section-head .step-num { width: 24px; height: 24px; background: #ecfdf5; color: #0d5c45; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
 
                 .sn-upload-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
                 .sn-upload-box { width: 120px; height: 120px; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #64748b; cursor: pointer; background: #f8fafc; transition: all 0.2s; position: relative; overflow: hidden; }
-                .sn-upload-box:hover { border-color: #059669; background: #ecfdf5; color: #059669; }
+                .sn-upload-box:hover { border-color: #0d5c45; background: #ecfdf5; color: #0d5c45; }
                 .sn-upload-box span { font-size: 12px; font-weight: 600; text-align: center; }
                 .sn-img-preview { width: 120px; height: 120px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; }
                 .sn-img-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 11px; }
-                .sn-img-preview .cover-tag { position: absolute; top: 6px; left: 6px; background: #10b981; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+                .sn-img-preview .cover-tag { position: absolute; top: 6px; left: 6px; background: #0d5c45; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
                 .sn-remove-img { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 0; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
                 .sn-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
                 .sn-field label { font-size: 13px; font-weight: 700; color: #334155; }
                 .sn-input { width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; background: #fff; transition: border-color 0.2s; }
-                .sn-input:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.1); }
+                .sn-input:focus { border-color: #0d5c45; box-shadow: 0 0 0 3px rgba(5,150,105,0.1); }
                 .sn-textarea { min-height: 120px; resize: vertical; padding: 16px; width: 100%; box-sizing: border-box; }
                 .sn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
                 .sn-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 
                 .sn-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
                 .sn-cat-btn { padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 13px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; }
-                .sn-cat-btn.active { background: #059669; color: #fff; border-color: #059669; }
+                .sn-cat-btn.active { background: #0d5c45; color: #fff; border-color: #0d5c45; }
 
                 .sn-cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
                 .sn-cond-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #fff; cursor: pointer; position: relative; }
-                .sn-cond-card.active { border-color: #059669; background: #ecfdf5; }
+                .sn-cond-card.active { border-color: #0d5c45; background: #ecfdf5; }
                 .sn-cond-tag { display: inline-block; font-size: 10px; font-weight: 800; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 12px; margin-bottom: 8px; }
-                .sn-cond-card.active .sn-cond-tag { background: #10b981; color: #fff; }
+                .sn-cond-card.active .sn-cond-tag { background: #0d5c45; color: #fff; }
                 .sn-cond-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
                 .sn-cond-desc { font-size: 12px; color: #64748b; line-height: 1.4; }
-                .sn-cond-check { position: absolute; top: 16px; right: 16px; color: #059669; }
+                .sn-cond-check { position: absolute; top: 16px; right: 16px; color: #0d5c45; }
 
                 .sn-verify-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
                 .sn-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
-                .sn-checkbox input { width: 16px; height: 16px; accent-color: #059669; cursor: pointer; }
+                .sn-checkbox input { width: 16px; height: 16px; accent-color: #0d5c45; cursor: pointer; }
 
                 .sn-price-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
                 .sn-price-input { width: 100%; min-width: 0; flex: 1; box-sizing: border-box; font-size: 24px; font-weight: 800; color: #0f172a; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
                 .sn-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: flex-start; }
                 .sn-delivery-options { display: flex; flex-wrap: wrap; gap: 8px; }
                 .sn-delivery-option { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
-                .sn-delivery-option.on { border-color: #059669; background: #ecfdf5; color: #065f46; }
-                .sn-delivery-option input { accent-color: #059669; width: 16px; height: 16px; }
+                .sn-delivery-option.on { border-color: #0d5c45; background: #ecfdf5; color: #0a5038; }
+                .sn-delivery-option input { accent-color: #0d5c45; width: 16px; height: 16px; }
                 .sn-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
                 .sn-toggle-row:last-child { border: 0; padding-bottom: 0; }
                 .sn-toggle-info strong { display: block; font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
@@ -231,7 +226,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-preview-img { width: 100%; height: 200px; background: #f1f5f9; border-radius: 12px; margin-bottom: 16px; object-fit: cover; }
                 .sn-preview-cat { font-size: 11px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 10px; display: inline-block; margin-bottom: 8px; }
                 .sn-preview-title { font-size: 16px; font-weight: 800; color: #1e293b; line-height: 1.4; margin-bottom: 8px; }
-                .sn-preview-price { font-size: 18px; font-weight: 800; color: #059669; margin-bottom: 12px; }
+                .sn-preview-price { font-size: 18px; font-weight: 800; color: #0d5c45; margin-bottom: 12px; }
                 .sn-preview-seller { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; font-weight: 600; border-top: 1px solid #f1f5f9; padding-top: 12px; }
                 .sn-preview-seller img { width: 24px; height: 24px; border-radius: 50%; }
 
@@ -241,7 +236,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 .sn-boost-option:hover { background: #f8fafc; }
                 .sn-boost-info strong { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
                 .sn-boost-info span { font-size: 11px; color: #64748b; }
-                .sn-boost-price { font-size: 13px; font-weight: 700; color: #059669; }
+                .sn-boost-price { font-size: 13px; font-weight: 700; color: #0d5c45; }
 
                 .sn-submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; padding: 16px 5%; display: flex; justify-content: flex-end; align-items: center; gap: 16px; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
                 .sn-cancel-btn { background: transparent; border: 0; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -281,7 +276,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             <div className="sn-quota-box">
                                 <div className="sn-quota-info">
                                     <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                                        <Package size={16} color="#059669"/>
+                                        <Package size={16} color="#0d5c45"/>
                                         Free Listing Quota
                                         <span className="sn-slots-left">
                                             {Math.max(0, me.data.settings.freeListings + me.data.profile.extra_slots - me.data.counts.listings)} SLOTS LEFT
@@ -406,7 +401,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <div className="sn-offer-box">
                                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'4px'}}>
                                             <strong style={{fontSize:'12px'}}>Allow Offers</strong>
-                                            <input id="sn-allow-offers" type="checkbox" checked={allowOffers} onChange={e => setAllowOffers(e.target.checked)} style={{accentColor:'#059669'}} />
+                                            <input id="sn-allow-offers" type="checkbox" checked={allowOffers} onChange={e => setAllowOffers(e.target.checked)} style={{accentColor:'#0d5c45'}} />
                                         </div>
                                         <p style={{margin:0, fontSize:'10px', color:'#64748b'}}>Buyers can send you a price offer from the product page.</p>
                                     </div>
@@ -418,7 +413,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <strong>Open to Barter / Gadget Exchange</strong>
                                     <span>Buyers can propose an item in exchange from the product page.</span>
                                 </div>
-                                <input id="sn-exchange" type="checkbox" checked={exchange} onChange={e => setExchange(e.target.checked)} style={{width:'20px', height:'20px', accentColor:'#059669'}} />
+                                <input id="sn-exchange" type="checkbox" checked={exchange} onChange={e => setExchange(e.target.checked)} style={{width:'20px', height:'20px', accentColor:'#0d5c45'}} />
                             </div>
                         </div>
 
@@ -429,11 +424,12 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                             </div>
                             <textarea
                                 className={'sn-input sn-textarea' + (invalid === 'description' ? ' sn-invalid' : '')} data-field="description"
-                                required minLength={10} maxLength={3000}
+                                required minLength={10} maxLength={descriptionLimit}
                                 value={f.description}
                                 onChange={e => set('description', e.target.value)}
                                 placeholder="E.g. Purchased original from Sony Center in early 2023. Flawless cosmetic condition with absolutely zero tears or cracking on the earcups or headband cushion..."
                             />
+                            <div className="sn-char-count" aria-live="polite">{String(f.description || '').length} / {descriptionLimit}</div>
                         </div>
 
                         {/* Step 6: Pickup, Contact & Location */}
@@ -442,7 +438,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                 <h2><div className="step-num">6</div> Pickup, Safe Inspection & Contact</h2>
                             </div>
                             <p style={{fontSize:'12px', color:'#64748b', marginBottom:'16px'}}>
-                                These details help buyers reach you directly. You can save defaults in your <button type="button" style={{color:'#059669', fontWeight:700, background:'none', border:0, padding:0, cursor:'pointer', fontSize:'12px'}} onClick={() => actions.go('Dashboard')}>Edit Profile</button>.
+                                These details help buyers reach you directly. You can save defaults in your <button type="button" style={{color:'#0d5c45', fontWeight:700, background:'none', border:0, padding:0, cursor:'pointer', fontSize:'12px'}} onClick={() => actions.go('Dashboard')}>Edit Profile</button>.
                             </p>
                             <div className="sn-row">
                                 <div className="sn-field">
@@ -515,15 +511,15 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                                     <strong>Standard (Free) Listing</strong>
                                     <span>Uses one listing slot • Stays listed until you remove it</span>
                                 </div>
-                                <input type="radio" name="boost" checked={!boost} onChange={() => setBoost(null)} style={{accentColor:'#059669'}} />
+                                <input type="radio" name="boost" checked={!boost} onChange={() => setBoost(null)} style={{accentColor:'#0d5c45'}} />
                             </div>
                             {/* New listing: the choice is kept here and sent for approval once the listing exists.
                                 Existing listing: the usual promote form, which sends the request straight away. */}
                             <div className={'sn-boost-option' + (boost ? ' selected' : '')} id="sn-boost-spotlight"
-                                onClick={() => f.id ? actions.open('payment', { id: f.id, title: f.title }) : actions.open('payment', { defer: true, title: f.title, duration: boost?.duration, reference: boost?.reference, onPick: setBoost })}>
+                                onClick={() => f.id ? actions.open('payment', { id: f.id, title: f.title }) : actions.open('payment', { defer: true, title: f.title, ...(boost || {}), onPick: setBoost })}>
                                 <div className="sn-boost-info">
-                                    <strong><Star size={14} color="#e8621a" /> Spotlight Boost{boost ? ' (' + days(boost.duration) + ')' : ' (Featured)'}</strong>
-                                    <span>{boost ? 'Sent for approval when you publish • Ref: ' + boost.reference + ' • Tap to change' : 'Shown first with a Featured badge once the payment is approved'}</span>
+                                    <strong><Star size={14} color="#e8621a" /> Premium Listing{boost ? ' (' + days(boost.duration) + ')' : ''}</strong>
+                                    <span>{boost ? 'Goes live after payment verification • Ref: ' + boost.reference + ' • Tap to change' : 'Shown first with a Premium badge; the listing goes live once the payment is verified'}</span>
                                 </div>
                                 <span className="sn-boost-price">{boost ? '+ ' + money(boost.amount) : promoPrices.length ? 'from ' + money(Math.min(...promoPrices)) : ''}</span>
                             </div>
@@ -536,7 +532,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
                 <div className="sn-submit-bar">
                     <button type="button" className="sn-cancel-btn" onClick={() => window.history.back()}>Cancel & Discard</button>
                     <button type="submit" className="sn-publish-btn" disabled={busy}>
-                        {busy ? 'Publishing...' : f.id ? <><Zap size={18} /> Save Changes</> : boost ? <><Zap size={18} /> Publish & Request Spotlight</> : <><Zap size={18} /> Publish Listing Free</>}
+                        {busy ? 'Publishing...' : f.id ? <><Zap size={18} /> Save Changes</> : boost ? <><Zap size={18} /> Publish as Premium Listing</> : <><Zap size={18} /> Publish Listing Free</>}
                     </button>
                 </div>
             </form>

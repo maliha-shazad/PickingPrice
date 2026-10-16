@@ -1,4 +1,4 @@
-import { Actions, money, date, Item, useLoadAll, Status, Load } from './ui';
+import { Actions, money, date, Item, useLoadAll, Status, Load, DaysLeft } from './ui';
 import { MapPin, Clock, ArrowUpRight, Plus } from 'lucide-react';
 import { sampleRequests } from '../samples';
 
@@ -44,6 +44,7 @@ export function MyRequests({ actions }: { actions: Actions }) {
                                 <div className="br-card-meta">
                                     <span className="br-pill"><MapPin size={12}/> {p.location}</span>
                                     <span className="br-pill">{p.condition}</span>
+                                    <DaysLeft item={p} />
                                 </div>
                                 
                                 <button className="br-card-btn" onClick={() => actions.open('request', p)}>
@@ -67,8 +68,8 @@ export function MyRequests({ actions }: { actions: Actions }) {
                 .br-header-wrap { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; gap: 20px; flex-wrap: wrap; }
                 .br-title { font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px; letter-spacing: -0.5px; }
                 .br-subtitle { font-size: 15px; color: #64748b; margin: 0; }
-                .br-post-btn { background: #0f766e; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s; white-space: nowrap; }
-                .br-post-btn:hover { background: #0d9488; }
+                .br-post-btn { background: #0d5c45; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s; white-space: nowrap; }
+                .br-post-btn:hover { background: #0e7559; }
                 
                 /* Grid: 3 columns */
                 .br-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown } from 'lucide-react';
-import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading, ListLoading } from './ui';
+import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown, Crown, Flame, Eye } from 'lucide-react';
+import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading, ListLoading, sellerProps, DaysLeft } from './ui';
 import { samples, sampleRequests } from '../samples';
+import { AdSlider } from './slider';
 
 const categories = [
   { name: 'Clothes', icon: Shirt, color: '#e8f5e9' },
@@ -37,33 +38,35 @@ function CategoryIcon({ cat, onClick }: { cat: typeof categories[0]; onClick: ()
   const Icon = cat.icon;
   return (
     <button className="hp-cat-pill" style={{ '--cat-color': cat.color } as React.CSSProperties} onClick={onClick}>
-      <span className="hp-cat-icon-wrap"><Icon size={22} /></span>
+      <span className="hp-cat-icon-wrap"><Icon size={32} /></span>
       <span className="hp-cat-label">{cat.name}</span>
     </button>
   );
 }
 
-function ProductCard({ item, saved, onSave, onClick }: { item: Item; saved: boolean; onSave: () => void; onClick: () => void }) {
+// premium: the golden card of the Premium Listings row, with the crown badge and a View Details button.
+function ProductCard({ item, saved, onSave, onClick, actions, premium }: { item: Item; saved: boolean; onSave: () => void; onClick: () => void; actions: Actions; premium?: boolean }) {
   return (
-    <article className="hp-product-card">
+    <article className={'hp-product-card' + (premium ? ' hp-premium-card' : '')}>
       <div className="hp-product-photo">
         <button className="hp-product-img-btn" onClick={onClick}>
           <Photo src={(item.images as string[] | undefined)?.[0] ?? (item.image as string | undefined)} alt={item.title as string} />
         </button>
-        {item.condition && <span className="hp-condition-badge">{item.condition as string}</span>}
+        {premium ? <span className="hp-premium-badge"><Crown size={13} /> PREMIUM</span> : item.condition && <span className="hp-condition-badge">{item.condition as string}</span>}
         <button className={`hp-heart-btn${saved ? ' loved' : ''}`} aria-label={`Save ${item.title}`} onClick={onSave}>
           <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
         </button>
-        {!!item.featured && <span className="hp-featured-badge">Featured</span>}
+        {!!item.featured && !premium && <span className="hp-featured-badge">Premium</span>}
       </div>
       <div className="hp-product-info">
-        <span className="hp-product-category">{item.category as string}</span>
+        <span className="hp-product-category">{item.category as string}{premium && item.condition ? ' | ' + item.condition : ''}</span>
         <button className="hp-product-title" onClick={onClick}>{item.title as string}</button>
         <strong className="hp-product-price">{money(item.price as number)}</strong>
         <div className="hp-product-meta">
           <span><MapPin size={11} /> {item.location as string}</span>
-          <span>{item.seller as string}</span>
+          <span {...sellerProps(actions, item, '')}>{item.seller as string}</span>
         </div>
+        {premium && <button className="hp-premium-view" onClick={onClick}>View Details <ArrowUpRight size={15} /></button>}
       </div>
     </article>
   );
@@ -86,6 +89,7 @@ function RequestCard({ item, onOffer }: { item: Item; onOffer: () => void }) {
       <div className="hp-request-footer">
         <span><MapPin size={11} /> {item.location as string}</span>
         <span>{item.condition as string}</span>
+        <DaysLeft item={item} />
       </div>
     </article>
   );
@@ -165,7 +169,12 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
         </label>
         <label>
           <span>Type</span>
-          <select id="hp-search-type" className="pp-select" value={kind} onChange={e => { setKind(e.target.value); setPage(1); }}>
+          <select id="hp-search-type" className="pp-select" value={kind} onChange={e => {
+            // A condition that the new type rules out goes back to "Any condition", so the two never contradict.
+            const next = e.target.value;
+            if ((next === 'new' && condition !== 'all' && condition !== 'New') || (next === 'preloved' && condition === 'New')) setCondition('all');
+            setKind(next); setPage(1);
+          }}>
             <option value="all">New and pre-loved</option>
             <option value="new">New only</option>
             <option value="preloved">Pre-loved only</option>
@@ -175,7 +184,7 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
           <span>Condition</span>
           <select id="hp-search-condition" className="pp-select" value={condition} onChange={e => { setCondition(e.target.value); setPage(1); }}>
             <option value="all">Any condition</option>
-            {SEARCH_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+            {SEARCH_CONDITIONS.filter(c => kind === 'all' || (kind === 'new' ? c === 'New' : c !== 'New')).map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
         <label>
@@ -206,7 +215,7 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
         ) : (
           <div className="hp-arrivals-grid">
             {items.map(item => (
-              <ProductCard key={String(item.id)} item={item} saved={saved.has(String(item.id))} onSave={() => onSave(String(item.id))} onClick={() => actions.open('listing', item)} />
+              <ProductCard key={String(item.id)} item={item} saved={saved.has(String(item.id))} onSave={() => onSave(String(item.id))} onClick={() => actions.open('listing', item)} actions={actions} />
             ))}
           </div>
         )}
@@ -218,33 +227,47 @@ function SearchResults({ actions, q, category, sampleMode, saved, onSave, onClea
 
 export function Homepage({ actions }: { actions: Actions }) {
   // Products follow the city chosen in the header. Pre-Loved Deals hold only used conditions and Fresh Arrivals
-  // only New, like their own pages. A small extra request tells whether any member has listed anything at all,
-  // so an empty city is not mistaken for an empty site (which shows the samples).
+  // only New, like their own pages. Each kind (pre-loved, New, premium) shows samples only until a real product of
+  // that kind exists anywhere on the site; small extra requests (size=1, every city) tell whether one does, so an
+  // empty city is not mistaken for an empty site.
   const city = actions.location && actions.location !== 'all' ? actions.location : '';
   const cityQuery = city ? '&city=' + encodeURIComponent(city) : '';
   const reqState = useLoad('requests?size=3', actions.revision);
   const usedState = useLoad('listings?type=preloved&size=6' + cityQuery, actions.revision);
   const newState = useLoad('listings?type=new&size=8' + cityQuery, actions.revision);
   const anyState = useLoad('listings?size=1', actions.revision);
+  const usedAnyState = useLoad('listings?type=preloved&size=1', actions.revision);
+  const newAnyState = useLoad('listings?type=new&size=1', actions.revision);
+  const premiumAnyState = useLoad('listings?premium=1&size=1', actions.revision);
+  const premiumState = useLoad('listings?premium=1&size=8' + cityQuery, actions.revision);
+  const popularState = useLoad('listings?sort=popular&size=12' + cityQuery, actions.revision);
 
   // Until the answers arrive nothing is shown, so samples never flash before real products and requests.
   const ready = (s: { data: unknown; error: string }) => !!s.data || !!s.error;
-  const reqsReady = ready(reqState), listsReady = ready(usedState) && ready(newState) && ready(anyState);
+  const reqsReady = ready(reqState), listsReady = ready(usedState) && ready(newState) && ready(anyState) && ready(usedAnyState) && ready(newAnyState);
+  const premiumReady = ready(premiumState) && ready(premiumAnyState);
   const realReqs = reqState.data?.items || [];
   const realUsed: Item[] = usedState.data?.items || [];
   const realNew: Item[] = newState.data?.items || [];
 
   const hasRealReqs = reqState.data?.total > 0;
   const hasRealLists = Number(anyState.data?.total) > 0;
+  const hasRealUsed = Number(usedAnyState.data?.total) > 0, hasRealNew = Number(newAnyState.data?.total) > 0, hasRealPremium = Number(premiumAnyState.data?.total) > 0;
   const citySamples = samples.filter(p => inCity(p.location, actions.location));
+  // Products with an active promotion, paid for by their sellers; sample premium products until the first real one.
+  const premium: Item[] = !premiumReady ? [] : hasRealPremium ? (premiumState.data?.items || []) : citySamples.filter(p => p.featured).slice(0, 8);
 
   const liveRequests = !reqsReady ? [] : hasRealReqs ? realReqs : sampleRequests.slice(0, 3);
-  const recentDeals: Item[] = !listsReady ? [] : hasRealLists ? realUsed : citySamples.filter(p => p.condition !== 'New').slice(0, 6);
-  const freshArrivals: Item[] = !listsReady ? [] : hasRealLists ? realNew : citySamples.filter(p => p.condition === 'New').slice(0, 8);
-  // Spotlight: a promoted product when there is one, otherwise the newest; the sample only before any real product exists.
+  const recentDeals: Item[] = !listsReady ? [] : hasRealUsed ? realUsed : citySamples.filter(p => p.condition !== 'New').slice(0, 6);
+  const freshArrivals: Item[] = !listsReady ? [] : hasRealNew ? realNew : citySamples.filter(p => p.condition === 'New').slice(0, 8);
+  // Popular Product: the most viewed product (one already in Premium Listings above is skipped, so it is not shown twice);
+  // with no views yet, the newest product. The sample only before any real product exists.
+  const premiumIds = new Set(premium.map(p => p.id));
+  const byViews: Item[] = popularState.data?.items || [];
   const realLists = [...realNew, ...realUsed].sort((a, b) => String(b.created).localeCompare(String(a.created)));
-  const spotlight: any = !listsReady ? null : hasRealLists ? (realLists.find((l: Item) => !!l.featured) || realLists[0] || null) : (inCity(featuredSpotlight.location, actions.location) ? featuredSpotlight : null);
-  const spotlightFeatured = !!spotlight?.featured || !!spotlight?.sample;
+  const mostViewed = byViews.find(p => Number(p.views) > 0 && !premiumIds.has(p.id)) || byViews.find(p => Number(p.views) > 0) || null;
+  const spotlight: any = !listsReady || !ready(popularState) ? null : hasRealLists ? (mostViewed || byViews[0] || realLists[0] || null) : (inCity(featuredSpotlight.location, actions.location) ? featuredSpotlight : null);
+  const spotlightPopular = !!spotlight?.sample || Number(spotlight?.views) > 0;
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [catOpen, setCatOpen] = useState(false);
@@ -268,6 +291,15 @@ export function Homepage({ actions }: { actions: Actions }) {
     actions.submitSearch(heroSearch);
   };
 
+  // Moves the premium row by about one card; the arrows show only while the row is wider than the screen.
+  const scrollPremium = (dir: number) => document.getElementById('premium-scroll')?.scrollBy({ left: dir * 280, behavior: 'smooth' });
+  const [premiumScrolls, setPremiumScrolls] = useState(false);
+  useEffect(() => {
+    const measure = () => { const el = document.getElementById('premium-scroll'); setPremiumScrolls(!!el && el.scrollWidth > el.clientWidth + 4); };
+    measure(); window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [premium.length]);
+
   const scrollDeals = (dir: 'left' | 'right') => {
     const el = document.getElementById('deals-scroll');
     if (el) el.scrollBy({ left: dir === 'right' ? 280 : -280, behavior: 'smooth' });
@@ -290,6 +322,7 @@ export function Homepage({ actions }: { actions: Actions }) {
       {/* ── HERO ── */}
       <section className="hp-hero">
         <div className="hp-hero-content">
+          <p className="hp-hero-slogan">Buy Smart · Sell Easy · Find What You Need</p>
           <h1 className="hp-hero-title">Find what you need. Sell what you don&apos;t.</h1>
           <p className="hp-hero-sub">
             Buy new and pre-loved products or post a request and let <br />sellers come to you.
@@ -310,18 +343,18 @@ export function Homepage({ actions }: { actions: Actions }) {
               </button>
               {catOpen && (
                 <div className="pp-location-dropdown hp-cat-dropdown-menu">
-                  <button 
-                    type="button" 
-                    className={`pp-loc-option${searchCategory === 'all' ? ' selected' : ''}`} 
+                  <button
+                    type="button"
+                    className={`pp-loc-option${searchCategory === 'all' ? ' selected' : ''}`}
                     onClick={() => { setSearchCategory('all'); setCatOpen(false); }}
                   >
                     All Categories
                   </button>
                   {HERO_CATS.slice(1).map(c => (
-                    <button 
-                      type="button" 
-                      key={c} 
-                      className={`pp-loc-option${searchCategory === c ? ' selected' : ''}`} 
+                    <button
+                      type="button"
+                      key={c}
+                      className={`pp-loc-option${searchCategory === c ? ' selected' : ''}`}
                       onClick={() => { setSearchCategory(c); setCatOpen(false); }}
                     >
                       {c}
@@ -391,21 +424,48 @@ export function Homepage({ actions }: { actions: Actions }) {
 
       <div className="hp-body">
 
-        {/* ── LIVE SEARCH RESULTS (shown when searching) ── */}
+        {/* SEARCH RESULTS first, above the slider; everything below stays as it is */}
         {isSearching && (
           <SearchResults actions={actions} q={searchQ.trim()} category={searchCategory} sampleMode={listsReady && !hasRealLists}
             saved={savedIds} onSave={toggleSave} onClear={() => { setSearchQ(''); setSearchCategory('all'); }} anchor={searchResultsRef} />
         )}
 
+        {/* SLIDER: announcements, just above the categories */}
+        <AdSlider actions={actions} />
+
         {/* EXPLORE CATEGORIES */}
-        {!isSearching && (
+        {(
         <section className="hp-section">
           <div className="hp-section-head">
             <h2 className="hp-section-title">Explore Categories</h2>
-            <button className="hp-see-all" onClick={() => actions.go('Explore')}>See All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" onClick={() => actions.go('AllCategories')}>See All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-categories-grid">
             {categories.map(cat => <CategoryIcon key={cat.name} cat={cat} onClick={() => setSearchCategory(cat.name)} />)}
+          </div>
+        </section>
+        )}
+
+        {/* PREMIUM LISTINGS */}
+        {premium.length > 0 && (
+        <section className="hp-section hp-premium-section">
+          <div className="hp-section-head">
+            <div className="hp-section-title-wrap">
+              <Crown size={20} className="hp-crown-icon" />
+              <h2 className="hp-section-title">Premium Listings</h2>
+            </div>
+            <span className="hp-premium-note">Promoted by sellers</span>
+          </div>
+          <div className="hp-premium-row">
+            {premiumScrolls && <button className="hp-premium-arrow prev" aria-label="Previous premium products" onClick={() => scrollPremium(-1)}><ChevronLeft size={20} /></button>}
+            <div className="hp-premium-scroll" id="premium-scroll">
+              {premium.map(item => (
+                <div key={item.id} className="hp-premium-card-wrap">
+                  <ProductCard premium item={{ ...item, featured: true }} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} actions={actions} />
+                </div>
+              ))}
+            </div>
+            {premiumScrolls && <button className="hp-premium-arrow next" aria-label="Next premium products" onClick={() => scrollPremium(1)}><ChevronRight size={20} /></button>}
           </div>
         </section>
         )}
@@ -427,23 +487,24 @@ export function Homepage({ actions }: { actions: Actions }) {
           </div>
         </section>
 
-        {/* FEATURED SPOTLIGHT */}
+        {/* POPULAR PRODUCT: the most viewed */}
         {spotlight && <section className="hp-spotlight">
           <div className="hp-spotlight-badges">
-            <span className="hp-spotlight-badge">{spotlightFeatured ? 'Featured' : 'Just Listed'}</span>
+            <span className="hp-spotlight-badge">{spotlightPopular ? <><Flame size={13} /> Most Viewed</> : 'Just Listed'}</span>
           </div>
           <div className="hp-spotlight-inner">
             <div className="hp-spotlight-img-wrap">
               <Photo src={spotlight.images?.[0] ?? spotlight.image} alt={String(spotlight.title)} />
             </div>
             <div className="hp-spotlight-info">
-              <span className="hp-spotlight-eyebrow">{spotlightFeatured ? 'Featured Spotlight' : 'Latest Listing'}</span>
+              <span className="hp-spotlight-eyebrow">{spotlightPopular ? 'Popular Product' : 'Latest Listing'}</span>
               <h2 className="hp-spotlight-title">{spotlight.title}</h2>
               <p className="hp-spotlight-sub">{spotlight.subtitle || [spotlight.category, spotlight.condition].filter(Boolean).join(' · ')}</p>
               <div className="hp-spotlight-price">{money(Number(spotlight.price) || 0)}</div>
               <div className="hp-spotlight-meta">
                 <span><MapPin size={13} /> {spotlight.location}</span>
-                <span>{spotlight.seller} {!!spotlight.verified && <ShieldCheck size={13} />}</span>
+                {Number(spotlight.views) > 0 && <span><Eye size={13} /> {Number(spotlight.views).toLocaleString('en-PK')} {Number(spotlight.views) === 1 ? 'view' : 'views'}</span>}
+                <span {...sellerProps(actions, spotlight as Item, '')}>{spotlight.seller} {!!spotlight.verified && <ShieldCheck size={13} />}</span>
               </div>
               <button className="hp-spotlight-buy" onClick={() => actions.open('listing', spotlight as Item)}>
                 Buy Now <ArrowUpRight size={16} />
@@ -453,7 +514,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         </section>}
 
         {/* RECENT PRE-LOVED DEALS */}
-        {!isSearching && (
+        {(
         <section className="hp-section">
           <CityHeading actions={actions} />
           <div className="hp-section-head">
@@ -467,7 +528,7 @@ export function Homepage({ actions }: { actions: Actions }) {
           <div className="hp-horizontal-scroll" id="deals-scroll">
             {recentDeals.length > 0 ? recentDeals.map(item => (
               <div key={item.id} className="hp-deal-card-wrap">
-                <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
+                <ProductCard item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} actions={actions} />
               </div>
             )) : listsReady ? <NoneInCity actions={actions} what="pre-loved products" /> : <ListLoading />}
           </div>
@@ -475,7 +536,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         )}
 
         {/* FRESH ARRIVALS: products in New condition only; hidden when there are none */}
-        {!isSearching && freshArrivals.length > 0 && (
+        {freshArrivals.length > 0 && (
         <section className="hp-section">
           <CityHeading actions={actions} />
           <div className="hp-section-head">
@@ -487,7 +548,7 @@ export function Homepage({ actions }: { actions: Actions }) {
           </div>
           <div className="hp-arrivals-grid">
             {freshArrivals.length > 0 ? freshArrivals.map(item => (
-              <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} />
+              <ProductCard key={item.id} item={item} saved={savedIds.has(item.id)} onSave={() => toggleSave(item.id)} onClick={() => actions.open('listing', item)} actions={actions} />
             )) : null}
           </div>
         </section>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { ChevronRight, Heart, Share2, MapPin, Clock, ShieldCheck, CheckCircle2, Star, MessageSquare, Phone, Send, Flag, BadgePercent, Repeat } from 'lucide-react';
-import { Item, Actions, money, Photo, useLoad, Load, api } from './ui';
+import { useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Heart, Share2, MapPin, Clock, ShieldCheck, CheckCircle2, Star, MessageSquare, Phone, Send, Flag, BadgePercent, Repeat } from 'lucide-react';
+import { Item, Actions, money, Photo, useLoad, Load, api, ReviewCard, ReviewSummary } from './ui';
 import { toast } from 'sonner';
 
 // "Listed 3 hours ago": how long since the seller posted it.
@@ -18,6 +18,19 @@ const since = (iso: string) => {
 
 export function ProductPage({ item, actions }: { item: Item; actions: Actions }) {
   const [photoIdx, setPhotoIdx] = useState(0);
+  // The photo slider: the track scrolls sideways (swipe on phones); the mouse can drag it; arrows, dots and
+  // thumbnails move it; the shown photo follows the scroll position.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
+  const showPhoto = (i: number, count: number) => {
+    const next = ((i % count) + count) % count, el = trackRef.current;
+    setPhotoIdx(next);
+    if (el) el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
+  };
+  const onTrackScroll = () => { const el = trackRef.current; if (!el || drag.current) return; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); setPhotoIdx(p => (p === i ? p : i)); };
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => { if (e.pointerType !== 'mouse' || e.button !== 0 || !trackRef.current) return; drag.current = { x: e.clientX, left: trackRef.current.scrollLeft, moved: false }; trackRef.current.classList.add('dragging'); };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => { const d = drag.current, el = trackRef.current; if (!d || !el) return; if (Math.abs(e.clientX - d.x) > 4) d.moved = true; el.scrollLeft = d.left - (e.clientX - d.x); };
+  const endDrag = (count: number) => { const d = drag.current, el = trackRef.current; if (!d || !el) return; drag.current = null; const delta = el.scrollLeft - d.left, w = el.clientWidth; const from = Math.round(d.left / Math.max(1, w)); showPhoto(Math.max(0, Math.min(count - 1, Math.abs(delta) > w * 0.15 ? from + (delta > 0 ? 1 : -1) : from)), count); window.setTimeout(() => el.classList.remove('dragging'), 450); };
 
   // Fetch seller profile to get reviews and ratings
   const sellerState = useLoad(item.owner ? 'profiles/' + item.owner : null, actions.revision);
@@ -28,7 +41,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
   const location = String(item.location || 'Pakistan');
   const category = String(item.category || 'Products');
   const description = String(item.description || 'The seller has not added a description.');
-  
+
   // Extract images
   let images: string[] = [];
   if (Array.isArray(item.images) && item.images.length > 0) {
@@ -81,7 +94,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
         <div className="pp-prod-top-actions">
           <button className="pp-icon-btn" onClick={handleShare}><Share2 size={18} /></button>
           <button className={`pp-icon-btn ${isSaved ? 'saved' : ''}`} onClick={handleSave}>
-            <Heart size={18} fill={isSaved ? '#10b981' : 'none'} color={isSaved ? '#10b981' : 'currentColor'} />
+            <Heart size={18} fill={isSaved ? '#0d5c45' : 'none'} color={isSaved ? '#0d5c45' : 'currentColor'} />
           </button>
         </div>
       </div>
@@ -95,30 +108,43 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
               <span className="badge-like-new">{item.condition || 'Like New'}</span>
               {!!item.verified && <span className="badge-verified"><ShieldCheck size={12} /> Verified Listing</span>}
             </div>
-            
-            {/* Main Image */}
+
+            {/* Main Image: a slider of every photo */}
             {images.length > 0 ? (
-              <Photo src={images[photoIdx]} alt={title} className="pp-main-photo" />
+              <>
+                <div className="pp-photo-track" ref={trackRef} onScroll={onTrackScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={() => endDrag(images.length)} onPointerLeave={() => endDrag(images.length)} onDragStart={e => e.preventDefault()}
+                  tabIndex={0} aria-roledescription="carousel" aria-label="Product photos" onKeyDown={e => { if (e.key === 'ArrowRight') showPhoto(photoIdx + 1, images.length); if (e.key === 'ArrowLeft') showPhoto(photoIdx - 1, images.length); }}>
+                  {images.map((src, i) => (
+                    <div className="pp-photo-slide" key={i} aria-hidden={i !== photoIdx}>
+                      <Photo src={src} alt={title + (images.length > 1 ? ' (photo ' + (i + 1) + ')' : '')} className="pp-main-photo" />
+                    </div>
+                  ))}
+                </div>
+                {images.length > 1 && <>
+                  <button type="button" className="pp-photo-arrow prev" aria-label="Previous photo" onClick={() => showPhoto(photoIdx - 1, images.length)}><ChevronLeft size={20} /></button>
+                  <button type="button" className="pp-photo-arrow next" aria-label="Next photo" onClick={() => showPhoto(photoIdx + 1, images.length)}><ChevronRight size={20} /></button>
+                </>}
+              </>
             ) : (
               <div className="mock-thumb-bg" style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#999'}}>No Photo</div>
             )}
-            
+
             {images.length > 0 && (
               <div className="badge-photos-count">{photoIdx + 1}/{images.length} Photos</div>
             )}
           </div>
-          
+
           {images.length > 1 && (
             <>
               <div className="pp-prod-dots">
                 {images.map((_, i) => (
-                  <span key={i} className={`dot ${i === photoIdx ? 'active' : ''}`} onClick={() => setPhotoIdx(i)}></span>
+                  <span key={i} className={`dot ${i === photoIdx ? 'active' : ''}`} onClick={() => showPhoto(i, images.length)}></span>
                 ))}
               </div>
-              
+
               <div className="pp-prod-thumbnails">
                 {images.map((img, i) => (
-                  <div key={i} className={`pp-thumb ${i === photoIdx ? 'active' : ''}`} onClick={() => setPhotoIdx(i)}>
+                  <div key={i} className={`pp-thumb ${i === photoIdx ? 'active' : ''}`} onClick={() => showPhoto(i, images.length)}>
                     <Photo src={img} alt={`Thumb ${i + 1}`} />
                   </div>
                 ))}
@@ -134,7 +160,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             <h1 className="pp-prod-price">{priceText}</h1>
             <div className="pp-prod-price-badges">
               <span className="badge-fixed-price">{item.negotiable ? 'ASKING' : 'FIXED'}<br/>PRICE</span>
-              <span className="badge-negotiable"><span className="neg-dot" style={item.negotiable ? { background: '#10b981' } : undefined}></span> Negotiable: {item.negotiable ? 'Yes' : 'No'}</span>
+              <span className="badge-negotiable"><span className="neg-dot" style={item.negotiable ? { background: '#0d5c45' } : undefined}></span> Negotiable: {item.negotiable ? 'Yes' : 'No'}</span>
             </div>
           </div>
 
@@ -168,7 +194,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
             </div>
             <div className="cond-badge">
               <span>CATEGORY</span>
-              <strong>{item.condition === 'New' ? 'Brand New' : 'Pre-Loved'}</strong>
+              <strong>{String(item.category || 'Other')}{item.subcategory ? ' › ' + String(item.subcategory) : ''}</strong>
             </div>
             {item.brand ? <div className="cond-badge" id="pp-brand">
               <span>BRAND</span>
@@ -207,7 +233,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
                 <Star size={14} className="star-icon" fill="currentColor" /> {sellerData?.rating?.average ? Number(sellerData.rating.average).toFixed(1) : 'New'} ({sellerData?.rating?.count || 0})
               </div>
             </div>
-            
+
             <div className="seller-trust-badges">
               {!!sellerData?.profile?.verified && <span><ShieldCheck size={12} /> Verified Member</span>}
               {sellerData?.activeListings > 0 && <span><CheckCircle2 size={12} /> {sellerData.activeListings} Active Listings</span>}
@@ -218,7 +244,7 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
                 if (item.owner) {
                   actions.open('profile', { id: item.owner });
                 } else {
-                  alert('Seller profile is not available for sample items.');
+                  toast.info('Seller profiles open on real products; this one is a sample.');
                 }
               }}>View Seller Profile ➔</button>
             </div>
@@ -245,17 +271,10 @@ export function ProductPage({ item, actions }: { item: Item; actions: Actions })
         <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#111827' }}>Seller Reviews</h3>
         <Load state={sellerState}>
           {sellerData && sellerData.reviews && sellerData.reviews.items.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="pp-review-list">
+              <ReviewSummary average={sellerData.rating?.average} count={sellerData.rating?.count} />
               {sellerData.reviews.items.map((r: Item) => (
-                <div key={r.id} style={{ padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <strong style={{ color: '#111827', fontSize: '14px' }}>{r.reviewer}</strong>
-                    <span style={{ color: '#f59e0b', fontSize: '12px', display: 'flex', alignItems: 'center' }}>
-                      <Star size={12} fill="currentColor" /> {r.rating}
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#4b5563', lineHeight: '1.5' }}>{r.body}</p>
-                </div>
+                <ReviewCard key={r.id} review={r} mine={r.owner === actions.user?.id} onReport={actions.user && r.owner !== actions.user.id ? () => actions.open('report', { type: 'review', id: r.id }) : undefined} />
               ))}
             </div>
           ) : (
@@ -384,9 +403,9 @@ function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
   if (submitted) {
     return (
       <div id="pp-review-thanks" style={{ marginTop: '24px', padding: '24px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', textAlign: 'center' }}>
-        <CheckCircle2 size={32} style={{ color: '#059669', margin: '0 auto 8px', display: 'block' }} />
-        <p style={{ fontSize: '15px', fontWeight: 600, color: '#065f46', margin: 0 }}>Thank you for your review!</p>
-        <p style={{ fontSize: '13px', color: '#047857', margin: '4px 0 0' }}>Your feedback helps other buyers.</p>
+        <CheckCircle2 size={32} style={{ color: '#0d5c45', margin: '0 auto 8px', display: 'block' }} />
+        <p style={{ fontSize: '15px', fontWeight: 600, color: '#0a5038', margin: 0 }}>Thank you for your review!</p>
+        <p style={{ fontSize: '13px', color: '#0a5038', margin: '4px 0 0' }}>Your feedback helps other buyers.</p>
       </div>
     );
   }
@@ -443,7 +462,7 @@ function ReviewForm({ item, actions }: { item: Item; actions: Actions }) {
         onClick={handleSubmit}
         disabled={submitting || rating === 0}
         style={{
-          width: '100%', padding: '12px', background: rating === 0 ? '#d1d5db' : '#059669', color: '#fff',
+          width: '100%', padding: '12px', background: rating === 0 ? '#d1d5db' : '#0d5c45', color: '#fff',
           border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: rating === 0 ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s',
         }}

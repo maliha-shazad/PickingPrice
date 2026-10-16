@@ -12,6 +12,8 @@ export function Messages({ actions }: { actions: Actions }) {
     const state = useLoad('conversations?page=' + page + '&size=20', actions.revision);
     const convos: Item[] = state.data?.items || [];
     const total = state.data?.total || 0;
+    // Unread messages across all chats; the badge goes away once every chat has been opened.
+    const unread = Number(state.data?.unread) || 0;
 
     const filtered = searchQ.trim()
         ? convos.filter((c: Item) =>
@@ -26,7 +28,7 @@ export function Messages({ actions }: { actions: Actions }) {
                 <aside className={`msg-sidebar${current ? ' msg-sidebar-hidden-mobile' : ''}`}>
                     <div className="msg-sidebar-header">
                         <h2 className="msg-sidebar-title"><MessageCircle size={18} /> Messages</h2>
-                        <span className="msg-sidebar-count">{total}</span>
+                        {unread > 0 && <span className="msg-sidebar-count" title={unread + (unread === 1 ? ' unread message' : ' unread messages')}>{unread}</span>}
                     </div>
 
                     <div className="msg-search-wrap">
@@ -52,7 +54,7 @@ export function Messages({ actions }: { actions: Actions }) {
                             {filtered.map((c: Item) => (
                                 <button
                                     key={c.id}
-                                    className={`msg-conv-item${current === c.id ? ' active' : ''}`}
+                                    className={`msg-conv-item${current === c.id ? ' active' : ''}${Number(c.unread) > 0 && current !== c.id ? ' unread' : ''}`}
                                     onClick={() => setCurrent(c.id)}
                                 >
                                     <div className="msg-conv-avatar">
@@ -63,7 +65,7 @@ export function Messages({ actions }: { actions: Actions }) {
                                     <div className="msg-conv-info">
                                         <div className="msg-conv-name-row">
                                             <strong className="msg-conv-name">{c.other_name || 'User'}</strong>
-                                            <span className="msg-conv-time">{date(c.updated)}</span>
+                                            <span className="msg-conv-time">{Number(c.unread) > 0 && current !== c.id && <span className="msg-conv-unread">{c.unread}</span>}{date(c.updated)}</span>
                                         </div>
                                         <p className="msg-conv-preview"><span className="msg-conv-kind">{contextLabel(c.context as Item | null, String(c.context_type || ''))}</span>{String(c.title || 'Conversation')}</p>
                                     </div>
@@ -121,7 +123,7 @@ function ChatPanel({ actions, id, onBack }: { actions: Actions; id: string; onBa
     const messages: Item[] = data?.items || [];
     const conv = data?.conversation;
     // Opening the chat marked its message notifications read on the server: update the bell's count.
-    useEffect(() => { if (Number(data?.cleared) > 0) actions.refresh(); }, [data]);
+    useEffect(() => { if (Number(data?.cleared) > 0 || Number(data?.wasUnread) > 0) actions.refresh(); }, [data]);
 
     useEffect(() => {
         // Scroll the message list itself, not the page: the page jumping down hid the chat's header.
@@ -253,7 +255,8 @@ export function Notifications({ actions }: { actions: Actions }) {
     }, [state.data]);
 
     const follow = (n: Item) => {
-        actions.perform('notifications/' + n.id, 'PATCH', {});
+        // Marked as read quietly: following a notification is not a change the member made.
+        api('notifications/' + n.id, 'PATCH', {}).then(() => actions.refresh()).catch(() => { });
         if (n.link_type === 'listing') actions.open('listing', { id: n.link_id });
         else if (n.link_type === 'request') actions.open('request', { id: n.link_id });
         else if (n.link_type === 'conversation') actions.open('conversation', { id: n.link_id });

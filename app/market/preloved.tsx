@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, CheckCircle2, ShieldCheck, MessageCircle, MapPin, Search, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Timer, CheckCheck, Plus, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading, ListLoading } from './ui';
+import { Actions, Photo, useLoadAll, DELIVERY_OPTIONS, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading, ListLoading, sellerProps } from './ui';
 import { samples } from '../samples';
 
 
@@ -79,11 +79,12 @@ export function PreLoved({ actions }: { actions: Actions }) {
 
   const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
-  const hasRealData = state.data?.total > 0;
   const loaded = !!state.data || !!state.error;
   // Samples only once the site is known to have no real listing; nothing (a placeholder) while that is still loading.
   // Only the chosen city's products, whether they are members' listings or the samples.
-  const sourceData = (!loaded ? [] : hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  // Pre-loved products only: samples until a real pre-loved product exists (real New products do not hide them).
+  const realUsedOnly = realListings.filter((p: any) => p.condition !== 'New');
+  const sourceData = (!loaded ? [] : realUsedOnly.length ? realUsedOnly : samples.filter(p => p.condition !== 'New')).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const filtered = sourceData.filter((p: any) => p.condition !== 'New').filter((p: any) => {
@@ -262,7 +263,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
                     <option value="Price: Low to High">Price: Low to High</option>
                     <option value="Price: High to Low">Price: High to Low</option>
                   </select>
-                  <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#2d6a4f' }} />
+                  <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#0d5c45' }} />
                 </div>
               </div>
             </div>
@@ -291,11 +292,11 @@ export function PreLoved({ actions }: { actions: Actions }) {
                     <div className="pl-card-catrow">
                       <span className="pl-card-cat">{p.category}</span>
                       {p.featured ? (
-                         <span className="pl-card-badge" style={{color: '#0d9488', background: '#ccfbf1'}}>Featured</span>
+                         <span className="pl-card-badge" style={{color: '#0e7559', background: '#ccfbf1'}}>Premium</span>
                       ) : p.condition === 'New' ? (
                          <span className="pl-card-badge" style={{color: '#2563eb', background: '#dbeafe'}}>New Arrival</span>
                       ) : (
-                         <span className="pl-card-badge" style={{color: '#0d9488', background: '#ccfbf1'}}>Pre-Loved</span>
+                         <span className="pl-card-badge" style={{color: '#0e7559', background: '#ccfbf1'}}>Pre-Loved</span>
                       )}
                     </div>
                     <h3 className="pl-card-title">{p.title}</h3>
@@ -304,7 +305,7 @@ export function PreLoved({ actions }: { actions: Actions }) {
                     </div>
                     <div className="pl-card-ref">{(p as any).brand ? 'Brand: ' + (p as any).brand : 'Condition: ' + p.condition}</div>
                     
-                    <div className="pl-card-seller">
+                    <div {...sellerProps(actions, p as any, 'pl-card-seller')}>
                       <div className="pl-seller-avatar">{p.seller.charAt(0)}</div>
                       <div className="pl-seller-info">
                         <span className="pl-seller-name">{p.seller}</span>

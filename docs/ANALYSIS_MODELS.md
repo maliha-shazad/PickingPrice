@@ -25,7 +25,7 @@ flowchart LR
   System -- "records, reports,<br/>statistics, activity log" --> Admin
   System -- "notification emails" --> Email
   Seller -. "pays the platform charge<br/>outside the system" .-> Pay
-  Pay -. "payment reference" .-> Seller
+  Pay -. "payment details and receipt" .-> Seller
 ```
 
 | Actor | Interaction with Picking Price |
@@ -34,7 +34,7 @@ flowchart LR
 | Seller | Registers and signs in, creates and manages listings, answers buyer requests with offers, chats with buyers, requests extra listing slots and promotions |
 | Administrator | Manages members, listings, requests, reviews and categories, reviews reports, approves or rejects platform payments, sets limits and prices |
 | Email service (optional) | Delivers a copy of each in-app notification when an email key is configured |
-| External payment method | Receives the platform charge outside the system; the seller enters the payment reference for the administrator to verify |
+| External payment method | Receives the platform charge outside the system; the seller enters the payment details (method, transaction ID, sender, amount, date and a receipt screenshot) for the administrator to cross-check |
 
 ## 2. Core marketplace flows
 
@@ -63,8 +63,9 @@ flowchart LR
   F --> G{Buyer decides}
   G -- Selects an offer --> H[Seller Selected:<br/>sellers notified]
   G -- No longer needed --> I[Closed or Cancelled]
-  B -. expiry date passes .-> J[Expired]
-  E -. expiry date passes .-> J
+  B -. 30 days pass with no<br/>offer selected .-> J[Expired: taken down,<br/>buyer notified]
+  E -. 30 days pass with no<br/>offer selected .-> J
+  J -. Post again .-> B
 ```
 
 ### 2.3 Promotion
@@ -72,13 +73,15 @@ flowchart LR
 ```mermaid
 flowchart LR
   A[Seller chooses a listing<br/>and a promotion length] --> B[Seller pays outside<br/>the platform]
-  B --> C[Seller submits the<br/>payment reference]
+  B --> C[Seller submits the payment<br/>details and receipt]
   C --> D[Payment request:<br/>Pending]
   D --> E{Administrator<br/>checks the payment}
-  E -- Approved --> F[Promotion active:<br/>Featured badge]
+  E -- Approved --> F[Premium Listing active:<br/>Premium badge]
   E -- Rejected --> G[Seller notified<br/>with the reason]
   F --> H[Promotion ends on<br/>its expiry date]
 ```
+
+A **Premium Listing** chosen while creating the listing works the same way, except that the listing itself waits (*Awaiting payment*, seen only by its seller) until the payment is approved, and goes live with the Premium badge at that moment. If the payment is rejected the seller can pay again or publish it as a free listing.
 
 ### 2.4 Additional listing slots
 
@@ -86,7 +89,7 @@ flowchart LR
 flowchart LR
   A[Seller reaches the<br/>free listing limit] --> B[Seller chooses the number<br/>of extra slots]
   B --> C[Seller pays outside<br/>the platform]
-  C --> D[Seller submits the<br/>payment reference]
+  C --> D[Seller submits the payment<br/>details and receipt]
   D --> E{Administrator<br/>checks the payment}
   E -- Approved --> F[Extra slots added:<br/>seller can list again]
   E -- Rejected --> G[Seller notified<br/>with the reason]
@@ -111,7 +114,7 @@ erDiagram
   USER ||--o{ REPORT : "files"
   USER ||--o{ NOTIFICATION : "receives"
   LISTING ||--o{ WISHLIST : "saved in"
-  LISTING ||--o{ PROMOTION : "featured by"
+  LISTING ||--o{ PROMOTION : "made premium by"
   LISTING ||--o{ PAYMENT_REQUEST : "promotion for"
   BUYER_REQUEST ||--o{ SELLER_OFFER : "receives"
   CONVERSATION ||--o{ MESSAGE : "contains"
@@ -146,6 +149,7 @@ erDiagram
     text images
     int negotiable
     int exchange
+    int views
     text status
   }
   BUYER_REQUEST {
@@ -199,6 +203,10 @@ erDiagram
     text listing_id FK
     int amount
     text reference
+    text method
+    text sender_account
+    int paid_amount
+    text receipt
     text status
     text verified_at
   }
@@ -252,7 +260,7 @@ erDiagram
 | Reports | `reports` |
 | Notifications | `notifications` |
 
-Supporting tables that are not marketplace entities: `sessions`, `auth_attempts`, `oauth_states`, `uploads`, `settings`, `conversation_reads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`, `notification_emails` and `schema_migrations`.
+Supporting tables that are not marketplace entities: `sessions`, `auth_attempts`, `oauth_states`, `uploads`, `settings`, `conversation_reads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`, `notification_emails`, `slides` (the slider at the top of the product pages), `listing_views` (recent product views, so each visitor counts once a day) and `schema_migrations`.
 
 A listing or request stores its category by name; renaming a category in the admin panel updates the items that use it. A report points at its target (listing, request, message, review or member) through `target_type` and `target_id`.
 

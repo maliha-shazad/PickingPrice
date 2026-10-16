@@ -75,6 +75,14 @@ try{
  r=await fetch(config.origin+'/api/market/listings/'+created.id);equal((await r.json() as {delivery:string[]}).delivery,['In-Store Pickup','Nationwide Delivery']);
  r=await fetch(config.origin+'/api/market/listings');equal(((await r.json()) as {items:{id:string;delivery:string[]}[]}).items.find(i=>i.id===created.id)!.delivery,['In-Store Pickup','Nationwide Delivery']);
  r=await fetch(config.origin+'/api/market/admin/users',{headers:{Cookie:cookie}});equal(r.status,403);
+ // Product views: one per visitor per day; the seller's own visits do not count; sort=popular puts the most viewed first.
+ const viewsOf=async()=>((await (await fetch(config.origin+'/api/market/listings?sort=popular&size=50')).json()) as {items:{id:string;views:number}[]}).items.find(i=>i.id===created.id)!.views;
+ const before=await viewsOf();
+ await fetch(config.origin+'/api/market/listings/'+created.id,{headers:{'User-Agent':'view-test-a'}});await fetch(config.origin+'/api/market/listings/'+created.id,{headers:{'User-Agent':'view-test-a'}});
+ equal(await viewsOf(),before+1);
+ await fetch(config.origin+'/api/market/listings/'+created.id,{headers:{'User-Agent':'view-test-b'}});equal(await viewsOf(),before+2);
+ await fetch(config.origin+'/api/market/listings/'+created.id,{headers:{Cookie:cookie}});equal(await viewsOf(),before+2);
+ r=await fetch(config.origin+'/api/market/listings?sort=popular&size=1');equal(((await r.json()) as {items:{id:string}[]}).items[0].id,created.id);
  // Request drafts (Post a Request > Save Draft for Later): saved per member, updated in place, deleted on request.
  const read=(path:string,c='')=>fetch(config.origin+path,{headers:{Cookie:c}});
  const del=(path:string,c=cookie)=>fetch(config.origin+path,{method:'DELETE',headers:{Origin:config.origin,Cookie:c}});
@@ -194,6 +202,42 @@ try{
  r=await send('/api/admin/logout',{},admin);equal(r.status,200);r=await get('/api/admin/market/admin/stats',admin);equal(r.status,401);
  r=await send('/api/admin/login',{email:boss,password:first});equal(r.status,401);
  r=await send('/api/admin/login',{email:boss,password:second});equal(r.status,200);const panel=r.headers.get('set-cookie')!.split(';')[0];
+ // The slider: the administrator uploads images and videos or adds YouTube links; visitors get the active slides.
+ const adminUpload=(body:Buffer,c=panel,type='application/octet-stream')=>fetch(config.origin+'/api/admin/files',{method:'POST',headers:{Origin:config.origin,Cookie:c,'Content-Type':type},body});
+ r=await adminUpload(png,'');equal(r.status,401);r=await adminUpload(png,cookie);equal(r.status,401);
+ r=await adminUpload(Buffer.from('not a picture or a video at all'));equal(r.status,400);
+ r=await adminUpload(png,panel,'image/png');equal(r.status,200);const slideImage=await r.json() as {url:string;mime:string};equal(slideImage.mime,'image/png');
+ const mp4=Buffer.concat([Buffer.from([0,0,0,24]),Buffer.from('ftypmp42'),Buffer.alloc(4000,1)]);
+ r=await adminUpload(mp4,panel,'video/mp4');equal(r.status,200);const slideVideo=await r.json() as {url:string;mime:string};equal(slideVideo.mime,'video/mp4');
+ // Videos are served in parts, which browsers (iPhones in particular) need to play them.
+ r=await fetch(config.origin+slideVideo.url,{headers:{Range:'bytes=0-99'}});equal(r.status,206);equal(r.headers.get('content-type'),'video/mp4');equal((await r.arrayBuffer()).byteLength,100);
+ const slides=(body:unknown,c=panel,path='')=>fetch(config.origin+'/api/admin/market/admin/slides'+path,{method:'POST',headers:{Origin:config.origin,Cookie:c,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ r=await slides({kind:'image',url:slideImage.url,title:'Eid sale',link:'/#brandnew',order:1},cookie);equal(r.status,401);
+ r=await slides({kind:'image',url:slideImage.url,title:'Eid sale',link:'/#brandnew',order:1});equal(r.status,200);const firstSlide=await r.json() as {id:string};
+ r=await slides({kind:'video',url:slideImage.url,order:2});equal(r.status,400);   // an image is not a video
+ r=await slides({kind:'video',url:slideVideo.url,link:'https://example.test/offer',order:2});equal(r.status,200);
+ r=await slides({kind:'youtube',url:'https://youtu.be/dQw4w9WgXcQ?t=5',order:3});equal(r.status,200);
+ r=await slides({kind:'youtube',url:'https://example.test/watch?v=dQw4w9WgXcQ'});equal(r.status,400);
+ r=await slides({kind:'image',url:slideImage.url,link:'javascript:alert(1)'});equal(r.status,400);
+ r=await slides({kind:'image',url:slideImage.url,link:'//elsewhere.test'});equal(r.status,400);
+ type Slide={id:string;kind:string;url:string;mobile_url:string;title:string;link:string};
+ // Phone versions: same kind as the slide, none for YouTube; kept unless changed, removed with ''.
+ r=await adminUpload(png,panel,'image/png');const phoneImage=await r.json() as {url:string};
+ r=await slides({kind:'image',url:slideImage.url,mobileUrl:slideVideo.url});equal(r.status,400);   // a video is not a phone image
+ r=await slides({kind:'youtube',url:'https://youtu.be/dQw4w9WgXcQ',mobileUrl:phoneImage.url});equal(r.status,400);
+ r=await slides({kind:'image',url:slideImage.url,mobileUrl:'/api/files/not-uploaded'});equal(r.status,400);
+ const shown=async()=>((await (await get('/api/market/slides')).json()) as {items:Slide[]}).items;
+ r=await slides({mobileUrl:phoneImage.url},panel,'/'+firstSlide.id);equal(r.status,200);
+ let visible=await shown();equal(visible[0].mobile_url,phoneImage.url);
+ r=await slides({title:'Eid sale'},panel,'/'+firstSlide.id);equal(r.status,200);visible=await shown();equal(visible[0].mobile_url,phoneImage.url);   // kept when not sent
+ r=await slides({mobileUrl:''},panel,'/'+firstSlide.id);equal(r.status,200);visible=await shown();equal(visible[0].mobile_url,'');
+ r=await slides({kind:'video',url:slideVideo.url,mobileUrl:slideVideo.url,order:9});equal(r.status,200);const phoneVideoSlide=await r.json() as {id:string};
+ visible=await shown();equal(visible.find(s=>s.id===phoneVideoSlide.id)!.mobile_url,slideVideo.url);
+ r=await fetch(config.origin+'/api/admin/market/admin/slides/'+phoneVideoSlide.id,{method:'DELETE',headers:{Origin:config.origin,Cookie:panel}});equal(r.status,200);
+ visible=await shown();equal(visible.map(s=>s.kind),['image','video','youtube']);equal(visible[2].url,'https://www.youtube.com/watch?v=dQw4w9WgXcQ');equal([visible[0].title,visible[0].link],['Eid sale','/#brandnew']);
+ r=await slides({active:false},panel,'/'+firstSlide.id);equal(r.status,200);visible=await shown();equal(visible.map(s=>s.kind),['video','youtube']);
+ r=await fetch(config.origin+'/api/admin/market/admin/slides/'+firstSlide.id,{method:'DELETE',headers:{Origin:config.origin,Cookie:panel}});equal(r.status,200);
+ r=await get('/api/admin/market/admin/slides',panel);equal(((await r.json()) as {items:Slide[]}).items.length,2);
  // Email from the site's own Gmail account: the administrator connects it once in the panel. Until then Resend carries the emails.
  type MailState={service:string;available:boolean;connected:boolean;email:string;problem:string;returnAddress:string};
  const mailState=async()=>(await (await get('/api/admin/mail',panel)).json()) as MailState;
@@ -274,7 +318,7 @@ try{
  const held=tokenCalls.filter(t=>t.grant_type==='authorization_code').length;
  r=await send('/api/admin/mail/disconnect',{});equal(r.status,401);r=await send('/api/admin/mail/disconnect',{},panel);equal(r.status,200);equal(revoked,['refresh-'+google.issued]);assert(held>=3);checks++;
  ms=await mailState();equal([ms.service,ms.connected,ms.email],['resend',false,'']);
- r=await get('/api/admin/market/admin/audit',panel);const audit=JSON.stringify(await r.json());assert(audit.includes('admin:mail-connect')&&audit.includes('admin:mail-disconnect')&&audit.includes('pickingprice@gmail.test'));checks++;
+ r=await get('/api/admin/market/admin/audit',panel);const audit=JSON.stringify(await r.json());assert(audit.includes('slide:add')&&audit.includes('slide:delete')&&audit.includes('admin:mail-connect')&&audit.includes('admin:mail-disconnect')&&audit.includes('pickingprice@gmail.test'));checks++;
  // Resend uses its own request shape; a refusal is reported as not sent.
  const viaResend={resendKey:'re_direct_key',from:'Picking Price <notify@example.test>',site:config.origin,endpoint:config.emailEndpoint};
  equal(await sendMail(db,viaResend,{to:'direct@example.test',subject:'Direct check',text:'plain',html:'<p>rich</p>'}),true);const direct=outbox.find(m=>m.mail.to[0]==='direct@example.test')!;equal(direct.auth,'Bearer re_direct_key');equal(direct.mail.from,'Picking Price <notify@example.test>');equal(direct.mail.text,'plain');

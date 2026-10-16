@@ -5,13 +5,13 @@ import { resolve } from 'node:path';
 import { market } from '../lib/market/router';
 import { Database, MarketError, User, Context, now, id } from '../lib/market/types';
 import { one, run, ensureProfile, initialize } from '../lib/market/core';
-import { imageMime } from '../lib/market/files';
+import { imageMime, mediaMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode, requestResetCode, checkResetCode } from '../lib/market/password-reset';
 import { legalHtml, legalTitle } from '../app/legal-content';
 import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail, accountEmail, welcomeEmail, passwordChangedEmail } from '../lib/market/email';
 import type { GmailClient } from '../lib/market/gmail';
-import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds } from '../lib/market/admin-auth';
+import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds, adminUser } from '../lib/market/admin-auth';
 export type Config = {
     origin: string;
     uploadsDir: string;
@@ -45,14 +45,17 @@ export function createApp(db: Database, config: Config) {
     const oauthName = secure ? '__Host-pp_oauth' : 'pp_oauth';
     const googleReady = () => !!(config.googleClientId && config.googleClientSecret);
     const setCookie = (res: Response, name: string, value: string, age: number) => res.append('Set-Cookie', `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${secure ? '; Secure' : ''}`);
-    app.use((req, res, next) => { res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'strict-origin-when-cross-origin'); if (req.path.startsWith('/api/'))
+    // No other site may show these pages in a frame (clickjacking); over HTTPS browsers are told to stay on HTTPS.
+    app.use((req, res, next) => { res.set('X-Content-Type-Options', 'nosniff'); res.set('Referrer-Policy', 'strict-origin-when-cross-origin'); res.set('X-Frame-Options', 'DENY'); res.set('Content-Security-Policy', "frame-ancestors 'none'"); if (secure) res.set('Strict-Transport-Security', 'max-age=15552000'); if (req.path.startsWith('/api/'))
         res.set('Cache-Control', 'no-store'); if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin !== config.origin)
         return res.status(403).json({ error: 'Invalid request origin.' }); next(); });
     app.use('/api/files', express.raw({ type: () => true, limit: '5mb' }));
+    // The administrator's slider uploads: images up to 10 MB and videos up to 50 MB.
+    app.use('/api/admin/files', express.raw({ type: () => true, limit: '51mb' }));
     app.use(express.json({ limit: '24kb' }));
     async function user(req: Request): Promise<User | null> { const t = cookie(req, sessionName); if (!t)
         return null; const r = await one(db, 'SELECT a.id,a.email,a.name,a.role,a.google_sub FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires>?', digest(t), now()); return r ? { userId: r.id, email: r.email, displayName: r.name, role: r.role === 'admin' ? 'both' : r.role, provider: r.google_sub ? 'google' : 'email' } : null; } // administrator rights exist only in the separate /admin panel
-    async function context(req: Request) { const c: Context = { db, user: await user(req) }; await initialize(db); await ensureProfile(c); return c; }
+    async function context(req: Request) { const u = await user(req); const c: Context = { db, user: u, visitor: u ? 'member:' + u.userId : 'guest:' + digest((req.ip || '') + '|' + (req.get('user-agent') || '')).slice(0, 32) }; await initialize(db); await ensureProfile(c); return c; }
     async function session(res: Response, account: string) { const profile = await one(db, 'SELECT suspended FROM profiles WHERE id=?', account); if (profile?.suspended) throw new MarketError('Your account is suspended.', 403); const t = token(); await run(db, 'INSERT INTO sessions (token_hash,account_id,expires) VALUES (?,?,?)', digest(t), account, new Date(Date.now() + 7 * 86400000).toISOString()); setCookie(res, sessionName, t, 7 * 86400); }
     async function limit(req: Request, email: string) { for (const [key, max] of [[digest('ip:' + (req.ip || 'unknown')), 30], [digest('email:' + email), 8]] as const) {
         const until = new Date(Date.now() + 900000).toISOString(), t = now();
@@ -137,7 +140,7 @@ export function createApp(db: Database, config: Config) {
     } res.json({ url: '/api/files/' + key }); });
     app.get('/api/files/:id', async (req, res) => { const key = String(req.params.id); if (!/^[a-zA-Z0-9-]{1,80}$/.test(key))
         throw new MarketError('Photo not found.', 404); const file = await one(db, 'SELECT mime FROM uploads WHERE id=?', key); if (!file)
-        throw new MarketError('Photo not found.', 404); res.set('Content-Type', file.mime); res.set('Cache-Control', 'public,max-age=86400'); res.send(await readFile(resolve(config.uploadsDir, key))); });
+        throw new MarketError('Photo not found.', 404); res.set('Cache-Control', 'public,max-age=86400'); res.sendFile(resolve(config.uploadsDir, key), { headers: { 'Content-Type': file.mime } }); });
     const adminName = secure ? '__Host-pp_admin' : 'pp_admin';
     const adminCookie = (res: Response, value: string, age: number) => res.append('Set-Cookie', `${adminName}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
     const ip = (req: Request) => req.ip || 'unknown';
@@ -145,6 +148,17 @@ export function createApp(db: Database, config: Config) {
     app.post('/api/admin/login', async (req, res) => { adminCookie(res, await adminLogin(db, req.body, ip(req)), adminSessionSeconds); res.json({ ok: true }); });
     app.post('/api/admin/setup', async (req, res) => { adminCookie(res, await adminSetup(db, req.body, config.adminSetupCode, ip(req)), adminSessionSeconds); res.json({ ok: true }); });
     app.post('/api/admin/logout', async (req, res) => { await adminLogout(db, cookie(req, adminName)); adminCookie(res, '', 0); res.json({ ok: true }); });
+    app.post('/api/admin/files', async (req, res) => { if (!await adminUser(db, cookie(req, adminName)))
+        throw new MarketError('Sign in to continue.', 401); if (!Buffer.isBuffer(req.body))
+        throw new MarketError('Upload an image or a video.'); const mime = mediaMime(req.body); if (mime.startsWith('image/') && req.body.length > 10 * 1024 * 1024)
+        throw new MarketError('Images can be up to 10 MB.', 413); if (req.body.length > 50 * 1024 * 1024)
+        throw new MarketError('Videos can be up to 50 MB.', 413); const key = id(); await mkdir(config.uploadsDir, { recursive: true }); await writeFile(resolve(config.uploadsDir, key), req.body); try {
+        await run(db, 'INSERT INTO uploads (id,owner,mime,size,created) VALUES (?,?,?,?,?)', key, 'admin', mime, req.body.length, now());
+    }
+    catch (e) {
+        await unlink(resolve(config.uploadsDir, key));
+        throw e;
+    } res.json({ url: '/api/files/' + key, mime }); });
     app.post('/api/admin/password', async (req, res) => { res.json(await adminChangePassword(db, cookie(req, adminName), req.body, ip(req))); });
     // The Gmail account the site sends from: status, connect (Google returns to /callback), disconnect, test email.
     const mailOauth = secure ? '__Host-pp_mail_oauth' : 'pp_mail_oauth';

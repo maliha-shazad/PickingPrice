@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MessageCircle, ShieldCheck } from 'lucide-react';
-import { Actions, Item, useLoad, Load, Photo, Status, Pager, Choice, money, date, Empty } from './ui';
+import { Actions, Item, useLoad, Load, Photo, Status, Pager, Choice, money, date, Empty, DaysLeft, ReviewCard, ReviewSummary } from './ui';
 export function ListingDetail({ item, actions }: {
     item: Item;
     actions: Actions;
@@ -57,8 +57,8 @@ export function RequestDetail({ item, actions }: {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', color: '#334155', fontWeight: 500, padding: '0 8px' }}>
                 <span style={{ fontSize: '18px' }}>📍</span> Location: {p.location || 'Not specified'}
-                {p.category && <span className="rd-category" style={{ fontSize: '12px', fontWeight: 700, color: '#0f766e', background: '#ccfbf1', borderRadius: '20px', padding: '3px 10px', whiteSpace: 'nowrap' }}>{p.category}</span>}
-                {p.expiry && <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#94a3b8' }}>Expires {date(p.expiry)}</span>}
+                {p.category && <span className="rd-category" style={{ fontSize: '12px', fontWeight: 700, color: '#0d5c45', background: '#ccfbf1', borderRadius: '20px', padding: '3px 10px', whiteSpace: 'nowrap' }}>{p.category}</span>}
+                {p.expiry && !p.sample && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8' }}><DaysLeft item={p} />Ends {date(p.expiry)}</span>}
             </div>
             
             {p.sample ? (
@@ -94,14 +94,14 @@ export function RequestDetail({ item, actions }: {
                                 </>
                             )}
                             {['Open', 'Responses Received', 'Seller Selected'].includes(p.status) && (
-                                <button style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} onClick={() => actions.open('confirm', { title: 'Close this request?', text: 'This will stop further offers.', path: 'requests/' + p.id + '/status', method: 'POST', body: { status: 'Closed' } })}>Close request</button>
+                                <button style={{ width: '100%', padding: '12px', background: '#0d5c45', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} onClick={() => actions.open('confirm', { title: 'Close this request?', text: 'This will stop further offers.', path: 'requests/' + p.id + '/status', method: 'POST', body: { status: 'Closed' } })}>Close request</button>
                             )}
                         </div>
                     ) : (
                         ['Open', 'Responses Received'].includes(p.status) && (
                             <div className="rd-actions" style={{ display: 'flex', gap: '12px' }}>
                                 <button 
-                                    style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+                                    style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #0d5c45 0%, #0d5c45 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
                                     onClick={() => actions.open('offer-form', { request_id: p.id })}
                                 >
                                     Submit Offer
@@ -188,12 +188,8 @@ export function ProfileDetail({ item, actions }: {
                     <h3>Reviews <span>{data.reviews.total}</span></h3>
                     {data.reviews.items.length === 0
                         ? <div className="pf-empty">No reviews yet.</div>
-                        : <div className="pf-reviews">{data.reviews.items.map((r: Item) => (
-                            <div className="pf-review" key={r.id}>
-                                <div className="pf-review-head"><span className="pf-review-avatar">{String(r.reviewer || 'M').charAt(0).toUpperCase()}</span><div><strong>{r.reviewer}</strong>{stars(Number(r.rating))}</div><small>{date(r.created)}</small></div>
-                                <p>{r.body}</p>
-                                {!actions.readOnly && <button type="button" className="pf-link" onClick={() => actions.open('report', { type: 'review', id: r.id })}>Report review</button>}
-                            </div>
+                        : <div className="pf-reviews pp-review-list"><ReviewSummary average={data.rating?.average} count={data.rating?.count} />{data.reviews.items.map((r: Item) => (
+                            <ReviewCard key={r.id} review={r} mine={r.owner === actions.user?.id} onReport={!actions.readOnly && r.owner !== actions.user?.id ? () => actions.open('report', { type: 'review', id: r.id }) : undefined} />
                         ))}</div>}
                     <Pager page={page} total={data.reviews.total} onChange={setPage} />
                 </section>

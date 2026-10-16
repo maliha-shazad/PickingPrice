@@ -25,6 +25,8 @@ export async function ensureProfile(c: Context) { if (!c.user || c.user.provider
 export async function categoryCheck(db: Database, category: string, subcategory = '') { const r = await one(db, 'SELECT * FROM categories WHERE name=? AND active=1', category); if (!r)
     throw new MarketError('Choose an active category.'); if (subcategory && !JSON.parse(r.subcategories).includes(subcategory))
     throw new MarketError('Choose a valid subcategory.'); }
+/** A listing published with Spotlight waits in this state, seen only by its seller, until the payment is verified. */
+export const AWAITING_PAYMENT = 'Awaiting payment';
 export async function uploadCheck(c: Context, urls: string[]) { for (const url of urls.filter(x => x.startsWith('/api/files/'))) {
     const file = await one(c.db, 'SELECT owner FROM uploads WHERE id=?', url.split('/').pop());
     if (!file || (file.owner !== authenticated(c).userId && c.user?.role !== 'admin'))
@@ -67,14 +69,24 @@ export async function initialize(db: Database) {
     await run(db, 'CREATE TABLE IF NOT EXISTS conversation_reads (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, owner TEXT NOT NULL, read_at TEXT NOT NULL)');
     initialized.add(db);
 }
+/** A buyer request stays live for this many days; if no offer has been selected by then it is taken down. */
+export const REQUEST_DAYS = 30;
+export const requestExpiry = () => new Date(Date.now() + REQUEST_DAYS * 86400000).toISOString();
+/** Takes down every request whose time is up, for all members, and tells each owner why. Runs on page loads and every few minutes. */
+export async function expireRequests(db: Database) {
+    const t = now(), again = ' You can post it again from your Buyer Dashboard.';
+    await db.batch([
+        stmt(db, "INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) SELECT 'request-expired:'||r.id,r.owner,'Request taken down',CASE WHEN EXISTS (SELECT 1 FROM seller_offers o WHERE o.request_id=r.id AND o.status='Pending') THEN 'No offer was selected on \"'||r.title||'\" in time, so the request was taken down.' ELSE 'No offers came in on \"'||r.title||'\", so the request was taken down.' END||?,'request',r.id,0,? FROM buyer_requests r WHERE r.status IN ('Open','Responses Received') AND r.expiry<=? ON CONFLICT(id) DO NOTHING", again, t, t),
+        stmt(db, "UPDATE buyer_requests SET status='Expired',updated=? WHERE status IN ('Open','Responses Received') AND expiry<=?", t, t),
+    ]);
+}
 export async function expireForUser(c: Context) {
+    await expireRequests(c.db);
     if (!c.user)
         return;
     const uid = c.user.userId, t = now();
     await c.db.batch([
-        stmt(c.db, "INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) SELECT 'request-expired:'||id,owner,'Request expired',title,'request',id,0,? FROM buyer_requests WHERE owner=? AND status IN ('Open','Responses Received') AND expiry<=? ON CONFLICT(id) DO NOTHING", t, uid, t),
-        stmt(c.db, "UPDATE buyer_requests SET status='Expired',updated=? WHERE owner=? AND status IN ('Open','Responses Received') AND expiry<=?", t, uid, t),
-        stmt(c.db, "INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) SELECT 'promotion-expired:'||id,owner,'Promotion expired','Your featured listing period has ended.','listing',listing_id,0,? FROM promotions WHERE owner=? AND status='Active' AND expires<=? ON CONFLICT(id) DO NOTHING", t, uid, t),
+        stmt(c.db, "INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) SELECT 'promotion-expired:'||id,owner,'Promotion expired','Your Premium Listing period has ended.','listing',listing_id,0,? FROM promotions WHERE owner=? AND status='Active' AND expires<=? ON CONFLICT(id) DO NOTHING", t, uid, t),
         stmt(c.db, "UPDATE promotions SET status='Expired' WHERE owner=? AND status='Active' AND expires<=?", uid, t),
     ]);
 }

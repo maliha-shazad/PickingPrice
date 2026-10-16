@@ -1,4 +1,4 @@
-import { Context, MarketError, id, now, pageOf } from './types';
+import { Context, MarketError, Row, id, now, pageOf } from './types';
 import { permit, one, rows, stmt, notice, configuration, pagination, log, parseImages } from './core';
 import { stringValue } from './validation';
 export async function adminData(c: Context, section: string, q: URLSearchParams) { permit(c, 'admin'); if (section === 'stats') {
@@ -41,6 +41,35 @@ export async function deleteCategory(c: Context, key: string) {
     await c.db.batch([stmt(c.db, 'DELETE FROM categories WHERE id=?', key), log(c, 'category:delete', cat.name)]);
     return { ok: true };
 }
+/** What the member is told after a moderation action: a title naming the action and a body naming the item, what
+ * happened and the administrator's reason. The same text goes out as the notification email. */
+async function moderationNotice(c: Context, type: string, action: string, record: Row, reason: string) {
+    const quote = (v: unknown) => '"' + String(v || '').slice(0, 80) + '"';
+    const team = 'by the Picking Price support team';
+    const why = ' Reason: ' + reason;
+    const appeal = ' If you think this is a mistake, contact us from the Contact Us page.';
+    if (type === 'report')
+        return { title: action === 'resolve' ? 'Your report was resolved' : 'Your report was reviewed', body: (action === 'resolve' ? 'Thank you: we reviewed your report about a ' + record.target_type + ' and took action.' : 'We reviewed your report about a ' + record.target_type + ' and found nothing that needs action.') + ' Note from the team: ' + reason, linkType: '', linkId: '' };
+    if (type === 'user') {
+        const titles: Record<string, string> = { warn: 'A warning about your account', suspend: 'Your account was suspended', restore: 'Your account was restored', verify: 'Your account is now verified', unverify: 'Your verified badge was removed' };
+        const bodies: Record<string, string> = { warn: 'The support team sent you a warning about how the site is used.', suspend: 'Your account was suspended ' + team + ' and you cannot sign in for now.', restore: 'Your account was restored ' + team + ' and you can use the site again.', verify: 'Your account was verified ' + team + ' and now shows the Verified badge.', unverify: 'The Verified badge was removed from your account ' + team + '.' };
+        return { title: titles[action], body: bodies[action] + why + (action === 'suspend' || action === 'unverify' || action === 'warn' ? appeal : ''), linkType: 'profile', linkId: String(record.id) };
+    }
+    if (type === 'promotion') {
+        const listing = await one(c.db, 'SELECT title FROM listings WHERE id=?', record.listing_id);
+        return { title: 'Your Premium Listing was cancelled', body: 'The Premium Listing for ' + quote(listing?.title) + ' was cancelled ' + team + '; the product stays listed as a free listing.' + why + appeal, linkType: 'listing', linkId: String(record.listing_id) };
+    }
+    if (type === 'review') {
+        const seller = await one(c.db, 'SELECT name FROM profiles WHERE id=?', record.seller_id);
+        const done: Record<string, string> = { hide: 'was hidden', restore: 'is visible again', delete: 'was removed' };
+        return { title: action === 'restore' ? 'Your review is visible again' : action === 'delete' ? 'Your review was removed' : 'Your review was hidden', body: 'Your review of ' + String(seller?.name || 'a seller') + ' ' + done[action] + ' ' + team + '.' + why + (action === 'restore' ? '' : appeal), linkType: 'profile', linkId: String(record.seller_id) };
+    }
+    const what = (type === 'listing' ? 'Your listing ' : 'Your request ') + quote(record.title);
+    const titles: Record<string, string> = { hide: type === 'listing' ? 'Your listing was hidden' : 'Your request was hidden', restore: type === 'listing' ? 'Your listing is visible again' : 'Your request is visible again', delete: type === 'listing' ? 'Your listing was removed' : 'Your request was removed', cancel: 'Your request was cancelled' };
+    const done: Record<string, string> = { hide: ' was hidden from the site ', restore: ' is visible again, restored ', delete: ' was removed ', cancel: ' was cancelled ' };
+    const gone = action === 'delete';
+    return { title: titles[action], body: what + done[action] + team + '.' + why + (action === 'restore' ? '' : appeal), linkType: gone ? '' : type, linkId: gone ? '' : String(record.id) };
+}
 export async function moderate(c: Context, body: Record<string, unknown>) {
     const u = permit(c, 'admin'), type = body.type, key = stringValue(body.id, 1, 400), action = body.action, reason = stringValue(body.reason || '', 5, 1000);
     const table = ({ user: 'profiles', listing: 'listings', request: 'buyer_requests', review: 'reviews', promotion: 'promotions', report: 'reports' } as Record<string, string>)[String(type)];
@@ -64,11 +93,25 @@ export async function moderate(c: Context, body: Record<string, unknown>) {
             ops.push(stmt(c.db, 'DELETE FROM sessions WHERE account_id=?', key));
     }
     else if (type === 'listing' || type === 'request') {
-        if (!['hide', 'restore'].includes(action))
-            throw new MarketError('Choose hide or restore.');
+        const allowed = type === 'request' ? ['hide', 'restore', 'cancel', 'delete'] : ['hide', 'restore', 'delete'];
+        if (!allowed.includes(String(action)))
+            throw new MarketError(type === 'request' ? 'Choose hide, restore, cancel or delete.' : 'Choose hide, restore or delete.');
         if (record.status === 'Deleted')
-            throw new MarketError('Deleted content cannot be restored.');
-        if (type === 'request') {
+            throw new MarketError('This item has already been deleted.');
+        if (action === 'delete' || action === 'cancel') {
+            const t = now();
+            if (type === 'listing')
+                ops.push(stmt(c.db, "UPDATE listings SET status='Deleted',updated=? WHERE id=?", t, key), stmt(c.db, 'UPDATE profiles SET used_slots=CASE WHEN used_slots>0 THEN used_slots-1 ELSE 0 END WHERE id=?', record.owner), stmt(c.db, "UPDATE promotions SET status='Cancelled' WHERE listing_id=? AND status='Active'", key));
+            else {
+                if (action === 'cancel' && !['Open', 'Responses Received', 'Hidden'].includes(String(record.status)))
+                    throw new MarketError('Only a live or hidden request can be cancelled.');
+                // Sellers with an open offer are told the request is gone, and their offers are closed.
+                ops.push(stmt(c.db, 'UPDATE buyer_requests SET status=?,updated=? WHERE id=?', action === 'delete' ? 'Deleted' : 'Cancelled', t, key),
+                    stmt(c.db, "INSERT INTO notifications (id,owner,title,body,link_type,link_id,read,created) SELECT 'request-removed:'||id,owner,'Request closed by the support team',?,'','',0,? FROM seller_offers WHERE request_id=? AND status='Pending' ON CONFLICT(id) DO NOTHING", 'The buyer request "' + record.title + '" was ' + (action === 'delete' ? 'removed' : 'cancelled') + ' by the Picking Price support team, so your offer on it is closed.', t, key),
+                    stmt(c.db, "UPDATE seller_offers SET status='Not selected',updated=? WHERE request_id=? AND status='Pending'", t, key));
+            }
+        }
+        else if (type === 'request') {
             const saved = await one(c.db, 'SELECT value FROM settings WHERE key=?', 'moderated-request:' + key);
             if (action === 'hide' && record.status !== 'Hidden')
                 ops.push(stmt(c.db, 'INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', 'moderated-request:' + key, record.status));
@@ -80,9 +123,9 @@ export async function moderate(c: Context, body: Record<string, unknown>) {
             ops.push(stmt(c.db, "UPDATE listings SET status=?,updated=? WHERE id=?", action === 'hide' ? 'Hidden' : 'Active', now(), key));
     }
     else if (type === 'review') {
-        if (!['hide', 'restore'].includes(action))
-            throw new MarketError('Choose hide or restore.');
-        ops.push(stmt(c.db, 'UPDATE reviews SET hidden=? WHERE id=?', action === 'hide' ? 1 : 0, key));
+        if (!['hide', 'restore', 'delete'].includes(action))
+            throw new MarketError('Choose hide, restore or delete.');
+        ops.push(action === 'delete' ? stmt(c.db, 'DELETE FROM reviews WHERE id=?', key) : stmt(c.db, 'UPDATE reviews SET hidden=? WHERE id=?', action === 'hide' ? 1 : 0, key));
     }
     else if (type === 'promotion') {
         if (action !== 'cancel')
@@ -94,7 +137,8 @@ export async function moderate(c: Context, body: Record<string, unknown>) {
             throw new MarketError('Choose resolve or dismiss.');
         ops.push(stmt(c.db, 'UPDATE reports SET status=?,resolution=? WHERE id=?', action === 'resolve' ? 'Resolved' : 'Dismissed', reason, key));
     }
-    ops.push(notice(c.db, owner, type === 'report' ? 'Report reviewed' : 'Account / content update', reason, type === 'user' ? 'profile' : type, key), log(c, type + ':' + action, key));
+    const message = await moderationNotice(c, String(type), String(action), record, reason);
+    ops.push(notice(c.db, owner, message.title, message.body, message.linkType, message.linkId), log(c, type + ':' + action, key));
     await c.db.batch(ops);
     return { ok: true };
 }

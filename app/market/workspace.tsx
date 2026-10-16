@@ -3,7 +3,7 @@ import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, Sh
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Toaster, toast } from 'sonner';
-import { Actions, Item, api, useLoad, Load } from './ui';
+import { Actions, Item, api, useLoad, Load, successMessage } from './ui';
 import { Catalogue } from './catalogue';
 import { Dashboard, SellerServices } from './dashboard';
 import { RequestDetail, ProfileDetail } from './details';
@@ -59,17 +59,17 @@ export default function Workspace() {
                         const { latitude, longitude } = pos.coords;
                         const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.GOOGLE_MAPS_KEY || ''}`);
                         const data = await res.json();
-                        
+
                         let city = null;
                         if (data.results && data.results.length > 0) {
                             const components = data.results[0].address_components;
-                            const cityObj = components.find((c: any) => c.types.includes('locality')) || 
+                            const cityObj = components.find((c: any) => c.types.includes('locality')) ||
                                             components.find((c: any) => c.types.includes('administrative_area_level_2'));
                             if (cityObj) {
                                 city = cityObj.long_name;
                             }
                         }
-                        
+
                         if (city && !localStorage.getItem('pp_location')) {
                             setLocation(city);
                         }
@@ -320,13 +320,12 @@ export default function Workspace() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const perform = async (path: string, method = 'POST', body?: Record<string, unknown>) => {
+    const perform = async (path: string, method = 'POST', body?: Record<string, unknown>, quiet = false) => {
         try {
             const d = await api(path, method, body);
             refresh();
-            const isFav = path.startsWith('favorites/');
-            const msg = isFav ? (body?.saved ? 'Saved successfully' : 'Removed successfully') : method === 'DELETE' ? 'Removed successfully' : 'Saved successfully';
-            toast.success(msg);
+            const msg = successMessage(path, method, body);
+            if (!quiet && msg) toast.success(msg);
             return d;
         } catch (e: unknown) {
             const err = e as { message?: string; status?: number };
@@ -385,7 +384,7 @@ export default function Workspace() {
         'listing': 'Product details', 'request': 'Buyer request', 'profile': 'Member profile',
         'listing-form': modal?.item.id ? 'Edit listing' : 'Create a listing',
         'request-form': modal?.item.id ? 'Edit request' : 'Post a request',
-        'offer-form': 'Your offer', 'payment': modal?.item.defer ? 'Spotlight Boost' : modal?.item.id ? 'Promote your listing' : 'Request extra listings', 'enable-selling': 'Selling is not switched on', 'enable-buying': 'Buying is not switched on',
+        'offer-form': 'Your offer', 'payment': modal?.item.defer ? 'Premium Listing' : modal?.item.id ? 'Promote your listing' : 'Request extra listings', 'enable-selling': 'Selling is not switched on', 'enable-buying': 'Buying is not switched on',
         'report': 'Report a concern', 'conversation': 'Conversation',
         'safety': infoTitle.safety, 'info': infoTitle[modal?.item.topic as InfoTopic] || 'Picking Price'
     };
@@ -633,6 +632,7 @@ export default function Workspace() {
             </nav>
 
             {/* ── PAGE CONTENT ── */}
+            {/* Top of the product pages: the admin's slider, then promoted products (each shown only when it has something) */}
             {view === 'Explore' && <Homepage actions={actions} />}
             {view === 'PreLoved' && <PreLoved actions={actions} />}
             {view === 'BrandNew' && <BrandNew actions={actions} />}
@@ -712,7 +712,7 @@ export default function Workspace() {
 
             {/* ── MODALS ── */}
             <Dialog open={!!modal && modal.type !== 'confirm'} onOpenChange={o => !o && close()}>
-                <DialogContent className={'market-modal ' + (['request', 'profile', 'info', 'safety'].includes(modal?.type || '') ? 'wide-modal' : '')}>
+                <DialogContent className={'market-modal ' + (['request', 'profile', 'info', 'safety'].includes(modal?.type || '') ? 'wide-modal' : modal?.type === 'conversation' ? 'chat-modal' : '')}>
                     <DialogTitle className={modal?.type === 'request' ? 'sr-only' : ''}>
                         {modal?.type === 'request' ? 'Request Details' : title[modal?.type || ''] || 'Community & safety'}
                     </DialogTitle>

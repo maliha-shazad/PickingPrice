@@ -2,7 +2,7 @@ import { useEffect, useId, useState, ReactNode } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Eye, EyeOff, KeyRound, Lock, LogOut, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Actions, Item, api, setApiBase } from './ui';
+import { Actions, Item, api, setApiBase, successMessage } from './ui';
 import { Admin, CategoryForm, ModerateForm, PaymentReview, ResetCode, CategoryDelete } from './admin';
 import { ListingDetail, RequestDetail, ProfileDetail } from './details';
 
@@ -164,11 +164,12 @@ export default function AdminApp() {
     if (!session.signedIn)
         return <Gate session={session} onDone={load} />;
 
-    const perform = async (path: string, method = 'POST', body?: Record<string, unknown>) => {
+    const perform = async (path: string, method = 'POST', body?: Record<string, unknown>, quiet = false) => {
         try {
             const d = await api(path, method, body);
             setRevision(v => v + 1);
-            toast.success('Saved successfully');
+            const msg = successMessage(path, method, body);
+            if (!quiet && msg) toast.success(msg);
             return d;
         } catch (e: unknown) {
             const err = e as Failure;
@@ -196,9 +197,9 @@ export default function AdminApp() {
     return (
         <>
             <Toaster position="bottom-right" richColors />
-            <header className="adm-bar" style={{ background: '#0f172a', color: '#fff', padding: '12px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <header className="adm-bar" style={{ background: 'linear-gradient(135deg, #0d5c45, #0a5038)', color: '#fff', padding: '12px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <div className="adm-bar-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '16px' }}>
-                    <ShieldCheck size={20} color="#34d399" /> Picking Price Admin
+                    <ShieldCheck size={20} color="#f39c12" /> Picking Price Admin
                 </div>
                 <div className="adm-bar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span className="adm-bar-email" style={{ fontSize: '13px', color: '#cbd5e1', overflowWrap: 'anywhere' }}>{session.email}</span>

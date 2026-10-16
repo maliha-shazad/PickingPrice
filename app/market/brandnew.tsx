@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, Star, ShieldCheck, ChevronDown, X, Shirt, Monitor, Camera, Package, FileCheck, MessageSquare, Home, Sofa, Dumbbell, BookOpen, Car, Utensils, Gem, Baby, Paintbrush, FilePlus, BadgeDollarSign, SlidersHorizontal } from 'lucide-react';
-import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading, ListLoading } from './ui';
+import { Actions, Photo, useLoadAll, offersDelivery, sellerScore, inCity, inArea, NoneInCity, CityHeading, ListLoading, sellerProps } from './ui';
 import { samples } from '../samples';
 
 export function BrandNew({ actions }: { actions: Actions }) {
@@ -62,11 +62,12 @@ export function BrandNew({ actions }: { actions: Actions }) {
 
   const state = useLoadAll('listings', actions.revision);
   const realListings = state.data?.items || [];
-  const hasRealData = state.data?.total > 0;
   const loaded = !!state.data || !!state.error;
   // Samples only once the site is known to have no real listing; nothing (a placeholder) while that is still loading.
   // Only the chosen city's products, whether they are members' listings or the samples.
-  const sourceData = (!loaded ? [] : hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  // New products only: samples until a real New product exists (real pre-loved products do not hide them).
+  const realNewOnly = realListings.filter((p: any) => p.condition === 'New');
+  const sourceData = (!loaded ? [] : realNewOnly.length ? realNewOnly : samples.filter(p => p.condition === 'New')).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const filtered = sourceData.filter((p: any) => p.condition === 'New').filter((p: any) => {
@@ -143,7 +144,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
       <div className="bn-hero-wrap">
         <div className="bn-hero">
           <div className="bn-hero-left">
-            <div className="bn-hero-badge">● BRAND NEW PRODUCTS</div>
+            <div className="bn-hero-badge">BRAND NEW PRODUCTS</div>
             <h1 className="bn-hero-title">Brand New Products<br/>from Sellers<br/>Across Pakistan</h1>
             <p className="bn-hero-sub">Browse unused items listed by sellers. Check the product, its packing and any warranty with the seller before you pay.</p>
           </div>
@@ -297,7 +298,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
             </div>
             
             <div className="bn-sidebar-footer">
-              <ShieldCheck size={16} color="#059669" /> All listed merchants have signed a legal declaration to supply original unopened stock only.
+              <ShieldCheck size={16} color="#0d5c45" /> All listed merchants have signed a legal declaration to supply original unopened stock only.
             </div>
 
           </aside>
@@ -307,7 +308,6 @@ export function BrandNew({ actions }: { actions: Actions }) {
             <CityHeading actions={actions} />
             <div className="pl-feed-header">
               <div style={{display:'flex', alignItems: 'center', gap: '8px'}}>
-                <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#059669'}}></div>
                 <h2 className="pl-feed-title" style={{fontSize: '18px', margin: 0}}>Showing {filtered.length} Brand New items in {currentCity || 'Pakistan'}</h2>
               </div>
               <div className="pl-sort-wrap">
@@ -319,7 +319,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
                     value={sort}
                     onChange={(e) => setSort(e.target.value)}
                   >
-                    <option value="Featured First">Featured First</option>
+                    <option value="Featured First">Premium First</option>
                     <option value="Newest">Newest First</option>
                     <option value="Price: Low to High">Price: Low to High</option>
                     <option value="Price: High to Low">Price: High to Low</option>
@@ -364,7 +364,7 @@ export function BrandNew({ actions }: { actions: Actions }) {
                     <div className="bn-card-badges-top">
                       <span className="bn-badge-dark"><ShieldCheck size={10} /> Brand New</span>
                       {/* Only a warranty the product really states. */}
-                      {!!(p as any).warranty && <span className="bn-badge-light" style={{color: i % 2 === 0 ? '#059669' : '#ea580c', background: i % 2 === 0 ? '#d1fae5' : '#ffedd5'}}>{String((p as any).warranty)}</span>}
+                      {!!(p as any).warranty && <span className="bn-badge-light" style={{color: i % 2 === 0 ? '#0d5c45' : '#ea580c', background: i % 2 === 0 ? '#d1fae5' : '#ffedd5'}}>{String((p as any).warranty)}</span>}
                     </div>
                     <button className="bn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}>
                       <Heart size={16} fill={wishlist.includes(p.id) ? '#ef4444' : 'none'} color={wishlist.includes(p.id) ? '#ef4444' : '#9ca3af'} />
@@ -380,10 +380,10 @@ export function BrandNew({ actions }: { actions: Actions }) {
                     </div>
                     <div className="pl-card-ref">{(p as any).brand ? 'Brand: ' + (p as any).brand : 'Brand new, unused'}</div>
                     
-                    <div className="pl-card-seller">
-                      <div className="pl-seller-avatar" style={{ background: '#059669', color: '#fff' }}>{p.seller.charAt(0)}</div>
+                    <div {...sellerProps(actions, p as any, 'pl-card-seller')}>
+                      <div className="pl-seller-avatar" style={{ background: '#0d5c45', color: '#fff' }}>{p.seller.charAt(0)}</div>
                       <div className="pl-seller-info">
-                        <span className="pl-seller-name">{!!(p as any).verified && <ShieldCheck size={12} color="#059669" style={{display:'inline', marginRight: 2}}/>} {p.seller}</span>
+                        <span className="pl-seller-name">{!!(p as any).verified && <ShieldCheck size={12} color="#0d5c45" style={{display:'inline', marginRight: 2}}/>} {p.seller}</span>
                         <span className="pl-seller-loc">{p.location}</span>
                       </div>
                       <div className="pl-seller-rating">

@@ -13,6 +13,9 @@ async function suite(db: unknown, label: string) {
     const denied = async (fn: () => Promise<unknown>, status?: number) => { await assert.rejects(fn, e => e instanceof MarketError && (!status || e.status === status)); checks++; };
     for (const who of Object.keys(users))
         await call(who, 'GET', 'bootstrap');
+    // Payment details the seller sends with every payment, including a receipt uploaded to their own account.
+    await run(db, 'INSERT INTO uploads (id,owner,mime,size,created) VALUES (?,?,?,?,?)', 'receipt-seller', 'seller', 'image/png', 100, new Date().toISOString());
+    const proof = { method: 'JazzCash', senderName: 'Seller Name', senderAccount: '03001234567', paidAmount: 100000, paidOn: new Date().toISOString().slice(0, 10), receipt: '/api/files/receipt-seller' };
     const listing = { title: 'Canvas tote bag', description: 'A well kept everyday canvas bag.', category: 'Accessories', subcategory: '', brand: 'Test', price: 1500, quantity: 1, condition: 'Good', location: 'Karachi', images: ['https://example.test/photo.jpg'] };
     await denied(() => call(null, 'POST', 'listings', listing), 401);
     await denied(() => call('buyer', 'POST', 'listings', listing), 403);
@@ -23,9 +26,21 @@ async function suite(db: unknown, label: string) {
     await denied(() => call('other', 'PATCH', 'listings/' + l.id, listing), 403);
     await call('seller', 'PATCH', 'listings/' + l.id, { ...listing, price: 1700 });
     ok((await call(null, 'GET', 'listings/' + l.id)).price === 1700);
+    // "About this item" is limited to 1000 characters; a description already longer may stay as long as it was.
+    await denied(() => call('seller', 'POST', 'listings', { ...listing, description: 'x'.repeat(1001) }));
+    await run(db, 'UPDATE listings SET description=? WHERE id=?', 'y'.repeat(1200), l.id);
+    ok(await call('seller', 'PATCH', 'listings/' + l.id, { ...listing, price: 1700, description: 'y'.repeat(1200) }));
+    await denied(() => call('seller', 'PATCH', 'listings/' + l.id, { ...listing, price: 1700, description: 'y'.repeat(1201) }));
+    await call('seller', 'PATCH', 'listings/' + l.id, { ...listing, price: 1700 });
     const req = { title: 'Looking for a good book', description: 'Looking for an interesting used novel.', category: 'Books', price: 900, quantity: 1, condition: 'Good', location: 'Lahore', image: '', expiry: new Date(Date.now() + 86400000).toISOString() };
     await denied(() => call('seller', 'POST', 'requests', req), 403);
-    await denied(() => call('buyer', 'POST', 'requests', { ...req, expiry: '2000-01-01' }));
+    // Every new request runs for 30 days; an expiry sent by the browser is ignored.
+    const fixed = await call('buyer', 'POST', 'requests', { ...req, expiry: '2000-01-01' });
+    const fixedEnd = Date.parse((await call('buyer', 'GET', 'requests/' + fixed.id)).expiry) - Date.now();
+    ok(fixedEnd > 30 * 86400000 - 60000 && fixedEnd <= 30 * 86400000);
+    await denied(() => call('seller', 'DELETE', 'requests/' + fixed.id), 403);
+    await call('buyer', 'DELETE', 'requests/' + fixed.id);
+    await denied(() => call('buyer', 'GET', 'requests/' + fixed.id), 404);
     const r = await call('buyer', 'POST', 'requests', req);
     await denied(() => call('seller', 'POST', 'requests/' + r.id + '/offers', { description: 'Good condition book' }));
     const offer = { price: 800, description: 'I have this book in good condition.', image: '' };
@@ -48,6 +63,12 @@ async function suite(db: unknown, label: string) {
     ok(msg.id);
     await denied(() => call('other', 'GET', 'messages/' + conv.id), 404);
     await denied(() => call('other', 'POST', 'messages/' + conv.id, { body: 'intrusion' }), 404);
+    // The Messages count is unread messages: the seller has one until the chat is opened; the buyer's own message does not count.
+    const sellerChats = await call('seller', 'GET', 'conversations');
+    ok(sellerChats.unread === 1 && sellerChats.items.find((x: Record<string, unknown>) => x.id === conv.id).unread === 1);
+    ok((await call('buyer', 'GET', 'conversations')).unread === 0);
+    ok((await call('seller', 'GET', 'messages/' + conv.id)).wasUnread === 1);
+    ok((await call('seller', 'GET', 'conversations')).unread === 0);
     await call('buyer', 'POST', 'profiles/seller/reviews', { rating: 4, body: 'A very helpful and responsive seller.' });
     ok(Number((await call(null, 'GET', 'profiles/seller')).rating.average) === 4);
     await denied(() => call('buyer', 'POST', 'profiles/seller/reviews', { rating: 7, body: 'Some review body' }));
@@ -57,11 +78,11 @@ async function suite(db: unknown, label: string) {
     await call('buyer', 'PUT', 'favorites/' + l.id, { saved: true });
     ok((await call('buyer', 'GET', 'favorites')).total == 1);
     ok((await call('seller', 'GET', 'favorites')).total == 0);
-    await denied(() => call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 2, reference: 'REF-TEST' }), 409);
+    await denied(() => call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 2, reference: 'REF-TEST', ...proof }), 409);
     const settings = (await call('admin', 'GET', 'admin/settings')).settings;
     await call('admin', 'POST', 'admin/settings', { ...settings, freeListings: 1, paymentInstructions: 'Test-only external payment instructions.' });
     await denied(() => call('seller', 'POST', 'listings', listing), 409);
-    const pay = await call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 2, reference: 'REF-TEST', amount: 1 });
+    const pay = await call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 2, reference: 'REF-TEST', ...proof, amount: 1 });
     ok(pay.amount === 100);
     await denied(() => call('seller', 'POST', 'admin/payments/' + pay.id, { status: 'Approved' }), 403);
     await call('admin', 'POST', 'admin/payments/' + pay.id, { status: 'Approved' });
@@ -69,13 +90,56 @@ async function suite(db: unknown, label: string) {
     ok((await one(db as import('../lib/market/types').Database, 'SELECT extra_slots FROM profiles WHERE id=?', 'seller') as Record<string, unknown>)?.extra_slots === 2);
     const l2 = await call('seller', 'POST', 'listings', listing);
     ok(l2.id);
-    const promo = await call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 3, listingId: l.id, reference: 'PROMO-TEST' });
+    const promo = await call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 3, listingId: l.id, reference: 'PROMO-TEST', ...proof });
     ok(promo.amount === 350);
     await call('admin', 'POST', 'admin/payments/' + promo.id, { status: 'Approved' });
     ok((await call(null, 'GET', 'listings')).items.find((i: Record<string, unknown>) => i.id === l.id)?.featured);
+    // The Premium strip lists only products with an active promotion.
+    const premium = await call(null, 'GET', 'listings', {}, 'premium=1');
+    ok(premium.items.length >= 1 && premium.items.every((i: Record<string, unknown>) => i.featured) && premium.items.some((i: Record<string, unknown>) => i.id === l.id));
     await call('seller', 'DELETE', 'listings/' + l2.id);
     await call('seller', 'DELETE', 'listings/' + l2.id);
     ok((await one(db as import('../lib/market/types').Database, 'SELECT used_slots FROM profiles WHERE id=?', 'seller') as Record<string, unknown>)?.used_slots === 1);
+    // Payment details are cross-checked: a known method, the full amount, a sensible date and the seller's own receipt.
+    type Row = Record<string, unknown>;
+    const promoBody = { purpose: 'promotion', duration: 3, listingId: l.id };
+    await denied(() => call('seller', 'POST', 'payments', { ...promoBody, ...proof, reference: 'NO-METHOD', method: 'Cash in hand' }));
+    await denied(() => call('seller', 'POST', 'payments', { ...promoBody, ...proof, reference: 'TOO-LITTLE', paidAmount: 349 }));
+    await denied(() => call('seller', 'POST', 'payments', { ...promoBody, ...proof, reference: 'FUTURE-DAY', paidOn: '2999-01-01' }));
+    await denied(() => call('seller', 'POST', 'payments', { ...promoBody, ...proof, reference: 'NO-RECEIPT', receipt: '' }));
+    await run(db, 'INSERT INTO uploads (id,owner,mime,size,created) VALUES (?,?,?,?,?)', 'receipt-other', 'other', 'image/png', 100, new Date().toISOString());
+    await denied(() => call('seller', 'POST', 'payments', { ...promoBody, ...proof, reference: 'NOT-MINE', receipt: '/api/files/receipt-other' }));
+    const payments = async () => (await call('admin', 'GET', 'admin/payments')).items as Row[];
+    const promoRow = (await payments()).find(p => p.reference === 'PROMO-TEST')!;
+    ok(promoRow.sender_account === '03001234567' && promoRow.method === 'JazzCash' && promoRow.paid_amount === 100000 && promoRow.receipt === '/api/files/receipt-seller');
+    // Spotlight chosen on Sell Now: the listing waits, unseen by others, until the payment is approved.
+    const held = await call('seller', 'POST', 'listings', { ...listing, title: 'Held for Spotlight', spotlight: { duration: 3, ...proof, reference: 'SPOT-1' } });
+    ok(held.status === 'Awaiting payment');
+    ok(!(await call(null, 'GET', 'listings')).items.some((i: Row) => i.id === held.id));
+    await denied(() => call(null, 'GET', 'listings/' + held.id), 404);
+    await denied(() => call('buyer', 'GET', 'listings/' + held.id), 404);
+    ok((await call('seller', 'GET', 'listings/' + held.id)).id === held.id);
+    const spot1 = (await payments()).find(p => p.reference === 'SPOT-1')!;
+    ok(spot1.listing_id === held.id && spot1.status === 'Pending' && spot1.purpose === 'promotion');
+    await call('admin', 'POST', 'admin/payments/' + spot1.id, { status: 'Approved' });
+    ok((await call(null, 'GET', 'listings')).items.find((i: Row) => i.id === held.id)?.featured);
+    // Rejected: the listing stays back, the seller is told why, and can publish it without the Spotlight.
+    const held2 = await call('seller', 'POST', 'listings', { ...listing, title: 'Second Spotlight', spotlight: { duration: 3, ...proof, reference: 'SPOT-2' } });
+    const spot2 = (await payments()).find(p => p.reference === 'SPOT-2')!;
+    await call('admin', 'POST', 'admin/payments/' + spot2.id, { status: 'Rejected', note: 'No such transfer was found.' });
+    ok(!(await call(null, 'GET', 'listings')).items.some((i: Row) => i.id === held2.id));
+    ok(((await call('seller', 'GET', 'notifications')).items as Row[]).some(n => n.title === 'Payment rejected' && String(n.body).includes('not published yet')));
+    await denied(() => call('buyer', 'POST', 'listings/' + held2.id + '/publish'));
+    await call('seller', 'POST', 'listings/' + held2.id + '/publish');
+    ok((await call(null, 'GET', 'listings')).items.some((i: Row) => i.id === held2.id));
+    await denied(() => call('seller', 'POST', 'listings/' + held2.id + '/publish'), 409);
+    // A Spotlight with bad payment details creates no listing and uses no slot.
+    const usedBefore = (await one(db, 'SELECT used_slots FROM profiles WHERE id=?', 'seller'))!.used_slots;
+    await denied(() => call('seller', 'POST', 'listings', { ...listing, spotlight: { duration: 3, ...proof, reference: 'SPOT-3', paidAmount: 1 } }));
+    ok((await one(db, 'SELECT used_slots FROM profiles WHERE id=?', 'seller'))!.used_slots === usedBefore);
+    await call('seller', 'DELETE', 'listings/' + held.id);
+    await call('seller', 'DELETE', 'listings/' + held2.id);
+    ok((await one(db, 'SELECT used_slots FROM profiles WHERE id=?', 'seller'))!.used_slots === 1);
     await call('admin', 'POST', 'admin/moderate', { type: 'user', id: 'seller', action: 'suspend', reason: 'Testing account moderation' });
     await denied(() => call('seller', 'GET', 'me'), 403);
     ok(!(await call(null, 'GET', 'listings')).items.some((i: Record<string, unknown>) => i.id === l.id));
@@ -115,7 +179,23 @@ async function suite(db: unknown, label: string) {
     await run(db, 'UPDATE buyer_requests SET expiry=? WHERE id=?', '2000-01-01T00:00:00.000Z', expired.id);
     await denied(() => call('seller', 'POST', 'requests/' + expired.id + '/offers', offer), 409);
     const ns = await call('buyer', 'GET', 'notifications');
-    ok(ns.items.some((n: Record<string, unknown>) => n.id === 'request-expired:' + expired.id));
+    ok(ns.items.some((n: Record<string, unknown>) => n.id === 'request-expired:' + expired.id && n.title === 'Request taken down' && String(n.body).startsWith('No offers came in')));
+    // A request whose offers were never selected says so; an ended request can be posted again for a fresh 30 days.
+    const unanswered = await call('buyer', 'POST', 'requests', req);
+    await call('seller', 'POST', 'requests/' + unanswered.id + '/offers', offer);
+    await denied(() => call('buyer', 'POST', 'requests/' + unanswered.id + '/repost'), 409);
+    await run(db, 'UPDATE buyer_requests SET expiry=? WHERE id=?', '2000-01-01T00:00:00.000Z', unanswered.id);
+    await call('other', 'GET', 'bootstrap');
+    ok((await call('buyer', 'GET', 'requests/' + unanswered.id)).status === 'Expired');
+    ok((await call('buyer', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.id === 'request-expired:' + unanswered.id && String(n.body).startsWith('No offer was selected')));
+    await denied(() => call('seller', 'POST', 'requests/' + unanswered.id + '/repost'), 403);
+    const again = await call('buyer', 'POST', 'requests/' + unanswered.id + '/repost');
+    const repost = await call('buyer', 'GET', 'requests/' + again.id);
+    ok(repost.status === 'Open' && repost.title === req.title && Date.parse(repost.expiry) > Date.now() + 29 * 86400000);
+    // Deleting a request with an open offer closes the offer and tells the seller.
+    const lastOffer = await call('seller', 'POST', 'requests/' + again.id + '/offers', offer) as { id: string };
+    await call('buyer', 'DELETE', 'requests/' + again.id);
+    ok((await call('seller', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.id === 'request-deleted:' + lastOffer.id && n.title === 'Request removed'));
     await call('buyer', 'PATCH', 'notifications/all');
     ok((await call('buyer', 'GET', 'bootstrap')).unread === 0);
     for (const request of [r, r2, r3]) {
@@ -140,15 +220,41 @@ async function suite(db: unknown, label: string) {
     const rp = (await call('admin', 'GET', 'admin/reports')).items[0];
     await call('admin', 'POST', 'admin/moderate', { type: 'report', id: rp.id, action: 'resolve', reason: 'Reviewed and resolved report' });
     ok((await call('admin', 'GET', 'admin/reports')).items[0].status === 'Resolved');
-    const reject = await call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 1, reference: 'REJECT-ME' });
+    // Every moderation action tells the member what happened, to what, and why.
+    const sellerNotes = (await call('seller', 'GET', 'notifications')).items as Record<string, unknown>[];
+    ok(sellerNotes.some(n => n.title === 'Your account is now verified' && String(n.body).includes('Reason: Verified for testing')));
+    ok(sellerNotes.some(n => n.title === 'A warning about your account' && String(n.body).includes('Reason: Test account warning')));
+    ok((await call('buyer', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.title === 'Your report was resolved' && String(n.body).includes('Reviewed and resolved report')));
+    // Delete a listing: gone for everyone, the seller's slot is freed, the seller is told with the title and reason.
+    const slotsBefore = Number((await call('seller', 'GET', 'me')).counts.listings);
+    const doomed = await call('seller', 'POST', 'listings', { ...listing, title: 'Listing to be removed' });
+    await denied(() => call('admin', 'POST', 'admin/moderate', { type: 'listing', id: doomed.id, action: 'archive', reason: 'Not a real action' }));
+    await call('admin', 'POST', 'admin/moderate', { type: 'listing', id: doomed.id, action: 'delete', reason: 'Prohibited item in the photos' });
+    await denied(() => call(null, 'GET', 'listings/' + doomed.id), 404);
+    ok(Number((await call('seller', 'GET', 'me')).counts.listings) === slotsBefore);
+    ok((await call('seller', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.title === 'Your listing was removed' && String(n.body).includes('"Listing to be removed"') && String(n.body).includes('Reason: Prohibited item in the photos') && n.link_type === ''));
+    await denied(() => call('admin', 'POST', 'admin/moderate', { type: 'listing', id: doomed.id, action: 'restore', reason: 'Deleted items stay deleted' }));
+    // Cancel a request with an open offer: the buyer and the seller are both told; the offer is closed.
+    const cancelled = await call('buyer', 'POST', 'requests', { ...req, title: 'Request the team cancels' });
+    const openOffer = await call('seller', 'POST', 'requests/' + cancelled.id + '/offers', offer);
+    await call('admin', 'POST', 'admin/moderate', { type: 'request', id: cancelled.id, action: 'cancel', reason: 'Duplicate of another request' });
+    ok((await call('buyer', 'GET', 'requests/' + cancelled.id)).status === 'Cancelled');
+    ok((await call('buyer', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.title === 'Your request was cancelled' && String(n.body).includes('Reason: Duplicate of another request')));
+    ok((await call('seller', 'GET', 'notifications')).items.some((n: Record<string, unknown>) => n.id === 'request-removed:' + openOffer.id && n.title === 'Request closed by the support team'));
+    ok((await call('seller', 'GET', 'offers', {}, 'request=' + cancelled.id)).items[0].status === 'Not selected');
+    // Delete a request.
+    await call('admin', 'POST', 'admin/moderate', { type: 'request', id: cancelled.id, action: 'delete', reason: 'Removed after the duplicate check' });
+    await denied(() => call('buyer', 'GET', 'requests/' + cancelled.id), 404);
+    await denied(() => call('admin', 'POST', 'admin/moderate', { type: 'promotion', id: 'none', action: 'delete', reason: 'Promotions cannot be deleted' }));
+    const reject = await call('seller', 'POST', 'payments', { purpose: 'slots', quantity: 1, reference: 'REJECT-ME', ...proof });
     await call('admin', 'POST', 'admin/payments/' + reject.id, { status: 'Rejected', note: 'Transfer not found' });
     ok((await call('seller', 'GET', 'services')).usage.extra_slots === 2);
     ok(Array.isArray((await call('admin', 'GET', 'admin/listings')).items[0].images));
     const conf = (await call('admin', 'GET', 'admin/settings')).settings;
     await denied(() => call('admin', 'POST', 'admin/settings', { ...conf, promotionDurations: [1, 1, 2] }));
     await call('admin', 'POST', 'admin/settings', { ...conf, promotionDurations: [2, 5, 10], promotionPlacement: 'badge-only' });
-    await denied(() => call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 3, listingId: l.id, reference: 'BAD-DURATION' }));
-    const custom = await call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 5, listingId: l.id, reference: 'CUSTOM-PROMO' });
+    await denied(() => call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 3, listingId: l.id, reference: 'BAD-DURATION', ...proof }));
+    const custom = await call('seller', 'POST', 'payments', { purpose: 'promotion', duration: 5, listingId: l.id, reference: 'CUSTOM-PROMO', ...proof });
     ok(custom.amount === 350);
     await call('admin', 'POST', 'admin/payments/' + custom.id, { status: 'Approved' });
     const promotion = await one(db, 'SELECT * FROM promotions WHERE id=?', custom.id);
@@ -158,6 +264,7 @@ async function suite(db: unknown, label: string) {
     await run(db, 'UPDATE promotions SET expires=? WHERE id=?', '2000-01-01T00:00:00.000Z', promo.id);
     await call('seller', 'GET', 'services');
     ok((await one(db, 'SELECT status FROM promotions WHERE id=?', promo.id))!.status === 'Expired');
+    ok(!(await call(null, 'GET', 'listings', {}, 'premium=1')).items.some((i: Record<string, unknown>) => i.id === l.id));
     await call('admin', 'POST', 'admin/categories', { id: 'books', name: 'Books', subcategories: ['Fiction'], active: false });
     await denied(() => call('buyer', 'POST', 'requests', req));
     await call('admin', 'POST', 'admin/categories', { id: 'books', name: 'Books', subcategories: ['Fiction'], active: true });
@@ -173,8 +280,15 @@ async function suite(db: unknown, label: string) {
     await call('admin','POST','admin/settings',{...conf,freeListings:25});
     const capacityIds=[];for(let i=0;i<25;i++)capacityIds.push((await call('capacity','POST','listings',{...listing,title:'Capacity item '+i})).id);
     ok((await call('capacity','GET','me')).counts.listings===25);await denied(()=>call('capacity','POST','listings',listing),409);
+    await run(db,'INSERT INTO uploads (id,owner,mime,size,created) VALUES (?,?,?,?,?)','receipt-capacity','capacity','image/png',100,new Date().toISOString());
+    await call('capacity','POST','payments',{purpose:'slots',quantity:1,...proof,reference:'CAP-SLOT',receipt:'/api/files/receipt-capacity'});
+    await assert.rejects(()=>call('capacity','POST','listings',listing),e=>e instanceof MarketError&&e.status===409&&/waiting for verification/.test(e.message));checks++;
     await call('capacity','DELETE','listings/'+capacityIds[0]);ok((await call('capacity','POST','listings',listing)).id);
-    ok((await call('buyer','GET','my-reviews')).items[0].seller_id==='seller');ok((await call('other','GET','my-reviews')).total===0);
+    ok((await call('buyer','GET','my-reviews')).items[0].seller_id==='seller');
+    // Delete a review: it is gone, and the reviewer is told whose review and why.
+    await call('admin','POST','admin/moderate',{type:'review',id:'buyer:seller',action:'delete',reason:'Personal details in the text'});
+    ok((await call('buyer','GET','my-reviews')).total==0);ok((await call(null,'GET','profiles/seller')).rating.count==0);
+    ok((await call('buyer','GET','notifications')).items.some((n:Record<string,unknown>)=>n.title==='Your review was removed'&&String(n.body).includes('Reason: Personal details in the text')));ok((await call('other','GET','my-reviews')).total===0);
     // Selected requests can be completed after their original response deadline.
     await run(db,'UPDATE buyer_requests SET expiry=? WHERE id=?','2000-01-01T00:00:00.000Z',r.id);
     await call('buyer','POST','requests/'+r.id+'/status',{status:'Closed'});ok((await call('buyer','GET','requests/'+r.id)).status==='Closed');

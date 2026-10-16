@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import { Actions, Item, Choice, Photo, money, useLoad, Load } from './ui';
+import { Actions, Item, Choice, Photo, money, useLoad, Load, daysLeft } from './ui';
 import { toast } from 'sonner';
 export function TextField({ label, value, onChange, type = 'text', required = true, maxLength = 120, min = 1, placeholder }: {
     label: string;
@@ -53,7 +53,7 @@ export function ItemForm({ kind, item = {}, actions, done }: {
     actions: Actions;
     done: () => void;
 }) { const isListing = kind === 'listings'; const [f, setF] = useState<Item>(()=>({ ...item, title: item.title || '', description: item.description || '', category: item.category || actions.categories[0]?.name || 'Clothes', subcategory: item.subcategory || '', brand: item.brand || '', price: item.price || '', quantity: item.quantity || 1, condition: item.condition || 'Like New', location: item.location || 'Peshawar', images: item.images || [], image: item.image || '', expiry: item.expiry?.toString().slice(0, 10) || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) })); const [busy, setBusy] = useState(false); const set = (k: string, v: unknown) => setF({ ...f, [k]: v }); async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); const result = await actions.perform(kind + (item.id ? '/' + item.id : ''), item.id ? 'PATCH' : 'POST', f as Record<string, unknown>); setBusy(false); if (result)
-    done(); } const sub = actions.categories.find(c => c.name === f.category)?.subcategories || []; return <form className="form" onSubmit={submit}><TextField label={isListing ? 'Product title' : 'What are you looking for?'} placeholder={isListing ? 'e.g. Samsung Galaxy A54, 128GB, black' : 'e.g. Study table with drawers'} value={f.title} onChange={v => set('title', v)}/><label className="field">Description<textarea required minLength={10} maxLength={3000} placeholder={isListing ? 'Age, what is included, any faults (at least 10 characters)' : 'Size, model, colour or anything else sellers should know (at least 10 characters)'} value={f.description} onChange={e => set('description', e.target.value)}/></label><div className="form-row"><label className="field">Category<Choice label="Category" value={f.category} onChange={v => setF({ ...f, category: v, subcategory: '' })} options={actions.categories.map(c => c.name)}/></label><label className="field">Condition<Choice label="Condition" value={f.condition} onChange={v => set('condition', v)} options={['New', 'Like New', 'Good', 'Fair', 'Used']}/></label></div>{isListing && <div className="form-row"><label className="field">Subcategory<Choice label="Subcategory" value={f.subcategory || 'none'} onChange={v => set('subcategory', v === 'none' ? '' : v)} options={[{ value: 'none', label: 'Not specified' }, ...sub]}/></label><TextField label="Brand (optional)" placeholder="e.g. Samsung" value={f.brand} required={false} onChange={v => set('brand', v)}/></div>}<div className="form-row"><TextField label={isListing ? 'Price (Rs.)' : 'Maximum budget (Rs.)'} type="number" placeholder="e.g. 4500" value={f.price} onChange={v => set('price', v)}/><TextField label="Quantity" type="number" placeholder="e.g. 1" value={f.quantity} onChange={v => set('quantity', v)}/></div><TextField label="City" placeholder="e.g. Peshawar" maxLength={80} value={f.location} onChange={v => set('location', v)}/>{!isListing && <TextField label="Expiry date (within one year)" type="date" value={f.expiry} onChange={v => set('expiry', v)}/>}<Photos values={isListing ? f.images : f.image ? [f.image] : []} max={isListing ? 6 : 1} onChange={v => set(isListing ? 'images' : 'image', isListing ? v : v[0] || '')}/><button className="btn dark" disabled={busy}>{busy ? 'Saving…' : item.id ? 'Save changes' : isListing ? 'Publish listing' : 'Post request'}</button></form>; }
+    done(); } const sub = actions.categories.find(c => c.name === f.category)?.subcategories || []; return <form className="form" onSubmit={submit}><TextField label={isListing ? 'Product title' : 'What are you looking for?'} placeholder={isListing ? 'e.g. Samsung Galaxy A54, 128GB, black' : 'e.g. Study table with drawers'} value={f.title} onChange={v => set('title', v)}/><label className="field">Description<textarea required minLength={10} maxLength={3000} placeholder={isListing ? 'Age, what is included, any faults (at least 10 characters)' : 'Size, model, colour or anything else sellers should know (at least 10 characters)'} value={f.description} onChange={e => set('description', e.target.value)}/></label><div className="form-row"><label className="field">Category<Choice label="Category" value={f.category} onChange={v => setF({ ...f, category: v, subcategory: '' })} options={actions.categories.map(c => c.name)}/></label><label className="field">Condition<Choice label="Condition" value={f.condition} onChange={v => set('condition', v)} options={['New', 'Like New', 'Good', 'Fair', 'Used']}/></label></div>{isListing && <div className="form-row"><label className="field">Subcategory<Choice label="Subcategory" value={f.subcategory || 'none'} onChange={v => set('subcategory', v === 'none' ? '' : v)} options={[{ value: 'none', label: 'Not specified' }, ...sub]}/></label><TextField label="Brand (optional)" placeholder="e.g. Samsung" value={f.brand} required={false} onChange={v => set('brand', v)}/></div>}<div className="form-row"><TextField label={isListing ? 'Price (Rs.)' : 'Maximum budget (Rs.)'} type="number" placeholder="e.g. 4500" value={f.price} onChange={v => set('price', v)}/><TextField label="Quantity" type="number" placeholder="e.g. 1" value={f.quantity} onChange={v => set('quantity', v)}/></div><TextField label="City" placeholder="e.g. Peshawar" maxLength={80} value={f.location} onChange={v => set('location', v)}/>{!isListing && item.id && item.expiry && <p className="pp-request-run">{daysLeft(item.expiry)}. Editing does not change when the request ends.</p>}<Photos values={isListing ? f.images : f.image ? [f.image] : []} max={isListing ? 6 : 1} onChange={v => set(isListing ? 'images' : 'image', isListing ? v : v[0] || '')}/><button className="btn dark" disabled={busy}>{busy ? 'Saving…' : item.id ? 'Save changes' : isListing ? 'Publish listing' : 'Post request'}</button></form>; }
 export function OfferForm({ item, actions, done }: {
     item: Item;
     actions: Actions;
@@ -80,6 +80,15 @@ export function PaymentForm({ item, actions, done }: {
     const [quantity, setQuantity] = useState(Math.min(100, Math.max(1, Math.round(Number(item.quantity)) || 1)));
     const [picked, setDuration] = useState(item.duration ? String(item.duration) : '');
     const [reference, setReference] = useState(String(item.reference || ''));
+    // The details the administrator cross-checks against the bank or wallet account.
+    const today = new Date().toISOString().slice(0, 10);
+    const [method, setMethod] = useState(String(item.method || 'JazzCash'));
+    const [senderName, setSenderName] = useState(String(item.senderName || ''));
+    const [senderAccount, setSenderAccount] = useState(String(item.senderAccount || ''));
+    const [paidAmount, setPaidAmount] = useState(item.paidAmount ? String(item.paidAmount) : '');
+    const [paidOn, setPaidOn] = useState(String(item.paidOn || today));
+    const [receipt, setReceipt] = useState(String(item.receipt || ''));
+    const [uploading, setUploading] = useState(false);
     const [busy, setBusy] = useState(false);
     const conf = state.data?.settings;
     const prices = conf ? [conf.promotion24h, conf.promotion3d, conf.promotion7d] : [];
@@ -90,25 +99,42 @@ export function PaymentForm({ item, actions, done }: {
     const days = (d: number) => d === 1 ? '24 hours' : d + ' days';
     const setSlots = (n: number) => setQuantity(Math.min(100, Math.max(1, Math.round(n) || 1)));
     const ready = !!conf?.paymentInstructions && (purpose === 'slots' || durations.includes(Number(duration)));
+    const paid = Number(paidAmount || amount);
+    const proof = { reference: reference.trim(), method, senderName: senderName.trim(), senderAccount: senderAccount.trim(), paidAmount: paid, paidOn, receipt };
+    async function uploadReceipt(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        setUploading(true);
+        try {
+            const r = await fetch('/api/files', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+            const d: { url?: string; error?: string } = await r.json();
+            if (!r.ok || !d.url) throw Error(d.error || 'Upload failed.');
+            setReceipt(d.url);
+        } catch (err) { toast.error(err instanceof Error ? err.message : 'Upload failed.'); }
+        setUploading(false);
+    }
     return <Load state={state}>{conf && (
         <form className="pay-form" onSubmit={async e => {
             e.preventDefault();
-            if (defer) { (item.onPick as (choice: { duration: number; reference: string; amount: number }) => void)({ duration: Number(duration), reference: reference.trim(), amount }); done(); return; }
+            if (!receipt) { toast.error('Upload a screenshot or photo of the payment receipt.'); return; }
+            if (paid < amount) { toast.error('The amount you paid is less than ' + money(amount) + '. Pay the full amount first.'); return; }
+            if (defer) { (item.onPick as (choice: Record<string, unknown>) => void)({ duration: Number(duration), amount, ...proof }); done(); return; }
             setBusy(true);
-            const saved = await actions.perform('payments', 'POST', { purpose, quantity, duration: Number(duration), listingId: item.id || '', reference });
+            const saved = await actions.perform('payments', 'POST', { purpose, quantity, duration: Number(duration), listingId: item.id || '', ...proof });
             setBusy(false); if (saved) done();
         }}>
             {!!item.id && !defer && (
                 <div className="pay-tabs" role="tablist" aria-label="Service">
-                    <button type="button" role="tab" aria-selected={purpose === 'promotion'} className={purpose === 'promotion' ? 'active' : ''} onClick={() => setPurpose('promotion')}>Feature this listing</button>
+                    <button type="button" role="tab" aria-selected={purpose === 'promotion'} className={purpose === 'promotion' ? 'active' : ''} onClick={() => setPurpose('promotion')}>Make it a Premium Listing</button>
                     <button type="button" role="tab" aria-selected={purpose === 'slots'} className={purpose === 'slots' ? 'active' : ''} onClick={() => setPurpose('slots')}>Extra listing slots</button>
                 </div>
             )}
 
             <section className="pay-card">
                 <div className="pay-card-head"><span className="pay-step">1</span><div>
-                    <h3>{purpose === 'slots' ? 'How many extra listings?' : 'How long should it be featured?'}</h3>
-                    <p>{purpose === 'slots' ? money(conf.extraListingPrice) + ' per listing. They are added to your allowance once the payment is verified.' : defer ? 'Your product is published straight away as a normal listing. It moves ahead of other products, with a Featured badge, once our team has confirmed this payment.' : String(item.title || 'Your listing') + ' is shown ahead of other products for the time you choose.'}</p>
+                    <h3>{purpose === 'slots' ? 'How many extra listings?' : 'How long should it stay premium?'}</h3>
+                    <p>{purpose === 'slots' ? money(conf.extraListingPrice) + ' per listing. They are added to your allowance once the payment is verified.' : defer ? 'Your product goes live, ahead of other products with a Premium badge, once our team has confirmed this payment. Until then only you can see it.' : String(item.title || 'Your listing') + ' is shown ahead of other products for the time you choose.'}</p>
                 </div></div>
                 {purpose === 'slots' ? (
                     <div className="pay-qty">
@@ -133,25 +159,49 @@ export function PaymentForm({ item, actions, done }: {
             </section>
 
             <div className="pay-amount">
-                <div><span>Amount to pay</span><small>{purpose === 'slots' ? quantity + (quantity === 1 ? ' listing' : ' listings') + ' × ' + money(conf.extraListingPrice) : 'Featured for ' + days(Number(duration))}</small></div>
+                <div><span>Amount to pay</span><small>{purpose === 'slots' ? quantity + (quantity === 1 ? ' listing' : ' listings') + ' × ' + money(conf.extraListingPrice) : 'Premium Listing for ' + days(Number(duration))}</small></div>
                 <strong>{money(amount)}</strong>
             </div>
 
             <section className="pay-card">
                 <div className="pay-card-head"><span className="pay-step">2</span><div>
-                    <h3>Pay, then send us the reference</h3>
-                    <p>Payment is made outside Picking Price. Our team checks the transfer before your service starts.</p>
+                    <h3>Pay, then send us the payment details</h3>
+                    <p>Payment is made outside Picking Price. Our team matches these details with the transfer before your service starts.</p>
                 </div></div>
                 <div className={'pay-instructions' + (conf.paymentInstructions ? '' : ' missing')}>
                     <span className="pay-instructions-label">{conf.paymentInstructions ? 'Where to pay' : 'Payment details not added yet'}</span>
                     {conf.paymentInstructions || 'The payment details have not been set up yet, so requests cannot be submitted right now. Please contact support.'}
                 </div>
-                <label className="pay-field">Transaction / reference number
-                    <input id="pay-reference" type="text" required minLength={4} maxLength={120} placeholder="e.g. the TID from your transfer receipt" value={reference} onChange={e => setReference(e.target.value)} />
-                </label>
+                <div className="pay-proof-grid">
+                    <label className="pay-field">Paid with
+                        <select id="pay-method" className="pp-select" value={method} onChange={e => setMethod(e.target.value)}>
+                            {['JazzCash', 'Easypaisa', 'Bank transfer', 'Other'].map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </label>
+                    <label className="pay-field">Transaction ID / reference
+                        <input id="pay-reference" type="text" required minLength={4} maxLength={120} placeholder="e.g. the TID on your receipt" value={reference} onChange={e => setReference(e.target.value)} />
+                    </label>
+                    <label className="pay-field">Sender name
+                        <input id="pay-sender" type="text" required minLength={2} maxLength={80} placeholder="Name on the account you paid from" value={senderName} onChange={e => setSenderName(e.target.value)} />
+                    </label>
+                    <label className="pay-field">Sender account / wallet number
+                        <input id="pay-account" type="text" required minLength={4} maxLength={40} placeholder="e.g. 0300 1234567 or the last digits" value={senderAccount} onChange={e => setSenderAccount(e.target.value)} />
+                    </label>
+                    <label className="pay-field">Amount paid (Rs.)
+                        <input id="pay-paid" type="number" inputMode="numeric" required min={1} placeholder={String(amount)} value={paidAmount} onChange={e => setPaidAmount(e.target.value)} />
+                    </label>
+                    <label className="pay-field">Date paid
+                        <input id="pay-date" type="date" required max={today} value={paidOn} onChange={e => setPaidOn(e.target.value)} />
+                    </label>
+                </div>
+                <div className="pay-field pay-receipt">Receipt screenshot
+                    {receipt
+                        ? <div className="pay-receipt-done"><Photo src={receipt} alt="Payment receipt" /><button type="button" onClick={() => setReceipt('')}><X size={14} /> Change</button></div>
+                        : <label className="pay-receipt-pick"><Upload size={16} /> {uploading ? 'Uploading…' : 'Upload a screenshot or photo of the receipt'}<input id="pay-receipt" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={uploadReceipt} disabled={uploading} /></label>}
+                </div>
             </section>
 
-            <button className="pay-submit" id="pay-submit" disabled={!ready || busy}>{busy ? 'Submitting…' : defer ? 'Add Spotlight to this listing' : 'Submit for verification'}</button>
+            <button className="pay-submit" id="pay-submit" disabled={!ready || busy}>{busy ? 'Submitting…' : defer ? 'Make this a Premium Listing' : 'Submit for verification'}</button>
         </form>
     )}</Load>;
 }

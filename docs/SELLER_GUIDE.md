@@ -12,6 +12,8 @@ When your account can do both, use the **Buying / Selling** switch in the header
 
 ## 2. List a product
 
+The description (**About this item** on the product page) can be up to 1000 characters; a counter under the box shows how many you have used.
+
 1. Press **Sell Now**.
 2. Add up to six photos. The first photo is the one shown in lists.
 3. Enter the title, category and sub-category, and the brand if there is one.
@@ -49,9 +51,11 @@ When your slots are full, the site tells you and you can ask for more:
 
 1. Open the Seller Dashboard → **Quota & Services**.
 2. Choose a pack (+5 or +10) or enter the number of extra listings you want. The amount to pay is shown (Rs. 50 per slot unless the administrator has changed it).
-3. Pay that amount using the payment instructions shown in the form.
-4. Enter the payment reference from your bank or wallet and submit the request.
+3. Pay that amount using the payment instructions shown in the form, then fill in the payment details our team checks against the transfer: how you paid (JazzCash, Easypaisa, bank transfer or other), the transaction ID, the sender's name and account or wallet number, the amount you paid, the date, and a screenshot or photo of the receipt. The amount must not be less than the price, and each transaction ID can be used once.
+4. Submit the request.
 5. The administrator checks the payment. When it is approved the slots are added and you are notified; if it is rejected you are told why.
+
+While a slot payment is waiting for verification and your slots are full, publishing a new listing tells you so; you can publish as soon as the payment is approved.
 
 ## 4. Manage your listings
 
@@ -59,22 +63,26 @@ Open the Seller Dashboard → **Active Listings**. For each product you can view
 
 If the support team hides one of your listings you receive a notification with the reason.
 
-## 5. Promote a product
+Buyers can review you after they have chatted with you. Reviews appear on your products and your profile as cards with the stars, the date and the text, under your average rating. Each product counts its **views**: one per visitor per day, and your own visits are not counted. The most viewed product on the site is shown on the home page as the **Popular Product**.
 
-A promoted product carries a **Featured** badge and is shown before ordinary products for the time you pay for.
+## 5. Promote a product (Premium Listing)
+
+A promoted product is a **Premium Listing**: it carries a **Premium** badge and is shown before ordinary products for the time you pay for.
 
 1. In **Active Listings**, press **Promote** on the product.
 2. Choose one of the three lengths on offer (by default 24 hours, 3 days or 7 days) and see the price.
-3. Pay using the instructions shown, enter the payment reference and submit.
+3. Pay that amount using the payment instructions shown in the form, then fill in the payment details our team checks against the transfer: how you paid (JazzCash, Easypaisa, bank transfer or other), the transaction ID, the sender's name and account or wallet number, the amount you paid, the date, and a screenshot or photo of the receipt. The amount must not be less than the price, and each transaction ID can be used once. Then submit.
 4. When the administrator approves the payment the promotion starts. It ends by itself, and you are notified when it does.
 
-You can also ask for a promotion while you create the listing: on the Sell Now page choose **Spotlight Boost**, pick the length, pay, enter the payment reference and press **Publish & Request Spotlight**. The product is published straight away as a normal listing, and it becomes featured when the administrator approves the payment. If the payment is rejected the product simply stays a normal listing.
+You can also ask for a promotion while you create the listing: on the Sell Now page choose **Premium Listing**, pick the length, pay, fill in the payment details (with the receipt screenshot) and press **Publish as Premium Listing**. A free listing (the other option) goes live at once. The listing is saved but **not shown to buyers yet**: your Seller Dashboard shows it as *Waiting for payment verification*. When the administrator approves the payment it goes live with the Premium badge. If the payment is rejected you are told why; send the payment again with **Promote**, or press **Publish as free listing** to make it live as a normal listing.
+
+Promoted products also appear in the **Premium Listings** section of the home page, above Live Buyer Requests.
 
 ## 6. Answer buyer requests
 
 Buyers post what they are looking for on the **Requests** page.
 
-1. Open a request to read what the buyer needs: title, category, budget, quantity, condition, location and the date it expires.
+1. Open a request to read what the buyer needs: title, category, budget, quantity, condition, location and how many days are left (a request is live for 30 days). If the buyer deletes a request you made an offer on, you are notified and the offer is closed.
 2. Press **Submit Offer**, enter your price and describe what you are offering. You can add a photo.
 3. Use **Chat with Buyer** to answer questions.
 4. Follow your offers under **My Offers** in the Seller Dashboard. You can edit or withdraw an offer while the request is still open.

@@ -1,11 +1,12 @@
 import { Context, MarketError, pageOf } from './types';
 import { bootstrap, initialize, ensureProfile, expireForUser, authenticated, one, rows, configuration, pagination } from './core';
 import { migrateLegacy } from './legacy';
-import { listCatalogue, detail, saveListing, deleteListing, saveRequest, favorite } from './catalogue';
+import { listCatalogue, detail, recordView, saveListing, deleteListing, saveRequest, deleteRequest, repostRequest, favorite, publishListing } from './catalogue';
 import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification, draftList, saveDraft, deleteDraft } from './workflows';
 import { services, requestPayment, decidePayment } from './services';
 import { adminData, saveSettings, saveCategory, deleteCategory, moderate } from './admin';
 import { issueResetCode } from './password-reset';
+import { publicSlides, adminSlides, saveSlide, deleteSlide } from './slides';
 import { afterRequest } from './email';
 export async function market(c: Context, method: string, path: string[], q: URLSearchParams, body: Record<string, unknown> = {}) {
     const result = await route(c, method, path, q, body);
@@ -24,6 +25,11 @@ async function route(c: Context, method: string, path: string[], q: URLSearchPar
     if (method === 'GET') {
         if (!area || area === 'bootstrap')
             return bootstrap(c);
+        if (area === 'listings' && key) {
+            const item = await detail(c, area, key);
+            await recordView(c, item);
+            return item;
+        }
         if (area === 'listings' || area === 'requests')
             return key ? detail(c, area, key) : listCatalogue(c, area, q);
         if (area === 'offers')
@@ -60,14 +66,22 @@ async function route(c: Context, method: string, path: string[], q: URLSearchPar
             await expireForUser(c);
             return services(c, q);
         }
+        if (area === 'slides')
+            return publicSlides(c);
+        if (area === 'admin' && key === 'slides')
+            return adminSlides(c);
         if (area === 'admin')
             return adminData(c, key || 'stats', q);
     }
     if (method === 'POST') {
+        if (area === 'listings' && key && sub === 'publish')
+            return publishListing(c, key);
         if (area === 'listings')
             return saveListing(c, body);
         if (area === 'requests' && !key)
             return saveRequest(c, body);
+        if (area === 'requests' && key && sub === 'repost')
+            return repostRequest(c, key);
         if (area === 'requests' && key && sub === 'status')
             return requestStatus(c, key, body);
         if (area === 'requests' && key && sub === 'offers')
@@ -94,6 +108,8 @@ async function route(c: Context, method: string, path: string[], q: URLSearchPar
             return moderate(c, body);
         if (area === 'admin' && key === 'reset-code')
             return issueResetCode(c, body);
+        if (area === 'admin' && key === 'slides')
+            return saveSlide(c, body, sub);
     }
     if (method === 'PATCH') {
         if (area === 'listings' && key)
@@ -119,12 +135,16 @@ async function route(c: Context, method: string, path: string[], q: URLSearchPar
     if (method === 'DELETE') {
         if (area === 'listings' && key)
             return deleteListing(c, key);
+        if (area === 'requests' && key)
+            return deleteRequest(c, key);
         if (area === 'offers' && key)
             return withdrawOffer(c, key);
         if (area === 'drafts' && key)
             return deleteDraft(c, key);
         if (area === 'admin' && key === 'categories' && sub)
             return deleteCategory(c, sub);
+        if (area === 'admin' && key === 'slides' && sub)
+            return deleteSlide(c, sub);
     }
     throw new MarketError('This action is not available.', 404);
 }

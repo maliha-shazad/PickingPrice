@@ -22,6 +22,8 @@ export interface Context {
     db: Database;
     user: User | null;
     ownerEmail?: string;
+    /** Who is looking, for counting product views: the member, or a hash of a guest's address and browser. */
+    visitor?: string;
 }
 export class MarketError extends Error {
     status: number;

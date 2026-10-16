@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, Heart, ShieldCheck, ChevronDown, X, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, Package, Home, SlidersHorizontal, MessageCircle } from 'lucide-react';
-import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea, CityHeading, ListLoading } from './ui';
+import { Actions, useLoadAll, Photo, money, DELIVERY_OPTIONS, offersDelivery, inCity, inArea, CityHeading, ListLoading, sellerProps } from './ui';
 import { samples } from '../samples';
 
 const getCategoryIcon = (name: string) => {
@@ -66,11 +66,12 @@ export function AllCategories({ actions }: { actions: Actions }) {
 
   const state = useLoadAll('listings', actions.revision);
   const realListings = (state.data?.items || []) as any[];
-  const hasRealData = Number(state.data?.total) > 0;
   const loaded = !!state.data || !!state.error;
   // Samples only once the site is known to have no real listing; nothing (a placeholder) while that is still loading.
   // Only the chosen city's products, whether they are members' listings or the samples.
-  const sourceData: any[] = (!loaded ? [] : hasRealData ? realListings : samples).filter((p: any) => inCity(p.location, actions.location));
+  // Each kind on its own: real New products, or New samples until one exists; the same for pre-loved.
+  const realNewOnly = realListings.filter((p: any) => p.condition === 'New'), realUsedOnly = realListings.filter((p: any) => p.condition !== 'New');
+  const sourceData: any[] = (!loaded ? [] : [...(realNewOnly.length ? realNewOnly : samples.filter(p => p.condition === 'New')), ...(realUsedOnly.length ? realUsedOnly : samples.filter(p => p.condition !== 'New'))]).filter((p: any) => inCity(p.location, actions.location));
   useEffect(() => { setSelectedArea(''); }, [actions.location]);
 
   const options = (field: string) => Array.from(new Set(sourceData.map(p => p[field]).filter(Boolean) as string[]))
@@ -295,7 +296,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
                   <div className="pl-card-body">
                     <div className="pl-card-catrow">
                       <span className="pl-card-cat">{p.category}</span>
-                      <span className="pl-card-badge" style={{color: p.condition === 'New' ? '#2563eb' : '#0d9488', background: p.condition === 'New' ? '#dbeafe' : '#ccfbf1'}}>
+                      <span className="pl-card-badge" style={{color: p.condition === 'New' ? '#2563eb' : '#0e7559', background: p.condition === 'New' ? '#dbeafe' : '#ccfbf1'}}>
                         {p.condition === 'New' ? 'Brand New' : 'Pre-Loved'}
                       </span>
                     </div>
@@ -303,7 +304,7 @@ export function AllCategories({ actions }: { actions: Actions }) {
                     <div className="pl-card-price-row">
                       <span className="pl-card-price">{money(p.price)}</span>
                     </div>
-                    <div className="pl-card-seller">
+                    <div {...sellerProps(actions, p, 'pl-card-seller')}>
                       <div className="pl-seller-avatar">{(p.seller || 'S').charAt(0)}</div>
                       <div className="pl-seller-info">
                         <span className="pl-seller-name">{p.seller || 'Seller'}</span>
@@ -328,8 +329,8 @@ export function AllCategories({ actions }: { actions: Actions }) {
                 <Package size={48} style={{opacity:0.3,marginBottom:'16px'}} />
                 <p style={{fontSize:'16px',fontWeight:600}}>No products found{currentCity ? ' in ' + currentCity : ''}</p>
                 <p style={{fontSize:'14px'}}>{currentCity ? 'Only ' + currentCity + ' is shown because it is the city selected at the top of the page.' : 'Try adjusting your filters or browse all categories.'}</p>
-                {currentCity && actions.setLocation ? <button id="ac-all-pakistan" style={{marginTop:'12px',marginRight:'8px',padding:'10px 20px',background:'#fff',color:'#059669',border:'1.5px solid #059669',borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={() => actions.setLocation!('all')}>Show all Pakistan</button> : null}
-                <button style={{marginTop:'12px',padding:'10px 20px',background:'#059669',color:'#fff',border:0,borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={resetFilters}>Reset Filters</button>
+                {currentCity && actions.setLocation ? <button id="ac-all-pakistan" style={{marginTop:'12px',marginRight:'8px',padding:'10px 20px',background:'#fff',color:'#0d5c45',border:'1.5px solid #0d5c45',borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={() => actions.setLocation!('all')}>Show all Pakistan</button> : null}
+                <button style={{marginTop:'12px',padding:'10px 20px',background:'#0d5c45',color:'#fff',border:0,borderRadius:'8px',fontWeight:600,cursor:'pointer'}} onClick={resetFilters}>Reset Filters</button>
               </div>
             )}
 

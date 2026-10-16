@@ -57,7 +57,7 @@ export function ProfileDialog({ profile, actions, onClose }: { profile: Item; ac
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             {avatar ? <Photo src={avatar} alt="Profile picture" className="bd-dialog-avatar" /> : <div className="bd-dialog-avatar" aria-hidden="true" />}
                             <div className="bd-upload-area" style={{ flex: 1, padding: '16px' }} onClick={() => !uploading && file.current?.click()}>
-                                <UploadCloud size={22} color="#059669" />
+                                <UploadCloud size={22} color="#0d5c45" />
                                 <span>{uploading ? 'Uploading…' : avatar ? 'Click to change picture' : 'Click to upload a picture'}</span>
                             </div>
                         </div>

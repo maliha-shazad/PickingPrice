@@ -27,12 +27,13 @@ If you registered with a phone number, or the email does not arrive, contact sup
 | Part of the screen | What it does |
 |---|---|
 | Picking Price logo | Takes you back to the home page, from any page |
+| Slider and **Premium Listings** | The slider (announcements from Picking Price) is on the home page (Discover), just above Explore Categories. Products that sellers have promoted carry a **Premium** badge and have their own **Premium Listings** section on the home page, above Live Buyer Requests. Until the site has real products of a kind, sample ones are shown in their place, each kind on its own: real New products replace only the New samples, real pre-loved products only the pre-loved samples, and real Premium Listings only the premium samples. The same goes for buyer requests and the slider. Sample items are marked as samples on their product page. |
 | **Sell Now** (top right on a computer) | List a product for sale |
 | Search box | Searches every product by title, description, category and brand |
 | Location | **All Pakistan** at first. Choose a city to see only its products; every product list shows which one, for example "Peshawar based products". The city you choose is remembered on your device and is the default location for your requests |
 | Buying / Selling switch | Shown when your account can do both; changes the dashboard and shortcuts you see |
 | Bell | Your notifications. A number appears only when something is unread; it goes away when you open the Notifications page |
-| **Discover** | Home page: categories, live buyer requests, **Recent Pre-Loved Deals** (used products only) and **Fresh Arrivals** (New products only) |
+| **Discover** | Home page: categories, **Premium Listings** (when sellers have promoted products), live buyer requests with the days left, the **Popular Product** (the most viewed product on the site, marked *Most Viewed* with its number of views; until products have views, the newest one is shown as *Latest Listing*), **Recent Pre-Loved Deals** (used products only) and **Fresh Arrivals** (New products only). Press a seller's name on a product card to see their profile |
 | **Requests** | Every open buyer request |
 | **New Products** | Products listed in New condition |
 | **Pre-Loved** | Used products: Like New, Good, Fair and Used |
@@ -47,7 +48,7 @@ The browser's Back button works throughout the site: it closes an open popup fir
 ## 3. Search and filter
 
 1. Type what you want in the search box and press **Search**. You can pick a category first.
-2. The results appear on the home page with these tools above them:
+2. The results appear at the top of the home page (the slider, categories and every other section stay below them), with these tools above them:
    - **Sort by**: Relevance, Newest first, Price low to high, Price high to low.
    - **Type**: new and pre-loved together, new only, or pre-loved only.
    - **Condition**: New, Like New, Good, Fair or Used.
@@ -59,7 +60,7 @@ The **New Products**, **Pre-Loved** and **All Categories** pages have a filter p
 
 ## 4. Look at a product
 
-Open a product to see its photos, price, condition, brand, quantity available, location, when it was listed, the description, delivery and pickup options, and the seller's name, rating and number of active listings.
+Open a product to see its photos, price, condition, brand, quantity available, location, when it was listed, the description, delivery and pickup options, and the seller's name, rating and number of active listings. Product cards show each photo whole, never cropped. On the product page the photos form a slider: swipe on a phone, drag with the mouse, or use the arrows, the dots or the small photos underneath.
 
 From the product page you can:
 
@@ -78,8 +79,10 @@ Use a request when you cannot find what you need. Sellers see it and send you of
 
 1. Choose **Post a Request**.
 2. **Step 1**: write a title, set the quantity, choose a category and sub-category, and choose the condition you accept (Brand New, Like New, Good, Fair or Used).
-3. **Step 2**: enter your budget, add notes and reference photos if you have them, enter the **city or area**, choose the date the request should stay **open until** (14 days from today unless you change it, up to one year), and choose how you prefer to receive the item.
+3. **Step 2**: enter your budget, add notes and reference photos if you have them, enter the **city or area** and choose how you prefer to receive the item.
 4. Submit. Your request now appears on the **Requests** page.
+
+Every request is **live for 30 days**. Request cards show how long is left (for example *30 days left*, or *Ends in 5 hours* on the last day), on the Requests pages and in your Buyer Dashboard. If no offer has been selected when the 30 days are over, the request is taken down automatically and you get a notification (and an email) saying so: *No offers came in* when nobody made an offer, or *No offer was selected* when offers came but you did not choose one. Editing a request does not change when it ends.
 
 **Save Draft for Later** keeps an unfinished request. You will find it under **Draft Requests** in your Buyer Dashboard, where you can continue or delete it.
 
@@ -90,11 +93,21 @@ If your account is for selling only, the site asks you to switch on buying first
 1. When a seller sends an offer you get a notification, and the request shows **Responses Received**.
 2. Open the request from your dashboard to see every offer with its price and details. You can sort the offers and chat with each seller.
 3. Choose **Select seller** on the offer you prefer. That seller is told they were selected and the others are told they were not.
-4. You can also **Close request** when you no longer need it, or **Cancel request**. A request closes by itself on its expiry date.
+4. You can also **Close request** when you no longer need it, or **Cancel request**. A request is taken down by itself after 30 days if no offer was selected.
+
+In your Buyer Dashboard, under **My Requests**, every request shows the date it was **posted** and the date it **expires**, and has its own buttons:
+
+| Button | When | What it does |
+|---|---|---|
+| **Edit Request** | While it is live | Change the details; the end date stays the same |
+| **Close** | While it is live, or after you selected a seller | Marks it as done; no more offers |
+| **Cancel** | While it is live | Stops it; no more offers |
+| **Post again** | After it ended, was closed or cancelled | Posts it again as a new request, live for another 30 days |
+| **Delete** | Always | Removes it for good; sellers with an open offer on it are told |
 
 ## 7. Messages
 
-Every chat is about one product, request or offer, and the chat shows that item at the top with a **View** button. Open **Messages** to see all your chats and reply.
+Every chat is about one product, request or offer, and the chat shows that item at the top with a **View** button. Open **Messages** to see all your chats and reply. The number beside **Messages** is how many messages you have not read yet, and each chat with new messages shows its own number; both go away once you open the chat. A chat opened from a notification appears in a popup that fits the screen, with the message box always in view.
 
 Under each message you send there is a tick: one tick means it was sent, two ticks mean the other person has opened the chat and seen it. An open chat updates by itself every few seconds.
 
@@ -110,7 +123,9 @@ The dashboard shows your profile, your requests and their status, your draft req
 
 ## 10. Notifications
 
-You are notified when a seller sends an offer, when you receive a message, when your request expires, when a report you sent has been reviewed, and when the support team changes something on your account or content. If the site has email switched on, the same notifications are also sent to your email address.
+You are notified when a seller sends an offer, when you receive a message, when your request is taken down after 30 days, when a report you sent has been reviewed, and when the support team changes something on your account or content. If the site has email switched on, the same notifications are also sent to your email address.
+
+After each change you make (saving to your wishlist, sending an offer, posting a request and so on) a short message at the bottom of the screen says what was done. Opening a chat or a notification does not show one.
 
 **Emails you receive** (when the site has email switched on): a welcome email when you create your account, the code when you use Forgot Password, a notice when your password has been changed (if you did not change it, reset it straight away), and a copy of your notifications. For chats you get at most one email per conversation every 15 minutes, so a busy chat does not fill your inbox.
 
