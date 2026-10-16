@@ -314,6 +314,15 @@ export function Homepage({ actions }: { actions: Actions }) {
       searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [actions.searchTick]);
 
+  // Choosing a category tile also brings the visitor to the results, the same way (the results render first,
+  // then the page scrolls; scroll-margin-top keeps them clear of the sticky header).
+  const [categoryScroll, setCategoryScroll] = useState(0);
+  useEffect(() => {
+    if (categoryScroll && searchResultsRef.current)
+      searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [categoryScroll]);
+  const pickCategory = (name: string) => { setSearchCategory(name); setCategoryScroll(t => t + 1); };
+
   const HERO_CATS = ['All Categories', 'Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories'];
 
   return (
@@ -441,7 +450,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             <button className="hp-see-all" onClick={() => actions.go('AllCategories')}>See All <ChevronRight size={14} /></button>
           </div>
           <div className="hp-categories-grid">
-            {categories.map(cat => <CategoryIcon key={cat.name} cat={cat} onClick={() => setSearchCategory(cat.name)} />)}
+            {categories.map(cat => <CategoryIcon key={cat.name} cat={cat} onClick={() => pickCategory(cat.name)} />)}
           </div>
         </section>
         )}
