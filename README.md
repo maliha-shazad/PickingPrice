@@ -43,7 +43,8 @@ React 19 and Vite for the browser app, Node.js 24 with Express 5 for the server,
 |---|---|
 | `client/` | Entry point of the browser app: picks the screen from the address |
 | `app/market/` | The screens (React): home, product lists, product page, forms, dashboards, chat, admin panel, styles |
-| `app/` | Login, sign-up, forgot-password and legal pages, sample products |
+| `app/pages/` | The Login, Sign-up, Forgot Password, Privacy Policy and Terms of Service pages |
+| `app/` | The sign-in and sign-up form, the legal text (also used by the server), sample products, global styles |
 | `components/ui/` | Shared dialog, button, select, switch, table and pagination components |
 | `lib/market/` | The marketplace rules: listings, requests, offers, chat, reviews, payments, promotions, admin, email |
 | `lib/auth/` | Password hashing |

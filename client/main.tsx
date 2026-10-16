@@ -2,10 +2,10 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import Workspace from '../app/market/workspace';
 import AdminApp from '../app/market/admin-app';
-import LoginPage from '../app/login/page';
-import SignupPage from '../app/signup/page';
-import ForgotPasswordPage from '../app/forgot-password/page';
-import LegalPage from '../app/legal';
+import LoginPage from '../app/pages/login';
+import SignupPage from '../app/pages/signup';
+import ForgotPasswordPage from '../app/pages/forgot-password';
+import LegalPage from '../app/pages/legal';
 import '../app/globals.css';
 
 // One page for the whole site: the screen is picked from the address.
