@@ -142,3 +142,7 @@ A Gmail account can send about 500 emails a day. The one-time server setup in Go
 - **Weekly**: skim new Listings and Reviews for anything that breaks the rules; read the Activity log.
 - **After installing or moving the site**: enter the payment instructions, connect the Gmail account and send a test email, check the categories, and confirm sign-up, listing a product with a photo, and a test payment request all work.
 - **Backups**: back up the PostgreSQL database and the uploads folder together; one without the other is incomplete.
+
+## 12. About the technology
+
+Picking Price is a web application. The pages are built with React 19.2.6 (Vite 8.0.13), the server runs on Node.js 24 with Express 5.2.1, and all data is kept in a PostgreSQL 18 database on Railway. "Continue with Google" uses Google OAuth 2.0, and emails are sent through the Gmail API. The full list of components and versions is in the project's README.

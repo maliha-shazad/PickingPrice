@@ -255,3 +255,24 @@ erDiagram
 Supporting tables that are not marketplace entities: `sessions`, `auth_attempts`, `oauth_states`, `uploads`, `settings`, `conversation_reads`, `admin_auth`, `admin_sessions`, `admin_audit`, `mail_account`, `notification_emails` and `schema_migrations`.
 
 A listing or request stores its category by name; renaming a category in the admin panel updates the items that use it. A report points at its target (listing, request, message, review or member) through `target_type` and `target_id`.
+
+## 4. System architecture
+
+```mermaid
+flowchart LR
+  B["Browser<br/>React 19.2.6, built with Vite 8.0.13"] -- "HTTPS, JSON API" --> S["Server<br/>Node.js 24, Express 5.2.1"]
+  S -- "node-postgres 8.23.0" --> D[("PostgreSQL<br/>18 live, 17.11 local")]
+  S -- "photos" --> V["Disk folder<br/>(Railway volume)"]
+  S -- "sign-in" --> G["Google OAuth 2.0"]
+  S -- "emails" --> M["Gmail API"]
+```
+
+| Layer | Technology |
+|---|---|
+| Browser app | React 19.2.6, Vite 8.0.13, Tailwind CSS 4.2.1, Radix UI 1.6.7 |
+| Server | Node.js 24, Express 5.2.1, Zod 3.25.76 |
+| Data | PostgreSQL (18 on Railway, 17.11 locally), node-postgres 8.23.0 |
+| Hosting | Railway (Docker image `node:24-slim`), source on GitHub |
+| Outside services | Google OAuth 2.0 for sign-in, Gmail API for email |
+
+Versions checked on 16 October 2026 against the installed packages and the live services.

@@ -80,6 +80,16 @@ Set `RESEND_API_KEY`, verify your domain in [Resend](https://resend.com) and set
 
 Each notification is emailed at most once; chat messages send at most one email per conversation every 15 minutes; accounts registered with a phone number are skipped; notifications older than one hour are never emailed, so switching email on does not send a backlog. When neither Gmail nor Resend is ready no email is sent and the in-app notifications work as usual.
 
+## Technology used
+
+| Part | Technology |
+|---|---|
+| Passwords | scrypt with a random salt (Node.js `crypto`, Node.js 24) |
+| Sessions | Random tokens stored hashed in PostgreSQL, sent as an HttpOnly cookie (Express 5.2.1) |
+| Google sign-in | Google OAuth 2.0 / OpenID Connect, authorization code flow with PKCE, scopes `openid email profile` |
+| Email | Gmail API with the `gmail.send` permission only (a stored refresh token); Resend as an optional fallback |
+| Input checks | Zod 3.25.76 on the server |
+
 ## Not included
 
 Email address confirmation at sign-up, multi-factor sign-in and member-managed account linking are not implemented.

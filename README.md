@@ -35,7 +35,53 @@ PDF copies of these documents are in `docs/pdf/`, and the diagrams as images in 
 
 ## Technology
 
-React 19 and Vite for the browser app, Node.js 24 with Express 5 for the server, PostgreSQL for the data. The same code runs locally and on the live site.
+One application: a React site built with Vite, served by a Node.js + Express server that keeps its data in PostgreSQL. The same code runs locally and on the live site. Versions checked on 16 October 2026 against the installed packages and the live services.
+
+### Server and data
+
+| Part | Technology | Version | Used for |
+|---|---|---|---|
+| Language | TypeScript | 5.9.3 | All code, browser and server |
+| Runtime | Node.js | 24.18 or newer (live: Docker image `node:24-slim`) | Runs the server |
+| TypeScript runner | tsx | 4.23.13 | Runs the server's TypeScript without a compile step |
+| Package manager | pnpm | 11.25.0 | Installs the packages from `pnpm-lock.yaml` |
+| Web server | Express | 5.2.1 | Pages, API, sign-in, sessions, photo uploads |
+| Database | PostgreSQL | 18 on Railway (live), 17.11 locally | All data |
+| Database driver | node-postgres (`pg`) | 8.23.0 | Connects the server to PostgreSQL |
+| Input checks | Zod | 3.25.76 | Validates every request on the server |
+| Passwords | scrypt (Node.js `crypto`) | built into Node.js | Salted password hashes |
+
+### Browser app
+
+| Part | Technology | Version | Used for |
+|---|---|---|---|
+| Screens | React and React DOM | 19.2.6 | Every page and dialog |
+| Build | Vite, with @vitejs/plugin-react | 8.0.13, 6.0.2 | Builds the browser app into `server/public/` |
+| Styling | Tailwind CSS, @tailwindcss/postcss, tw-animate-css | 4.2.1, 4.2.1, 1.4.0 | Utility classes and animations, next to the site's own CSS in `app/market/styles.css` |
+| Components | Radix UI, with shadcn/ui components | 1.6.7 (shadcn theme 4.13.0) | Dialogs, selects, switches, tables, pagination (`components/ui/`) |
+| Icons | Lucide React | 1.31.0 | All icons |
+| Messages | Sonner | 2.0.8 | Short pop-up messages ("Saved successfully") |
+| Class helpers | class-variance-authority, clsx, tailwind-merge | 0.7.1, 2.1.1, 3.6.0 | Combining CSS classes in components |
+
+### Services
+
+| Service | Used for |
+|---|---|
+| Railway | Hosting: the `web` service runs the `Dockerfile`, a PostgreSQL service holds the data, a volume keeps the photos |
+| GitHub | Source code; every push to `main` redeploys the live site |
+| Google OAuth 2.0 / OpenID Connect | "Continue with Google" (scopes `openid email profile`, with PKCE) |
+| Gmail API | Sending emails (permission to send only) from the site's Gmail account; Resend is an optional fallback |
+| Google Search Console | Proves ownership of the site for Google's app verification |
+| Google Maps Geocoding API | Optional city detection; off until `GOOGLE_MAPS_KEY` is set |
+
+### Development and tests
+
+| Tool | Version | Used for |
+|---|---|---|
+| ESLint, @eslint/js, typescript-eslint, eslint-plugin-react-hooks, globals | 9.39.4, 9.39.4, 8.59.3, 7.1.1, 16.4.0 | `npm run lint` |
+| PGlite | 0.5.8 | In-memory PostgreSQL for the tests |
+| Node.js test runner and assertion scripts | built into Node.js | `npm test` |
+| Type definitions | @types/node 22.19.19, @types/express 5.0.6, @types/pg 8.23.1, @types/react 19.2.14, @types/react-dom 19.2.3 | Editor and lint type information |
 
 ## Project structure
 

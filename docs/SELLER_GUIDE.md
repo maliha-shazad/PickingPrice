@@ -124,3 +124,7 @@ If the site has email switched on, these are also sent to your email address.
 - Reply quickly in chat.
 - Meet in a busy public place and count the payment before handing over the item.
 - Remove a listing once the item is sold so buyers are not disappointed and your slot is freed.
+
+## 12. About the technology
+
+Picking Price is a web application. The pages are built with React 19.2.6 (Vite 8.0.13), the server runs on Node.js 24 with Express 5.2.1, and all data is kept in a PostgreSQL 18 database on Railway. "Continue with Google" uses Google OAuth 2.0, and emails are sent through the Gmail API. The full list of components and versions is in the project's README.

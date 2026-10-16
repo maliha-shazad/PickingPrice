@@ -20,6 +20,19 @@ Every hosting option below needs three things:
 2. **A PostgreSQL database**, given to the server as `DATABASE_URL`.
 3. **A place where uploaded photos stay.** The server writes each photo as a file in `UPLOADS_DIR`. This works on Railway (with a volume) and on your own computer or server. It does **not** work on Vercel or Cloudflare Containers without a code change, because their disks are temporary â€” see Sections 5 and 6.
 
+### Software versions
+
+| Software | Version | Notes |
+|---|---|---|
+| Node.js | 24.18 or newer | The `Dockerfile` uses `node:24-slim` |
+| pnpm | 11.25.0 | Pinned in `package.json`; install with `npm install --global pnpm@11.25.0` |
+| PostgreSQL | 18 on Railway, 17.11 locally | Any supported PostgreSQL works; the tables are created by `drizzle/*.sql` |
+| Express | 5.2.1 | Web server |
+| React / Vite | 19.2.6 / 8.0.13 | Built once with `pnpm build` |
+| tsx | 4.23.13 | Starts the server: `node --import tsx server/index.ts` |
+
+The complete list of components and versions is in [README.md](README.md#technology). Versions checked on 16 October 2026 against the installed packages and the live services.
+
 ### Environment variables
 
 | Variable | Needed | Purpose |

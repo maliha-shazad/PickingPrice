@@ -2,6 +2,10 @@
 
 Developer documentation for the HTTP API served by the Express server (`server/app.ts`). The rules behind it live in `lib/market/` and are routed in `lib/market/router.ts`.
 
+## Technology
+
+The API runs on Node.js 24 with Express 5.2.1. Data is stored in PostgreSQL (18 on the live site, 17.11 locally) through node-postgres 8.23.0, and every input is validated with Zod 3.25.76. The browser app that calls it is React 19.2.6 built with Vite 8.0.13. The full list is in the README.
+
 ## Conventions
 
 - Requests and responses are JSON. Errors are `{ "error": "message" }` with a matching HTTP status: 400 invalid input, 401 not signed in, 403 not allowed, 404 not found, 409 conflict (for example a full listing allowance), 413 too large, 429 too many attempts.

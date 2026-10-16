@@ -27,11 +27,12 @@ If you registered with a phone number, or the email does not arrive, contact sup
 | Part of the screen | What it does |
 |---|---|
 | Picking Price logo | Takes you back to the home page, from any page |
+| **Sell Now** (top right on a computer) | List a product for sale |
 | Search box | Searches every product by title, description, category and brand |
 | Location | **All Pakistan** at first. Choose a city to see only its products; every product list shows which one, for example "Peshawar based products". The city you choose is remembered on your device and is the default location for your requests |
 | Buying / Selling switch | Shown when your account can do both; changes the dashboard and shortcuts you see |
 | Bell | Your notifications. A number appears only when something is unread; it goes away when you open the Notifications page |
-| **Discover** | Home page: categories, live buyer requests, recent products |
+| **Discover** | Home page: categories, live buyer requests, **Recent Pre-Loved Deals** (used products only) and **Fresh Arrivals** (New products only) |
 | **Requests** | Every open buyer request |
 | **New Products** | Products listed in New condition |
 | **Pre-Loved** | Used products: Like New, Good, Fair and Used |
@@ -131,3 +132,7 @@ The support team reviews every report and you are notified of the result.
 - Report anything that looks like a scam.
 
 More advice is under **Safety Tips** and **Help Center** in the footer.
+
+## 13. About the technology
+
+Picking Price is a web application. The pages are built with React 19.2.6 (Vite 8.0.13), the server runs on Node.js 24 with Express 5.2.1, and all data is kept in a PostgreSQL 18 database on Railway. "Continue with Google" uses Google OAuth 2.0, and emails are sent through the Gmail API. The full list of components and versions is in the project's README.
