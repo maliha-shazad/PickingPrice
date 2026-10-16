@@ -19,7 +19,8 @@ export function RequestDetail({ item, actions }: {
     
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 8px 16px 8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            {/* The right padding keeps the status badge clear of the popup's close button. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', paddingRight: '28px' }}>
                 <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: '#0f172a' }}>Request Details</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: p.status === 'Cancelled' || p.status === 'Closed' ? '#f1f5f9' : '#dcfce7', color: p.status === 'Cancelled' || p.status === 'Closed' ? '#64748b' : '#166534', padding: '6px 12px', borderRadius: '24px', fontSize: '13px', fontWeight: 600 }}>
@@ -34,8 +35,8 @@ export function RequestDetail({ item, actions }: {
             </div>
             
             <div>
-                <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px 0', color: '#0f172a', lineHeight: 1.3 }}>{p.title}</h2>
-                <p style={{ fontSize: '15px', color: '#475569', lineHeight: 1.5, margin: '0' }}>{p.description}</p>
+                <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px 0', color: '#0f172a', lineHeight: 1.3, overflowWrap: 'anywhere' }}>{p.title}</h2>
+                <p style={{ fontSize: '15px', color: '#475569', lineHeight: 1.5, margin: '0', overflowWrap: 'anywhere' }}>{p.description}</p>
             </div>
             
             {p.image && (
@@ -55,10 +56,11 @@ export function RequestDetail({ item, actions }: {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', color: '#334155', fontWeight: 500, padding: '0 8px' }}>
-                <span style={{ fontSize: '18px' }}>📍</span> Location: {p.location || 'Not specified'}
+            {/* Location, category and time left: wraps onto more lines on narrow screens instead of running off the side. */}
+            <div className="rd-meta" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px', fontSize: '15px', color: '#334155', fontWeight: 500, padding: '0 8px', minWidth: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0, overflowWrap: 'anywhere' }}><span style={{ fontSize: '18px' }}>📍</span> Location: {p.location || 'Not specified'}</span>
                 {p.category && <span className="rd-category" style={{ fontSize: '12px', fontWeight: 700, color: '#0d5c45', background: '#ccfbf1', borderRadius: '20px', padding: '3px 10px', whiteSpace: 'nowrap' }}>{p.category}</span>}
-                {p.expiry && !p.sample && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8' }}><DaysLeft item={p} />Ends {date(p.expiry)}</span>}
+                {p.expiry && !p.sample && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 8px', fontSize: '12px', color: '#94a3b8' }}><DaysLeft item={p} />Ends {date(p.expiry)}</span>}
             </div>
             
             {p.sample ? (

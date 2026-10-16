@@ -3413,3 +3413,6 @@ footer.hp-footer{background:var(--pp-green-800) !important;color:#e6f2ec !import
   .adm-slider-kinds button{flex:1 1 auto}
 }
 @media (max-width:420px){.adm-slide-phone{flex-direction:column}.adm-slide-phone-preview{flex-basis:auto;width:100%}}
+/* Popups: their content may shrink to the popup width (long words wrap, rows wrap) */
+.market-modal>*{min-width:0}
+@media (max-width:600px){.market-modal .rd-meta{font-size:14px}}
