@@ -3416,3 +3416,8 @@ footer.hp-footer{background:var(--pp-green-800) !important;color:#e6f2ec !import
 /* Popups: their content may shrink to the popup width (long words wrap, rows wrap) */
 .market-modal>*{min-width:0}
 @media (max-width:600px){.market-modal .rd-meta{font-size:14px}}
+
+/* Admin card: logo on white, the name part in the app green with white text and icon */
+.adm-panel .bd-profile-cover.adm-logo-cover{background:#fff !important;border-bottom:1px solid #e3efe8}
+.adm-panel .bd-profile-card .bd-profile-info{background:linear-gradient(135deg,var(--pp-green-900),var(--pp-green-700))}
+.adm-panel .bd-profile-card .bd-profile-info h2,.adm-panel .bd-profile-card .bd-profile-meta,.adm-panel .bd-profile-card .bd-profile-meta span,.adm-panel .bd-profile-card .bd-profile-meta svg{color:#fff !important}
