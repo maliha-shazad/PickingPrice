@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Check, User } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, UserPlus, ShoppingBag, Store, Mail, Lock, Check, User, Key } from 'lucide-react';
 import { toast } from 'sonner';
 
 /** Where to send someone after they sign in: the page they were heading to (`?next=`), or home. Only paths on this site are accepted. */
@@ -25,6 +25,11 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
     const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
     const [remember, setRemember] = useState(false);
     const [accepted, setAccepted] = useState(false); // sign-up needs the Privacy Policy and Terms of Service accepted
+    // An email waiting for its confirmation code (after sign-up, or a log-in to an account not confirmed yet).
+    const [pending, setPending] = useState<{ email: string; sent: boolean } | null>(null);
+    const [code, setCode] = useState('');
+    const [wait, setWait] = useState(0); // seconds until the code can be sent again
+    useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(t); }, [wait]);
 
     useEffect(() => {
         fetch('/api/auth/options')
@@ -45,8 +50,13 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(tab === 'signup' ? { name, email, phone, password, role, accepted } : { email, password })
             });
-            const d: { error?: string } = await r.json();
+            const d: { error?: string; confirm?: boolean; email?: string; sent?: boolean } = await r.json();
             if (!r.ok) throw Error(d.error || 'Please try again.');
+            if (d.confirm) {
+                // Not signed in yet: the code emailed to the address confirms it first.
+                setPending({ email: d.email || email.trim(), sent: !!d.sent }); setCode(''); setWait(45); setPassword(''); setConfirm('');
+                return;
+            }
             await onSuccess();
             setPassword('');
             setConfirm('');
@@ -57,6 +67,76 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
             setBusy(false);
         }
     }
+
+    const post = async (path: string, body: Record<string, unknown>) => {
+        const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const d: { error?: string } = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(d.error || 'Please try again.');
+    };
+
+    async function confirmCode(e: React.FormEvent) {
+        e.preventDefault();
+        if (!pending) return;
+        setError(''); setBusy(true);
+        try {
+            await post('/api/auth/confirm', { email: pending.email, code });
+            await onSuccess();
+            toast.success('Email confirmed. Welcome to Picking Price!');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Please try again.');
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function resendCode() {
+        if (!pending) return;
+        setError(''); setBusy(true);
+        try {
+            await post('/api/auth/confirm/resend', { email: pending.email });
+            setPending({ ...pending, sent: true }); setCode(''); setWait(45);
+            toast.success('A new code is on its way.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Please try again.');
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    // Step two of signing up: the code from the email. Shown instead of the form until the address is confirmed.
+    if (pending) return (
+        <div className="pp-auth-modal">
+            <div className="pp-auth-header">
+                <div className="pp-auth-logo-img">
+                    <a href="/" aria-label="Picking Price home"><img src="/new-logo.png" alt="Picking Price" style={{ height: '56px', width: 'auto', display: 'block', margin: '0 auto 16px' }} /></a>
+                </div>
+                <h2 className="pp-auth-title">Confirm Your Email</h2>
+            </div>
+            <form className="pp-auth-form" onSubmit={confirmCode}>
+                <p className="pp-auth-confirm-note">
+                    {pending.sent
+                        ? <>We sent a 6-digit code to <strong>{pending.email}</strong>. Enter it below to start using your account. It is valid for 15 minutes; check the spam folder too.</>
+                        : <>The code could not be sent to <strong>{pending.email}</strong> just now. Press <strong>Resend code</strong> in a moment.</>}
+                </p>
+                <div className="pp-auth-field">
+                    <label htmlFor="confirm-code">Confirmation Code <span className="req">*</span></label>
+                    <div className="pp-auth-input-wrap">
+                        <Key size={16} className="pp-auth-input-icon" />
+                        <input id="confirm-code" required type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" />
+                    </div>
+                </div>
+                {error && <div className="pp-auth-error" role="alert">{error}</div>}
+                <button type="submit" id="confirm-submit" className="pp-auth-submit-btn" disabled={busy || code.length !== 6}>
+                    {busy ? 'Please wait…' : 'Confirm Email'}
+                    <ArrowRight size={18} />
+                </button>
+                <div className="pp-auth-confirm-links">
+                    <button type="button" id="confirm-resend" disabled={wait > 0 || busy} onClick={resendCode}>{wait > 0 ? `Resend code in ${wait}s` : 'Resend code'}</button>
+                    <button type="button" onClick={() => { setPending(null); setError(''); setCode(''); }}>Use a different email</button>
+                </div>
+            </form>
+        </div>
+    );
 
     return (
         <div className="pp-auth-modal">

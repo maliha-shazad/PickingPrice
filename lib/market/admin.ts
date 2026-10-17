@@ -18,7 +18,12 @@ export async function adminData(c: Context, section: string, q: URLSearchParams)
         const target = targets[item.target_type];
         item.target = target ? await one(c.db, `SELECT * FROM ${target} WHERE id=?`, item.target_id) : null;
     }
-} if (section === 'listings') result.items = result.items.map(parseImages); return result; }
+} if (section === 'users')
+    // Members who signed up but have not typed in their email code yet.
+    for (const item of result.items) {
+        const account = await one(c.db, 'SELECT email_verified FROM accounts WHERE id=?', item.id);
+        item.email_confirmed = !account || Number(account.email_verified) === 1;
+    } if (section === 'listings') result.items = result.items.map(parseImages); return result; }
 export async function saveSettings(c: Context, body: Record<string, unknown>) { permit(c, 'admin'); const d: Record<string, unknown> = {}; for (const key of ['freeListings', 'extraListingPrice', 'promotion24h', 'promotion3d', 'promotion7d']) {
     const value = body[key];
     if (!Number.isInteger(value) || value < (key === 'freeListings' ? 0 : 1) || value > 1000000)

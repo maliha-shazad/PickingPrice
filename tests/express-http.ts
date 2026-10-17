@@ -53,7 +53,21 @@ const equal=(a:unknown,b:unknown)=>{assert.deepEqual(a,b);checks++};
 const send=(path:string,body:unknown,cookie='',origin=config.origin)=>fetch(config.origin+path,{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
 try{
  const signup={email:'http@example.test',name:'HTTP Member',phone:'0300 1234567',password:'safe-http-password-123',role:'both',accepted:true};
- let r=await send('/api/auth/signup',signup);equal(r.status,200);const cookie=r.headers.get('set-cookie')!.split(';')[0];
+ let r=await send('/api/auth/signup',signup);equal(r.status,200);
+ // Email works here, so a new account first confirms its address with an emailed code; nobody is signed in yet.
+ let joined=await r.json() as {confirm:boolean;sent:boolean;email:string};equal([joined.confirm,joined.sent,joined.email,r.headers.get('set-cookie')],[true,true,signup.email,null]);
+ const codeFor=(to:string)=>{const sent=outbox.filter(m=>m.mail.to[0]===to&&/ is your Picking Price confirmation code$/.test(m.mail.subject));return /\b(\d{6})\b/.exec(sent[sent.length-1]?.mail.text||'')?.[1]||''};
+ const firstCode=codeFor(signup.email);assert(/^\d{6}$/.test(firstCode));checks++;
+ r=await fetch(config.origin+'/api/market/bootstrap');equal(((await r.json()) as {user:unknown}).user,null);
+ // Logging in before confirming signs nobody in either: it emails a new code, and the earlier one stops working.
+ r=await send('/api/auth/login',{email:signup.email,password:signup.password});equal(r.status,200);joined=await r.json() as typeof joined;equal([joined.confirm,joined.sent,r.headers.get('set-cookie')],[true,true,null]);
+ const secondCode=codeFor(signup.email);
+ if(secondCode!==firstCode){r=await send('/api/auth/confirm',{email:signup.email,code:firstCode});equal(r.status,400);}
+ r=await send('/api/auth/confirm',{email:signup.email,code:'12345'});equal(r.status,400);
+ r=await send('/api/auth/confirm',{email:signup.email,code:secondCode});equal(r.status,200);const cookie=r.headers.get('set-cookie')!.split(';')[0];
+ r=await send('/api/auth/confirm',{email:signup.email,code:secondCode});equal(r.status,409);   // used up, and the address is confirmed
+ r=await send('/api/auth/confirm/resend',{email:'nobody-yet@example.test'});equal(r.status,200);equal(codeFor('nobody-yet@example.test'),'');
+ await pg.query('DELETE FROM auth_attempts');   // the steps above do not count against the sign-in limits tested further down
  r=await fetch(config.origin+'/api/market/bootstrap',{headers:{Cookie:cookie}});equal(r.status,200);
  // The mobile number is required at sign-up and lands in the profile in one format.
  r=await send('/api/auth/signup',{...signup,email:'nophone@example.test',phone:''});equal(r.status,400);
@@ -127,7 +141,7 @@ try{
  // Notification emails: each new notification is also emailed to its owner, once.
  const waitFor=async(test:()=>boolean)=>{for(let i=0;i<80&&!test();i++)await new Promise(r=>setTimeout(r,50));return test()};
  const mailsTo=(to:string,subject:string)=>outbox.filter(m=>m.mail.to[0]===to&&m.mail.subject===subject);
- r=await send('/api/auth/signup',{email:'mailbuyer@example.test',name:'Mail Buyer',phone:'3011234567',password:'safe-http-password-123',role:'buyer',accepted:true});equal(r.status,200);const mailBuyer=r.headers.get('set-cookie')!.split(';')[0];
+ r=await send('/api/auth/signup',{email:'mailbuyer@example.test',name:'Mail Buyer',phone:'3011234567',password:'safe-http-password-123',role:'buyer',accepted:true});equal(r.status,200);r=await send('/api/auth/confirm',{email:'mailbuyer@example.test',code:codeFor('mailbuyer@example.test')});equal(r.status,200);const mailBuyer=r.headers.get('set-cookie')!.split(';')[0];await pg.query('DELETE FROM auth_attempts');
  r=await send('/api/market/conversations',{contextType:'listing',contextId:created.id},mailBuyer);equal(r.status,200);const mailChat=await r.json() as {id:string};
  r=await send('/api/market/messages/'+mailChat.id,{body:'Is this book <still> available?'},mailBuyer);equal(r.status,200);
  equal(await waitFor(()=>mailsTo(signup.email,'New message | Picking Price').length===1),true);
@@ -139,7 +153,7 @@ try{
  r=await send('/api/market/profiles/'+(await (await read('/api/market/bootstrap',cookie)).json() as {user:{id:string}}).user.id+'/reviews',{rating:5,body:'Quick replies and an honest description.'},mailBuyer);equal(r.status,200);
  equal(await waitFor(()=>mailsTo(signup.email,'New review | Picking Price').length===1),true);equal(mailsTo(signup.email,'New message | Picking Price').length,1);
  // Nothing is emailed twice, and the buyer who caused the notifications gets none of them.
- r=await read('/api/market/notifications',cookie);equal(r.status,200);await new Promise(r=>setTimeout(r,300));equal(mailsTo(signup.email,'New review | Picking Price').length,1);equal(outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test'&&m.mail.subject!=='Welcome to Picking Price').length,0);
+ r=await read('/api/market/notifications',cookie);equal(r.status,200);await new Promise(r=>setTimeout(r,300));equal(mailsTo(signup.email,'New review | Picking Price').length,1);equal(outbox.filter(m=>m.mail.to[0]==='mailbuyer@example.test'&&m.mail.subject!=='Welcome to Picking Price'&&!/confirmation code$/.test(m.mail.subject)).length,0);
  // A new account gets one welcome email, laid out from the left like every other email.
  equal(await waitFor(()=>mailsTo('mailbuyer@example.test','Welcome to Picking Price').length===1),true);const welcome=mailsTo('mailbuyer@example.test','Welcome to Picking Price')[0];
  assert(welcome.mail.text.includes('Hello Mail Buyer')&&welcome.mail.text.includes(config.origin)&&welcome.mail.html.includes('text-align:left')&&!welcome.mail.html.includes('margin:0 auto'));checks++;

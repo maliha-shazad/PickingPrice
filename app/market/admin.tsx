@@ -187,7 +187,7 @@ export function Admin({ actions }: { actions: Actions; }) {
                                                          r.role || r.location || date(r.created)}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Status>{tab === 'users' ? r.suspended ? 'Suspended' : r.verified ? 'Verified' : 'Active' : tab === 'reviews' ? r.hidden ? 'Hidden' : 'Visible' : r.status || 'Recorded'}</Status>
+                                                        <Status>{tab === 'users' ? r.suspended ? 'Suspended' : r.email_confirmed === false ? 'Email not confirmed' : r.verified ? 'Verified' : 'Active' : tab === 'reviews' ? r.hidden ? 'Hidden' : 'Visible' : r.status || 'Recorded'}</Status>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

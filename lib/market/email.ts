@@ -95,6 +95,16 @@ export function resetEmail(name: string, code: string, minutes: number) {
     return { subject: `${code} is your Picking Price reset code`, text, html };
 }
 
+/** The email that carries the code a new member types in to confirm their email address. */
+export function confirmCodeEmail(name: string, code: string, minutes: number) {
+    const text = `Hello ${name || 'there'},\n\nYour Picking Price confirmation code is: ${code}\n\nEnter it on the sign-up page to confirm your email address and start using your account. It is valid for ${minutes} minutes and works once.\n\nIf you did not create a Picking Price account, ignore this email.`;
+    const html = frame(`<p style="font-size:15px;margin:0 0 12px">Hello ${escape(name || 'there')},</p>`
+        + `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3c5446">Use this code to confirm your email address:</p>`
+        + `<p style="font-size:30px;font-weight:700;letter-spacing:6px;margin:0 0 14px;color:#1e3d2f;background:#eef5ea;border-radius:10px;padding:14px 18px;display:inline-block">${escape(code)}</p>`
+        + `<p style="font-size:14px;line-height:1.6;margin:0 0 20px;color:#3c5446">Enter it on the sign-up page to start using your account. It is valid for ${minutes} minutes and works once.</p>`
+        + `<p style="font-size:12px;color:#8aa08a;margin:0">If you did not create a Picking Price account, ignore this email.</p>`);
+    return { subject: `${code} is your Picking Price confirmation code`, text, html };
+}
 
 /** Sent once when a member creates an account (with a password or with Google). */
 export function welcomeEmail(name: string, site: string) {

@@ -9,7 +9,8 @@ import { imageMime, mediaMime } from '../lib/market/files';
 import { hashPassword, verifyPassword } from '../lib/auth/password';
 import { redeemResetCode, requestResetCode, checkResetCode } from '../lib/market/password-reset';
 import { legalHtml, legalTitle } from '../app/legal-content';
-import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail, accountEmail, welcomeEmail, passwordChangedEmail } from '../lib/market/email';
+import { setMailer, mailerFrom, activeMailer, mailService, sendMail, resetEmail, isEmail, accountEmail, welcomeEmail, passwordChangedEmail, confirmCodeEmail } from '../lib/market/email';
+import { newConfirmCode, confirmEmail, confirmMinutes } from '../lib/market/email-confirm';
 import type { GmailClient } from '../lib/market/gmail';
 import { adminStatus, adminSetup, adminLogin, adminLogout, adminChangePassword, adminMarket, adminMail, adminSessionSeconds, adminUser } from '../lib/market/admin-auth';
 export type Config = {
@@ -71,16 +72,25 @@ export function createApp(db: Database, config: Config) {
     // A Pakistani mobile number, typed with or without 0 / 92 / +92 in front, kept as +923001234567.
     const mobile = (value: unknown) => { const m = /^(?:\+?92|0)?(3\d{9})$/.exec(String(value ?? '').replace(/[\s-]/g, '')); if (!m)
         throw new MarketError('Enter a valid mobile number, for example 3001234567.'); return '+92' + m[1]; };
+    // Email confirmation: asked for whenever the site can send email. Without email (or for a phone-number login)
+    // the account works straight away, as before.
+    const canConfirm = async (email: string) => { const mail = activeMailer(); return isEmail(email) && !!mail && !!await mailService(db, mail); };
+    /** Emails a new code: 'sent', 'failed', or 'none' when there is no account waiting for confirmation. */
+    const sendConfirmCode = async (email: string) => { const mail = activeMailer(); const issued = await newConfirmCode(db, email); if (!issued || !mail)
+        return 'none'; return await sendMail(db, mail, { to: issued.email, name: issued.name, ...confirmCodeEmail(issued.name, issued.code, issued.minutes) }) ? 'sent' : 'failed'; };
     app.post('/api/auth/signup', async (req, res) => { const { email, password } = credentials(req.body); const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''; if (name.length < 2 || name.length > 80)
         throw new MarketError('Enter a name between 2 and 80 characters.'); const phone = mobile(req.body.phone); if (req.body.accepted !== true)
-        throw new MarketError('Accept the Privacy Policy and Terms of Service to create an account.'); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created) VALUES (?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now()); if (!inserted)
+        throw new MarketError('Accept the Privacy Policy and Terms of Service to create an account.'); await limit(req, email); const role = ['buyer', 'seller', 'both'].includes(req.body.role) ? req.body.role : 'buyer', key = id(), hash = await hashPassword(password), confirming = await canConfirm(email); const inserted = await one(db, 'INSERT INTO accounts (id,email,name,password_hash,role,created,email_verified) VALUES (?,?,?,?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id', key, email, name, hash, role, now(), confirming ? 0 : 1); if (!inserted)
         throw new MarketError('Unable to register with these details. Try signing in.', 409);
         // The number goes straight into the member's profile, where they can see and change it.
         await initialize(db); await run(db, 'INSERT INTO profiles (id,name,role,phone,created) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET phone=excluded.phone', key, name, role, phone, now());
+        if (confirming)
+            return res.json({ ok: true, confirm: true, email, sent: await sendConfirmCode(email) === 'sent', minutes: confirmMinutes });
         await session(res, key); await accountEmail(db, email, name, welcomeEmail(name, config.origin)); res.json({ ok: true }); });
-    app.post('/api/auth/login', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const a = await one(db, 'SELECT id,password_hash FROM accounts WHERE email=?', email); if (!await verifyPassword(password, a?.password_hash || null))
+    app.post('/api/auth/login', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const a = await one(db, 'SELECT id,password_hash,email_verified FROM accounts WHERE email=?', email); if (!await verifyPassword(password, a?.password_hash || null))
         throw new MarketError('Email or password is incorrect.', 401); const p = await one(db, 'SELECT suspended FROM profiles WHERE id=?', a!.id); if (p?.suspended)
-        throw new MarketError('Your account is suspended.', 403); await session(res, a!.id); res.json({ ok: true }); });
+        throw new MarketError('Your account is suspended.', 403); if (Number(a!.email_verified) === 0 && await canConfirm(email))
+        return res.json({ ok: false, confirm: true, email, sent: await sendConfirmCode(email) === 'sent', minutes: confirmMinutes }); await session(res, a!.id); res.json({ ok: true }); });
     app.post('/api/auth/logout', async (req, res) => { const t = cookie(req, sessionName); if (t)
         await run(db, 'DELETE FROM sessions WHERE token_hash=?', digest(t)); setCookie(res, sessionName, '', 0); res.json({ ok: true }); });
     // Forgot password: a code is emailed, checked, then exchanged for a new password. The member signs in afterwards.
@@ -93,6 +103,12 @@ export function createApp(db: Database, config: Config) {
     app.post('/api/auth/reset', async (req, res) => { const { email, password } = credentials(req.body); await limit(req, email); const key = await redeemResetCode(db, email, req.body.code, password);
         // Tell the owner, so a change they did not make does not go unnoticed.
         const owner = await one(db, 'SELECT name FROM accounts WHERE id=?', key); await accountEmail(db, email, String(owner?.name || ''), passwordChangedEmail(String(owner?.name || ''), config.origin)); res.json({ ok: true }); });
+    // The code from the confirmation email: the account is confirmed, signed in, and welcomed.
+    app.post('/api/auth/confirm', async (req, res) => { const email = identity(req.body); await limit(req, email); const key = await confirmEmail(db, email, req.body.code); await session(res, key);
+        const owner = await one(db, 'SELECT name FROM accounts WHERE id=?', key); await accountEmail(db, email, String(owner?.name || ''), welcomeEmail(String(owner?.name || ''), config.origin)); res.json({ ok: true }); });
+    app.post('/api/auth/confirm/resend', async (req, res) => { const email = identity(req.body); await limit(req, email); if (!await canConfirm(email))
+        throw new MarketError('Email cannot be sent from this site right now. Try again later.', 503); if (await sendConfirmCode(email) === 'failed')
+        throw new MarketError('The email could not be sent. Try again in a minute.', 502); res.json({ ok: true, minutes: confirmMinutes }); });
     app.get('/api/auth/google', async (_req, res) => { if (!googleReady())
         return res.redirect('/?auth_error=google_not_configured'); const state = token(), verifier = token(); await run(db, 'INSERT INTO oauth_states (state_hash,verifier,expires) VALUES (?,?,?)', digest(state), verifier, new Date(Date.now() + 600000).toISOString()); setCookie(res, oauthName, state, 600); const url = new URL('https://accounts.google.com/o/oauth2/v2/auth'); url.search = new URLSearchParams({ client_id: config.googleClientId!, redirect_uri: config.origin + '/api/auth/google/callback', response_type: 'code', scope: 'openid email profile', state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString(); res.redirect(url.toString()); });
     app.get('/api/auth/google/callback', async (req, res) => { const fail = (code: string) => { setCookie(res, oauthName, '', 0); return res.redirect('/?auth_error=' + code); }; if (!googleReady())

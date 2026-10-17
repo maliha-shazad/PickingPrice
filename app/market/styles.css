@@ -3483,3 +3483,10 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
   .pp-mobile-pill.request{background:var(--pp-orange-grad);color:#fff;border:0}
   .pp-mobile-pill.request:hover{background:var(--pp-orange-grad-hover);box-shadow:0 4px 14px rgba(230,126,34,.35)}
 }
+
+/* Sign-up, step two: the email confirmation code */
+.pp-auth-confirm-note{font-size:13px;color:#4a6352;line-height:1.6;margin:0}
+.pp-auth-confirm-note strong{color:#172a20;word-break:break-all}
+.pp-auth-confirm-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pp-auth-confirm-links button{background:none;border:0;padding:0;color:#1c694a;font-weight:700;font-size:13px;cursor:pointer}
+.pp-auth-confirm-links button:disabled{opacity:.5;cursor:default}

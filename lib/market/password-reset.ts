@@ -68,8 +68,9 @@ export async function redeemResetCode(db: Database, email: string, code: unknown
     const used = await one(db, "DELETE FROM email_tokens WHERE hash=? AND account_id=? AND purpose='reset' AND expires>? RETURNING hash", digest(account.id, supplied), account.id, now());
     if (!used)
         throw invalid();
+    // A code that reached the member (by email, or from support) also proves the email address, so it counts as confirmed.
     await db.batch([
-        stmt(db, 'UPDATE accounts SET password_hash=? WHERE id=?', await hashPassword(password), account.id),
+        stmt(db, 'UPDATE accounts SET password_hash=?,email_verified=1 WHERE id=?', await hashPassword(password), account.id),
         stmt(db, 'DELETE FROM sessions WHERE account_id=?', account.id),
     ]);
     return String(account.id);
