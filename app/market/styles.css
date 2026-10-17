@@ -3474,9 +3474,10 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
 .pp-cat-nav-item.pp-cat-all{background:var(--pp-orange-grad);color:#fff;font-weight:700;border-bottom-color:transparent}
 .pp-cat-nav-item.pp-cat-all:hover{background:var(--pp-orange-grad-hover);color:#fff;box-shadow:0 4px 12px rgba(230,126,34,.35)}
 
-/* Phones: All Categories is a plain tab like the ones beside it, and Post a Request matches Sell Now */
+/* Phones: All Categories is a plain tab like the ones beside it (text and icon in bold), and Post a Request matches Sell Now */
 @media(max-width:600px){
-  .pp-cat-nav-item.pp-cat-all{background:none;color:#4a6a4a;font-weight:500;box-shadow:none}
+  .pp-cat-nav-item.pp-cat-all{background:none;color:#4a6a4a;font-weight:700;box-shadow:none}
+  .pp-cat-nav-item.pp-cat-all svg{stroke-width:2.6}
   .pp-cat-nav-item.pp-cat-all:hover{background:#f4f8f2;color:#0a5038;box-shadow:none}
   .pp-mobile-pill.request{background:var(--pp-orange-grad);color:#fff;border:0}
   .pp-mobile-pill.request:hover{background:var(--pp-orange-grad-hover);box-shadow:0 4px 14px rgba(230,126,34,.35)}
