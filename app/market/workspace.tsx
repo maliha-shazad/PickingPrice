@@ -575,15 +575,14 @@ export default function Workspace() {
                     </div>
                 </div>
 
-                {/* Phones only (see styles.css). Signed out: tagline on the left, then Post a Request and Sell Now
+                {/* Phones only (see styles.css). Signed out: tagline on the left, then Sell Now and Post a Request
                     at the far right. Signed in: Sell Now and Post a Request on the left, Wishlist and Messages on the
                     right. Hidden until we know which, so nothing jumps sideways after the page loads. */}
                 <div className="pp-mobile-row" style={boot.data ? undefined : { visibility: 'hidden' }}>
                     {signedOut && <div className="pp-mobile-tagline">Buy Smart. Sell Easy. Find What You Need.</div>}
                     <div className="pp-mobile-group">
-                        {user && mobileSell}
+                        {mobileSell}
                         {mobileRequest}
-                        {!user && mobileSell}
                     </div>
                     {user && (
                         <div className="pp-mobile-group">
