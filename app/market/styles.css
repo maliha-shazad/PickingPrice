@@ -483,8 +483,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-cat-all{color:#0d5c45;font-weight:600}
 .pp-cat-all:hover{color:#0a5038}
 
-.pp-nav-right{display:flex;align-items:center;margin-left:auto;border-left:1px solid #e8efe4;padding-left:4px;flex-shrink:0}
-.pp-nav-right .pp-cat-nav-item+.pp-cat-nav-item{border-left:1px solid #e8efe4;margin-left:4px}
+.pp-nav-right{display:flex;align-items:center;margin-left:auto;border-left:1px solid #e8efe4;flex-shrink:0}
+.pp-nav-right .pp-cat-nav-item+.pp-cat-nav-item{border-left:1px solid #e8efe4}
 
 /* Responsive header */
 @media(max-width:1200px){
@@ -3473,3 +3473,11 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
 /* All Categories tab (first in the tab bar): the Sell Now button's orange and hover colour; it stays in place on hover */
 .pp-cat-nav-item.pp-cat-all{background:var(--pp-orange-grad);color:#fff;font-weight:700;border-bottom-color:transparent}
 .pp-cat-nav-item.pp-cat-all:hover{background:var(--pp-orange-grad-hover);color:#fff;box-shadow:0 4px 12px rgba(230,126,34,.35)}
+
+/* Phones: All Categories is a plain tab like the ones beside it, and Post a Request matches Sell Now */
+@media(max-width:600px){
+  .pp-cat-nav-item.pp-cat-all{background:none;color:#4a6a4a;font-weight:500;box-shadow:none}
+  .pp-cat-nav-item.pp-cat-all:hover{background:#f4f8f2;color:#0a5038;box-shadow:none}
+  .pp-mobile-pill.request{background:var(--pp-orange-grad);color:#fff;border:0}
+  .pp-mobile-pill.request:hover{background:var(--pp-orange-grad-hover);box-shadow:0 4px 14px rgba(230,126,34,.35)}
+}
