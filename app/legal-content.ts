@@ -2,7 +2,7 @@
 // Keep these in step with what the app really does: they are what Google and our members rely on.
 // No React or CSS here: the Express server also sends this as ready-made HTML, so that readers and
 // crawlers that do not run JavaScript still get the full text.
-export const UPDATED = '14 October 2026';
+export const UPDATED = '17 October 2026';
 
 export type Section = { heading: string; body: (string | string[])[] };
 
@@ -74,7 +74,7 @@ export const PRIVACY: Section[] = [
         'We may update this policy from time to time. The date at the top shows when it was last changed. If a change is significant, we will tell you on the website.',
     ] },
     { heading: 'Contact us', body: [
-        'If you have a question about this policy or want to use any of the choices above, use "Report a Problem" at the bottom of the website and we will get back to you.',
+        'If you have a question about this policy or want to use any of the choices above, use "Report a Problem" at the bottom of the website or email us at pickingprice@gmail.com, and we will get back to you.',
     ] },
 ];
 
@@ -135,7 +135,7 @@ export const TERMS: Section[] = [
         'These terms are governed by the laws of Pakistan.',
     ] },
     { heading: 'Contact us', body: [
-        'For any question about these terms, use "Report a Problem" at the bottom of the website.',
+        'For any question about these terms, use "Report a Problem" at the bottom of the website or email us at pickingprice@gmail.com.',
     ] },
 ];
 

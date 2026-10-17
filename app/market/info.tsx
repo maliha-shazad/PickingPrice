@@ -9,10 +9,10 @@ export const infoTitle: Record<InfoTopic, string> = {
     careers: 'Careers', privacy: 'Privacy Policy', terms: 'Terms of Service',
 };
 
-// PLACEHOLDER contact details: replace these with the real ones before launch.
+// Contact details. The email is the real one; the phone, hours and office are still PLACEHOLDERS to replace before launch.
 const CONTACT = {
-    email: 'support@pickingprice.pk',
-    careers: 'careers@pickingprice.pk',
+    email: 'pickingprice@gmail.com',
+    careers: 'pickingprice@gmail.com',
     phone: '+92 300 1234567',
     hours: 'Monday to Saturday, 10:00 am to 6:00 pm (PKT)',
     address: 'Picking Price, University Road, Peshawar, Pakistan',
