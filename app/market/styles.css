@@ -79,10 +79,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .pp-auth-switch-text button{background:transparent;border:0;color:#1c694a;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
 .pp-auth-switch-text button:hover{text-decoration:underline}
 
-.pp-auth-footer-links{display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px;color:#8fa395}
-.pp-auth-footer-links a{color:#8fa395;text-decoration:underline;text-underline-offset:2px}
-.pp-auth-footer-links a:hover{color:#4a6352}
-.pp-auth-footer-links .dot{font-size:10px}
 
 /* ===== NEW PRODUCT PAGE ===== */
 .product-page-container{max-width:1100px;margin:32px auto 60px;padding:0 24px}

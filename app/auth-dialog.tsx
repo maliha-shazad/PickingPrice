@@ -207,13 +207,6 @@ export default function AuthDialog({ mode, onSuccess }: { mode: string, onSucces
                         Already have an Account? <button type="button" onClick={() => { setTab('login'); setError(''); setPassword(''); setConfirm(''); }}>Log In <ArrowRight size={14}/></button>
                     </div>
                 )}
-
-            {/* Sign-up already links both documents in its checkbox, so the footer links show on the login page only. */}
-            {tab === 'login' && <div className="pp-auth-footer-links">
-                <a href="/terms">Terms of Service</a>
-                <span className="dot">•</span>
-                <a href="/privacy">Privacy Policy</a>
-            </div>}
         </div>
     );
 }
