@@ -593,6 +593,15 @@ export default function Workspace() {
             {/* ── CATEGORY NAV BAR ── */}
             <nav className="pp-category-nav" aria-label="Category navigation">
                 <div className="pp-category-nav-inner">
+                    {/* All Categories comes first */}
+                    <button
+                        id="nav-all-categories-btn"
+                        className="pp-cat-nav-item pp-cat-all"
+                        onClick={() => go('AllCategories')}
+                    >
+                        <Grid3x3 size={14} /> All Categories
+                    </button>
+
                     {/* Discover (home) */}
                     <button
                         id="nav-discover-btn"
@@ -627,15 +636,6 @@ export default function Workspace() {
                         onClick={() => go('PreLoved')}
                     >
                         <Heart size={14} /> Pre-Loved
-                    </button>
-
-                    {/* All Categories */}
-                    <button
-                        id="nav-all-categories-btn"
-                        className="pp-cat-nav-item pp-cat-all"
-                        onClick={() => go('AllCategories')}
-                    >
-                        <Grid3x3 size={14} /> All Categories
                     </button>
 
                     {/* Right-side nav items (only shown when logged in) */}
