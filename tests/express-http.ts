@@ -147,17 +147,20 @@ try{
  type Msg={body:string;read:boolean};const chat=async(c:string)=>((await (await read('/api/market/messages/'+mailChat.id,c)).json()) as {items:Msg[]}).items;
  equal((await chat(mailBuyer)).map(m=>m.read),[false,false]);
  const bell=async()=>((await (await read('/api/market/bootstrap',cookie)).json()) as {unread:number}).unread;const unreadBefore=await bell();assert(unreadBefore>=3);checks++;
+ // The header polls these two counts: unread notifications for the bell, unread chat messages for the Messages tab.
+ const counts=async(c:string)=>(await (await read('/api/market/counts',c)).json()) as {notifications:number;messages:number};
+ equal(await counts(cookie),{notifications:unreadBefore,messages:2});equal((await counts(mailBuyer)).messages,0);equal((await read('/api/market/counts')).status,401);
  equal((await chat(cookie)).map(m=>m.read),[false,false]);   // the seller opens the chat; the buyer's messages are not the seller's to tick
  // Opening the chat clears its two "New message" notifications from the bell; the review notification stays.
- equal(await bell(),unreadBefore-2);equal(((await (await read('/api/market/messages/'+mailChat.id,cookie)).json()) as {cleared:number}).cleared,0);
+ equal(await bell(),unreadBefore-2);equal(await counts(cookie),{notifications:unreadBefore-2,messages:0});equal(((await (await read('/api/market/messages/'+mailChat.id,cookie)).json()) as {cleared:number}).cleared,0);
  equal((await chat(mailBuyer)).map(m=>m.read),[true,true]);
  await new Promise(r=>setTimeout(r,15));r=await send('/api/market/messages/'+mailChat.id,{body:'One more question.'},mailBuyer);equal(r.status,200);
- const later=await chat(mailBuyer);equal(later.find(m=>m.body==='One more question.')!.read,false);equal(later.find(m=>m.body==='I can collect it today.')!.read,true);
+ equal((await counts(cookie)).messages,1);const later=await chat(mailBuyer);equal(later.find(m=>m.body==='One more question.')!.read,false);equal(later.find(m=>m.body==='I can collect it today.')!.read,true);
  await new Promise(r=>setTimeout(r,15));r=await send('/api/market/messages/'+mailChat.id,{body:'Yes, still available.'},cookie);equal(r.status,200);
  equal((await chat(cookie)).find(m=>m.body==='Yes, still available.')!.read,false);await chat(mailBuyer);equal((await chat(cookie)).find(m=>m.body==='Yes, still available.')!.read,true);
  r=await read('/api/market/messages/'+mailChat.id);equal(r.status,401);
  // The counts behind the header badges are real numbers on PostgreSQL too (it returns COUNT as text).
- r=await read('/api/market/bootstrap',cookie);const boot=await r.json() as {unread:unknown;openRequests:unknown};equal(typeof boot.unread,'number');equal(typeof boot.openRequests,'number');
+ r=await read('/api/market/bootstrap',cookie);const boot=await r.json() as {unread:unknown;messages:unknown;openRequests:unknown};equal(typeof boot.unread,'number');equal(typeof boot.messages,'number');equal(typeof boot.openRequests,'number');
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII=','base64');
  const upload=(bytes:Buffer,c=cookie)=>fetch(config.origin+'/api/files',{method:'POST',headers:{Origin:config.origin,Cookie:c,'Content-Type':'image/png'},body:new Uint8Array(bytes).buffer});
  r=await upload(png,'');equal(r.status,401);r=await upload(Buffer.from('<svg onload="alert(1)"></svg>'));equal(r.status,400);

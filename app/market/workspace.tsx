@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, ShoppingBag, Heart, MessageCircle, User } from 'lucide-react';
+import { Search, MapPin, Bell, ChevronDown, Plus, LogOut, Home, Tag, Grid3x3, ShoppingBag, Heart, MessageCircle, User, ArrowUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Toaster, toast } from 'sonner';
@@ -396,8 +396,37 @@ export default function Workspace() {
         if (afterSwitch === 'sell' && user.role !== 'buyer') { setAfterSwitch(''); open('listing-form'); }
         if (afterSwitch === 'request' && user.role !== 'seller') { setAfterSwitch(''); open('request-form'); }
     }, [afterSwitch, user?.role]);
+    // The bell's count (unread notifications) and the Messages tab's count (unread chat messages). They come
+    // with the page and are then asked for every 15 seconds, and when the member comes back to the tab, so a
+    // new notification or message shows without a reload. A fresh page load (after any change) starts over.
+    const [liveCounts, setLiveCounts] = useState<{ notifications: number; messages: number } | null>(null);
+    useEffect(() => { setLiveCounts(null); }, [boot.data]);
+    useEffect(() => {
+        if (!user?.id) return;
+        let live = true;
+        const check = () => {
+            if (document.visibilityState !== 'visible') return;
+            api('counts').then(d => { if (live) setLiveCounts({ notifications: Number(d.notifications) || 0, messages: Number(d.messages) || 0 }); }).catch(() => { });
+        };
+        const timer = setInterval(check, 15000);
+        window.addEventListener('focus', check);
+        document.addEventListener('visibilitychange', check);
+        return () => { live = false; clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
+    }, [user?.id]);
     // Counts arrive as text from PostgreSQL, so "0" must not be treated as something to show.
-    const unread = Number(boot.data?.unread) || 0;
+    const unread = liveCounts ? liveCounts.notifications : Number(boot.data?.unread) || 0;
+    const unreadMessages = liveCounts ? liveCounts.messages : Number(boot.data?.messages) || 0;
+    const messageBadge = unreadMessages > 0 && (
+        <span className="pp-msg-badge" aria-label={unreadMessages + (unreadMessages === 1 ? ' unread message' : ' unread messages')}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>
+    );
+    // Back to top: shown at the bottom right once the page has been scrolled down a screen or so.
+    const [showTop, setShowTop] = useState(false);
+    useEffect(() => {
+        const onScroll = () => setShowTop(window.scrollY > 600);
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
     const mobileSell = (
         <button id="mobile-sell-btn" className="pp-mobile-pill sell" onClick={() => open('listing-form')}>
             <Plus size={14} /> Sell Now
@@ -554,7 +583,7 @@ export default function Workspace() {
                                 <Heart size={15} /> <span>Wishlist</span>
                             </button>
                             <button id="mobile-messages-btn" className={`pp-mobile-link${view === 'Messages' ? ' active' : ''}`} aria-label="Messages" onClick={() => go('Messages')}>
-                                <MessageCircle size={15} /> <span>Messages</span>
+                                <MessageCircle size={15} /> <span>Messages</span>{messageBadge}
                             </button>
                         </div>
                     )}
@@ -624,7 +653,7 @@ export default function Workspace() {
                                 className={`pp-cat-nav-item${view === 'Messages' ? ' active' : ''}`}
                                 onClick={() => go('Messages')}
                             >
-                                <MessageCircle size={14} /> Messages
+                                <MessageCircle size={14} /> Messages{messageBadge}
                             </button>
                         </div>
                     )}
@@ -709,6 +738,12 @@ export default function Workspace() {
                     <span>Buy Smart. Sell Easy. Find What You Need.</span>
                 </div>
             </footer>
+
+            {showTop && (
+                <button id="back-to-top" className="pp-back-top" aria-label="Back to top" title="Back to top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <ArrowUp size={20} />
+                </button>
+            )}
 
             {/* ── MODALS ── */}
             <Dialog open={!!modal && modal.type !== 'confirm'} onOpenChange={o => !o && close()}>

@@ -103,7 +103,7 @@ async function conversationContext(c: Context, conv: Row) {
 }
 export async function conversationList(c: Context, q: URLSearchParams) { const u = authenticated(c), { page, size, offset } = pageOf(q); return pagination(c.db, 'SELECT c.*,p.name other_name FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=? ORDER BY c.updated DESC', 'SELECT COUNT(*) n FROM conversations c JOIN profiles p ON p.id=CASE WHEN c.first_user=? THEN c.second_user ELSE c.first_user END WHERE c.first_user=? OR c.second_user=?', [u.userId, u.userId, u.userId], page, size, offset).then(async result => ({ ...result, unread: await unreadMessages(c, u.userId), items: await Promise.all(result.items.map(async (conv: Row) => ({ ...conv, unread: await unreadMessages(c, u.userId, String(conv.id)), context: await conversationContext(c, conv) }))) })); }
 /** Messages from the other person sent after this member last opened the chat; for one chat, or all of them. */
-async function unreadMessages(c: Context, me: string, conversation?: string) {
+export async function unreadMessages(c: Context, me: string, conversation?: string) {
     const sql = "SELECT COUNT(*) n FROM chat_messages m JOIN conversations v ON v.id=m.conversation_id WHERE (v.first_user=? OR v.second_user=?) AND m.owner<>? AND m.created>COALESCE((SELECT r.read_at FROM conversation_reads r WHERE r.id=v.id||':'||?),'')" + (conversation ? ' AND v.id=?' : '');
     return Number((await one(c.db, sql, me, me, me, me, ...(conversation ? [conversation] : [])))!.n);
 }

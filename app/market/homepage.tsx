@@ -1,23 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, Shirt, Monitor, Sofa, Dumbbell, BookOpen, Camera, Car, Utensils, Gem, Baby, Paintbrush, ChevronLeft, ArrowUpRight, Tag, ChevronDown, Crown, Flame, Eye } from 'lucide-react';
+import { Search, ChevronRight, Heart, MapPin, ShieldCheck, Zap, Package, ChevronLeft, ArrowUpRight, Tag, ChevronDown, Crown, Flame, Eye } from 'lucide-react';
 import { Actions, Item, Photo, money, useLoad, Load, Pager, inCity, NoneInCity, CityHeading, ListLoading, sellerProps, DaysLeft } from './ui';
 import { samples, sampleRequests } from '../samples';
 import { AdSlider } from './slider';
 
-const categories = [
-  { name: 'Clothes', icon: Shirt, color: '#e8f5e9' },
-  { name: 'Electronics', icon: Monitor, color: '#e3f2fd' },
-  { name: 'Furniture', icon: Sofa, color: '#fff3e0' },
-  { name: 'Sports', icon: Dumbbell, color: '#fce4ec' },
-  { name: 'Books', icon: BookOpen, color: '#f3e5f5' },
-  { name: 'Cameras', icon: Camera, color: '#e0f7fa' },
-  { name: 'Automobiles', icon: Car, color: '#fbe9e7' },
-  { name: 'Kitchen', icon: Utensils, color: '#f9fbe7' },
-  { name: 'Jewelry', icon: Gem, color: '#fce4ec' },
-  { name: 'Kids', icon: Baby, color: '#e8f5e9' },
-  { name: 'Art', icon: Paintbrush, color: '#ede7f6' },
-  { name: 'Accessories', icon: Gem, color: '#e0f2f1' },
-];
+// Each category's picture is in public/images/categories (Fluent Emoji 3D, see vendor/fluent-emoji.LICENSE.md).
+const categories = ['Clothes', 'Electronics', 'Furniture', 'Sports', 'Books', 'Cameras', 'Automobiles', 'Kitchen', 'Jewelry', 'Kids', 'Art', 'Accessories']
+  .map(name => ({ name, image: '/images/categories/' + name.toLowerCase() + '.png' }));
 
 const featuredSpotlight = {
   id: 'sample-shoes',
@@ -35,10 +24,9 @@ const featuredSpotlight = {
 
 
 function CategoryIcon({ cat, onClick }: { cat: typeof categories[0]; onClick: () => void }) {
-  const Icon = cat.icon;
   return (
-    <button className="hp-cat-pill" style={{ '--cat-color': cat.color } as React.CSSProperties} onClick={onClick}>
-      <span className="hp-cat-icon-wrap"><Icon size={32} /></span>
+    <button className="hp-cat-pill" onClick={onClick}>
+      <span className="hp-cat-icon-wrap"><img className="hp-cat-img" src={cat.image} alt="" loading="lazy" /></span>
       <span className="hp-cat-label">{cat.name}</span>
     </button>
   );
@@ -447,7 +435,7 @@ export function Homepage({ actions }: { actions: Actions }) {
         <section className="hp-section">
           <div className="hp-section-head">
             <h2 className="hp-section-title">Explore Categories</h2>
-            <button className="hp-see-all" onClick={() => actions.go('AllCategories')}>See All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" onClick={() => actions.go('AllCategories')}>View More <ChevronRight size={14} /></button>
           </div>
           <div className="hp-categories-grid">
             {categories.map(cat => <CategoryIcon key={cat.name} cat={cat} onClick={() => pickCategory(cat.name)} />)}
@@ -455,13 +443,13 @@ export function Homepage({ actions }: { actions: Actions }) {
         </section>
         )}
 
-        {/* PREMIUM LISTINGS */}
+        {/* PREMIUM PRODUCTS */}
         {premium.length > 0 && (
         <section className="hp-section hp-premium-section">
           <div className="hp-section-head">
             <div className="hp-section-title-wrap">
               <Crown size={20} className="hp-crown-icon" />
-              <h2 className="hp-section-title">Premium Listings</h2>
+              <h2 className="hp-section-title">Premium Products</h2>
             </div>
             <span className="hp-premium-note">Promoted by sellers</span>
           </div>
@@ -486,7 +474,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               <span className="hp-live-dot" />
               <h2 className="hp-section-title">Live Buyer Requests</h2>
             </div>
-            <button className="hp-see-all" onClick={() => actions.go('BuyerRequests')}>View All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" onClick={() => actions.go('BuyerRequests')}>View More <ChevronRight size={14} /></button>
           </div>
           <div className="hp-requests-list">
             {!reqsReady && <ListLoading />}
@@ -531,7 +519,7 @@ export function Homepage({ actions }: { actions: Actions }) {
             <div className="hp-scroll-btns">
               <button className="hp-scroll-btn" onClick={() => scrollDeals('left')} aria-label="Scroll left"><ChevronLeft size={16} /></button>
               <button className="hp-scroll-btn" onClick={() => scrollDeals('right')} aria-label="Scroll right"><ChevronRight size={16} /></button>
-              <button className="hp-see-all" id="preloved-see-all" onClick={() => actions.go('PreLoved')}>See All <ChevronRight size={14} /></button>
+              <button className="hp-see-all" id="preloved-see-all" onClick={() => actions.go('PreLoved')}>View More <ChevronRight size={14} /></button>
             </div>
           </div>
           <div className="hp-horizontal-scroll" id="deals-scroll">
@@ -553,7 +541,7 @@ export function Homepage({ actions }: { actions: Actions }) {
               <Zap size={18} className="hp-zap-icon" />
               <h2 className="hp-section-title">Fresh Arrivals</h2>
             </div>
-            <button className="hp-see-all" id="arrivals-see-all" onClick={() => actions.go('BrandNew')}>See All <ChevronRight size={14} /></button>
+            <button className="hp-see-all" id="arrivals-see-all" onClick={() => actions.go('BrandNew')}>View More <ChevronRight size={14} /></button>
           </div>
           <div className="hp-arrivals-grid">
             {freshArrivals.length > 0 ? freshArrivals.map(item => (

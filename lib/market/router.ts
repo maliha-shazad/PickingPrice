@@ -2,7 +2,7 @@ import { Context, MarketError, pageOf } from './types';
 import { bootstrap, initialize, ensureProfile, expireForUser, authenticated, one, rows, configuration, pagination } from './core';
 import { migrateLegacy } from './legacy';
 import { listCatalogue, detail, recordView, saveListing, deleteListing, saveRequest, deleteRequest, repostRequest, favorite, publishListing } from './catalogue';
-import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, messageList, sendMessage, report, notificationList, readNotification, draftList, saveDraft, deleteDraft } from './workflows';
+import { requestStatus, offers, saveOffer, withdrawOffer, profile, saveProfile, review, conversation, conversationList, unreadMessages, messageList, sendMessage, report, notificationList, readNotification, draftList, saveDraft, deleteDraft } from './workflows';
 import { services, requestPayment, decidePayment } from './services';
 import { adminData, saveSettings, saveCategory, deleteCategory, moderate } from './admin';
 import { issueResetCode } from './password-reset';
@@ -24,7 +24,12 @@ async function route(c: Context, method: string, path: string[], q: URLSearchPar
     const [area, key, sub] = path;
     if (method === 'GET') {
         if (!area || area === 'bootstrap')
-            return bootstrap(c);
+            return { ...await bootstrap(c), messages: c.user ? await unreadMessages(c, c.user.userId) : 0 };
+        // The header's two counts (unread notifications, unread chat messages), asked for every few seconds.
+        if (area === 'counts') {
+            const u = authenticated(c);
+            return { notifications: Number((await one(c.db, 'SELECT COUNT(*) n FROM notifications WHERE owner=? AND read=0', u.userId))!.n), messages: await unreadMessages(c, u.userId) };
+        }
         if (area === 'listings' && key) {
             const item = await detail(c, area, key);
             await recordView(c, item);

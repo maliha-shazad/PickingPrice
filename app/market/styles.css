@@ -3421,3 +3421,55 @@ footer.hp-footer{background:var(--pp-green-800) !important;color:#e6f2ec !import
 .adm-panel .bd-profile-cover.adm-logo-cover{background:#fff !important;border-bottom:1px solid #e3efe8}
 .adm-panel .bd-profile-card .bd-profile-info{background:linear-gradient(135deg,var(--pp-green-900),var(--pp-green-700))}
 .adm-panel .bd-profile-card .bd-profile-info h2,.adm-panel .bd-profile-card .bd-profile-meta,.adm-panel .bd-profile-card .bd-profile-meta span,.adm-panel .bd-profile-card .bd-profile-meta svg{color:#fff !important}
+
+/* Home banners: "Can't find an item?" in the same orange as "Have something to sell?" */
+.hp-banner.hp-banner-teal{background:var(--pp-orange-grad) !important}
+.hp-banner-btn.hp-banner-btn-teal{background:#fff;color:#e67e22 !important}
+.hp-banner-btn.hp-banner-btn-teal:hover{background:#fef9e7}
+
+/* Hero category pills: bolder text */
+.hp-hero-pill{font-weight:700}
+
+/* Explore Categories: 3D pictures on a light tile, names underneath as before */
+.hp-cat-pill .hp-cat-icon-wrap{width:72px;height:72px;background:#f2f4f3;border-radius:14px}
+.hp-cat-img{width:54px;height:54px;object-fit:contain;display:block}
+
+/* Premium Products heading: title and note stay on one line on phones */
+.hp-premium-note{white-space:nowrap}
+@media(max-width:600px){
+  .hp-premium-section .hp-section-head{gap:10px}
+  .hp-premium-section .hp-section-title-wrap{gap:7px;min-width:0}
+  .hp-premium-section .hp-section-title{font-size:16px}
+  .hp-premium-section .hp-crown-icon{width:18px;height:18px;flex-shrink:0}
+  .hp-premium-note{font-size:11.5px}
+}
+@media(max-width:380px){
+  .hp-premium-section .hp-section-title{font-size:15px}
+  .hp-premium-note{font-size:10.5px}
+}
+
+/* Messages tab: the number of unread chat messages */
+.pp-msg-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#e8621a;color:#fff;font-size:10px;font-weight:700;line-height:1;box-sizing:border-box}
+/* On phones the count sits on the corner of the link, so it takes no room in the crowded header row. */
+.pp-mobile-link{position:relative;overflow:visible !important}
+.pp-mobile-link .pp-msg-badge{display:inline-flex !important;position:absolute;top:-6px;right:-13px;margin:0;min-width:16px;height:16px;padding:0 4px;font-size:9px;border:1.5px solid #fff}
+@media(max-width:389px){.pp-mobile-link .pp-msg-badge{top:-1px;right:-3px}}
+
+/* Back to top, bottom right; lifted above the bars fixed at the bottom of some pages */
+.pp-back-top{position:fixed;right:16px;bottom:20px;z-index:60;width:44px;height:44px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;background:var(--pp-orange-grad);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer;transition:transform .2s,background .2s}
+.pp-back-top:hover{background:var(--pp-orange-grad-hover);transform:translateY(-2px)}
+body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
+@media(max-width:900px){body:has(.product-page-container .pp-action-buttons) .pp-back-top{bottom:86px}}
+@media(max-width:600px){.pp-back-top{width:40px;height:40px;right:12px;bottom:16px}}
+
+/* Footer on phones: logo, description and social icons centred, with room before the link lists */
+@media(max-width:600px){
+  .hp-footer-brand{text-align:center;padding-bottom:10px}
+  .hp-footer-brand img{margin-left:auto;margin-right:auto}
+  .hp-footer-social{justify-content:center}
+}
+/* Footer bottom line on phones: slogan and copyright centred */
+@media(max-width:700px){
+  .hp-footer-bottom{align-items:center !important;text-align:center}
+  .hp-footer-bottom span:first-child,.hp-footer-bottom span:last-child{text-align:center !important}
+}
