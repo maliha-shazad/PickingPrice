@@ -245,7 +245,7 @@ export function SellNow({ actions, initialItem = null }: { actions: Actions, ini
 
                 @media(max-width: 900px) {
                     .sn-layout { grid-template-columns: 1fr; }
-                    .sn-sidebar { display: none; }
+                    .sn-sidebar { position: static; } /* the live preview and the Standard / Premium choice come under the form */
                     .sn-submit-bar { padding: 16px; justify-content: space-between; }
                 }
                 @media(max-width: 600px) {
