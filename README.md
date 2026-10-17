@@ -6,15 +6,15 @@ Live site: https://picking-price-production.up.railway.app
 
 ## What it does
 
-- **Accounts**: registration with name, mobile number, email and password (the mobile number is saved to the profile), sign-in with email and password, optional Google sign-in, buyer / seller / both roles.
+- **Accounts**: registration with name, mobile number, email and password (the mobile number is saved to the profile; the email is confirmed with a 6-digit code before the account can be used), sign-in with email and password, optional Google sign-in, buyer / seller / both roles.
 - **Listings**: title, description, category, brand, price, quantity, condition (New, Like New, Good, Fair, Used), location, up to six photos, delivery and pickup options.
 - **Buyer requests**: what the buyer needs, budget, quantity, acceptable condition and location. Every request takes offers for 30 days; if no offer is selected by then it is taken down automatically and the buyer is notified (it can be posted again). Requests can be saved as drafts.
 - **Seller offers**: sellers answer a request with a price and details; the buyer compares offers and selects one.
 - **Search**: keyword search over title, description, category and brand, with category, condition, city, area and price filters and four sort orders.
 - **Wishlist, chat, reviews, reports**: save products, message the other member about a product, request or offer (with read ticks), review a seller after contact, and report a listing, request, message, review or member.
-- **Listing slots and promotions**: every seller has a free listing allowance; extra slots and Premium Listings (promotions) are paid outside the site, and the seller sends the payment details (method, transaction ID, sender, amount, date and a receipt screenshot) that the administrator cross-checks before approving. A listing published as a Premium Listing stays hidden until its payment is approved. Promoted products appear in the **Premium Listings** strip.
+- **Listing slots and promotions**: every seller has a free listing allowance; extra slots and Premium Listings (promotions) are paid outside the site, and the seller sends the payment details (method, transaction ID, sender, amount, date and a receipt screenshot) that the administrator cross-checks before approving. A listing published as a Premium Listing stays hidden until its payment is approved. Promoted products appear in the **Premium Products** section of the home page.
 - **Slider**: a banner of images, videos or YouTube videos at the top of the product pages, managed in the admin panel.
-- **Notifications and emails**: in-app for every important event, and by email once the administrator has connected a Gmail account: a welcome email at sign-up, password reset codes, a password-changed notice, and a copy of each notification (new message, offer, review and so on). Opening a chat clears its message notifications; opening the Notifications page clears the rest.
+- **Notifications and emails**: in-app for every important event, and by email once the administrator has connected a Gmail account: the confirmation code at sign-up, a welcome email once the account is confirmed, password reset codes, a password-changed notice, and a copy of each notification (new message, offer, review and so on). Opening a chat clears its message notifications; opening the Notifications page clears the rest.
 - **Password reset**: a code emailed to the account's address, checked, then a new password; the administrator can issue a code as a fallback.
 - **Admin panel** at `/admin`: members, listings, requests, payments (with the payment details beside the price), reports, promotions, reviews, activity log, slider, categories and settings.
 

@@ -41,6 +41,8 @@ The sections are tabs across the top. Each has a search box that searches that s
 
 ## 3. Members
 
+The status column reads **Email not confirmed** for a member who signed up but has not yet typed in the 6-digit code emailed to them; they cannot use the account until they do. The member can ask for a new code by logging in or from the code step itself, and resetting the password with a code (theirs or yours) also confirms the address. Accounts created before email confirmation was introduced, and Google accounts, count as confirmed.
+
 - **Profile** opens the member's public profile: listings, rating and reviews.
 - **Manage** applies one action. A reason is required; the member gets a notification and an email that name the action and include your reason (for example "Your account was suspended … Reason: …"). The form says what the chosen action will do before you apply it, and **Cancel** closes it without doing anything.
 
@@ -145,7 +147,7 @@ Every administrator action is recorded with what was done, what it was done to, 
 
 ## 11. Email
 
-Members are emailed from a Gmail account that you connect once: a welcome email when they sign up, password reset codes, a notice when their password is changed, and copies of their notifications. Members always receive notifications inside the site whether or not email is working.
+Members are emailed from a Gmail account that you connect once: the code that confirms their email address at sign-up, a welcome email once it is confirmed, password reset codes, a notice when their password is changed, and copies of their notifications. Members always receive notifications inside the site whether or not email is working.
 
 ### Connect the Gmail account
 

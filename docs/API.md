@@ -21,8 +21,10 @@ The API runs on Node.js 24 with Express 5.2.1. Data is stored in PostgreSQL (18 
 | Method and path | Purpose |
 |---|---|
 | `GET /api/auth/options` | Which sign-in methods are available: `{ email, google, recovery }` |
-| `POST /api/auth/signup` | Register: `{ name, email, phone, password, role, accepted }`; `accepted` must be `true` (the Privacy Policy and Terms of Service were accepted); `phone` is a required Pakistani mobile number (`3001234567`, `03001234567` or `+923001234567`), saved to the profile as `+923001234567`. Signs the member in |
-| `POST /api/auth/login` | Sign in: `{ email, password }` |
+| `POST /api/auth/signup` | Register: `{ name, email, phone, password, role, accepted }`; `accepted` must be `true` (the Privacy Policy and Terms of Service were accepted); `phone` is a required Pakistani mobile number (`3001234567`, `03001234567` or `+923001234567`), saved to the profile as `+923001234567`. When the site can send email, the account starts unconfirmed and nobody is signed in: the answer is `{ ok, confirm: true, email, sent, minutes }` and a 6-digit code is emailed (`sent` says whether the email went out). Without email the member is signed in straight away, as before |
+| `POST /api/auth/login` | Sign in: `{ email, password }`. For an account whose email is not confirmed yet, the right password signs nobody in: it emails a new code and answers `{ ok: false, confirm: true, email, sent, minutes }` |
+| `POST /api/auth/confirm` | Confirm the email with the emailed code: `{ email, code }`. Signs the member in and sends the welcome email; 400 for a wrong or expired code, 409 when the address is already confirmed |
+| `POST /api/auth/confirm/resend` | Email a new confirmation code: `{ email }` (earlier codes stop working). Same answer whether or not the address is waiting for one; 503 when the site cannot send email |
 | `POST /api/auth/logout` | End the current session |
 | `POST /api/auth/forgot` | Email a 6-digit reset code to the account: `{ email }`. Same answer whether or not the address has an account; 503 when no email account is connected |
 | `POST /api/auth/reset/verify` | Check a reset code without using it: `{ email, code }` |
@@ -48,8 +50,9 @@ A listing, request, offer or profile may only reference images uploaded by the s
 
 | Method and path | Purpose | Sign-in |
 |---|---|---|
-| `GET /bootstrap` | Current user, categories, unread and open-request counts | No |
-| `GET /listings` | Active products. Filters: `q`, `category`, `condition`, `location`, `type` (`new` or `preloved`), `min`, `max`, `sort` (`relevance`, `newest`, `low`, `high`, `popular` = most viewed first), `premium=1` (only products with an active promotion, for the Premium Listings strip), `mine=1`, `saved=1` | Only for `mine` and `saved` |
+| `GET /bootstrap` | Current user, categories, unread notifications (`unread`), unread chat messages (`messages`) and open-request counts | No |
+| `GET /counts` | The two header counts only, `{ notifications, messages }`; the page asks for them every 15 seconds and when the tab is shown again | Yes |
+| `GET /listings` | Active products. Filters: `q`, `category`, `condition`, `location`, `type` (`new` or `preloved`), `min`, `max`, `sort` (`relevance`, `newest`, `low`, `high`, `popular` = most viewed first), `premium=1` (only products with an active promotion, for the home page's Premium Products section), `mine=1`, `saved=1` | Only for `mine` and `saved` |
 | `GET /listings/:id` | One product. Counts a view (one per visitor per product per day; the seller's own visits and the administrator's are not counted); each product carries `views` | No |
 | `GET /slides` | The active slides of the slider: `{ items: [{ id, kind (image, video or youtube), url, mobile_url (the phone version, or empty), title, link }] }`. Phones (up to 600 px wide) show `mobile_url` when it is set | No |
 | `GET /requests` | Open buyer requests, same filters as listings; `mine=1` for your own | Only for `mine` |

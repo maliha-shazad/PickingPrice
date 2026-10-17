@@ -32,7 +32,8 @@ The description (**About this item** on the product page) can be up to 1000 char
 7. Enter your location, and optionally a phone number, a WhatsApp number and a preferred meet-up spot.
 8. Tick the delivery and pickup options you offer.
 9. Decide the two deal switches (see below).
-10. Publish. The product is live immediately.
+10. Check the **Live Preview** of your product card, and choose **Standard (Free) Listing** or **Premium Listing** (see section 5). On a computer both are on the right of the form; on a phone or tablet they come under the form, just above the Publish button.
+11. Publish. A standard listing is live immediately.
 
 ### Deal switches
 
@@ -76,7 +77,7 @@ A promoted product is a **Premium Listing**: it carries a **Premium** badge and 
 
 You can also ask for a promotion while you create the listing: on the Sell Now page choose **Premium Listing**, pick the length, pay, fill in the payment details (with the receipt screenshot) and press **Publish as Premium Listing**. A free listing (the other option) goes live at once. The listing is saved but **not shown to buyers yet**: your Seller Dashboard shows it as *Waiting for payment verification*. When the administrator approves the payment it goes live with the Premium badge. If the payment is rejected you are told why; send the payment again with **Promote**, or press **Publish as free listing** to make it live as a normal listing.
 
-Promoted products also appear in the **Premium Listings** section of the home page, above Live Buyer Requests.
+Promoted products also appear in the **Premium Products** section of the home page, above Live Buyer Requests.
 
 ## 6. Answer buyer requests
 

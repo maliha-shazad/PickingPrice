@@ -2,7 +2,9 @@
 
 ## Member accounts
 
-Members register with their name, a Pakistani mobile number, an email address and a password of 8 to 128 characters, and sign in with the email and password. The mobile number is required at sign-up and saved to the member's profile as `+923001234567`, and a member signing up with the form must tick that they accept the Privacy Policy and Terms of Service (checked again by the server); signing up with the Google button does not ask for it. Older accounts registered with a phone number instead of an email still sign in with it. Passwords are stored only as salted scrypt hashes. A sign-in creates a server-side session kept in a secure, HttpOnly cookie; it expires after seven days and signing out ends it immediately. Sign-up, sign-in and reset attempts are limited per email address and per IP address, and every form request is checked against the site's own origin.
+Members register with their name, a Pakistani mobile number, an email address and a password of 8 to 128 characters, and sign in with the email and password. The mobile number is required at sign-up and saved to the member's profile as `+923001234567`, and a member signing up with the form must tick that they accept the Privacy Policy and Terms of Service (checked again by the server); signing up with the Google button does not ask for it. Older accounts registered with a phone number instead of an email still sign in with it.
+
+**Email confirmation.** When the site can send email, a new account starts unconfirmed (`accounts.email_verified = 0`) and nobody is signed in: a 6-digit code, valid for 15 minutes and usable once, is emailed to the address, and the member types it in on the sign-up page (`POST /api/auth/confirm`), which confirms the address, signs them in and sends the welcome email. Logging in to an unconfirmed account with the right password emails a new code instead of signing in, and a password reset with a code also confirms the address. Accounts that existed before this feature, Google accounts (Google has confirmed the address) and older phone-number logins count as confirmed. If the site cannot send email (no Gmail connected and no Resend key), sign-up works as before without a code. The code logic is in `lib/market/email-confirm.ts`. Passwords are stored only as salted scrypt hashes. A sign-in creates a server-side session kept in a secure, HttpOnly cookie; it expires after seven days and signing out ends it immediately. Sign-up, sign-in and reset attempts are limited per email address and per IP address, and every form request is checked against the site's own origin.
 
 The role chosen at sign-up (buying, selling, or both) only decides which features the member sees first. It can be changed later in the profile, and it never gives administrator rights.
 
@@ -45,7 +47,7 @@ Requests for a code, code checks and password changes are all counted by the sam
 
 ## Outgoing email
 
-The site sends four kinds of email, all laid out from the left of the mail window: a **welcome email** when an account is created (with a password or with Google), **password reset codes**, a **"your password was changed"** notice after every reset, and a copy of every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached). Email is sent over HTTPS, so it works on hosts that block SMTP.
+The site sends five kinds of email, all laid out from the left of the mail window: the **confirmation code** at sign-up, a **welcome email** once an account is ready (after its email is confirmed, or straight away with Google), **password reset codes**, a **"your password was changed"** notice after every reset, and a copy of every in-app notification (new offer, offer selected, new message, new review, payment decision, promotion or request expired, account or content update, listing limit reached). Email is sent over HTTPS, so it works on hosts that block SMTP.
 
 ### Gmail (works without your own domain)
 
@@ -92,8 +94,8 @@ Each notification is emailed at most once; chat messages send at most one email 
 
 ## Not included
 
-Email address confirmation at sign-up, multi-factor sign-in and member-managed account linking are not implemented.
+Multi-factor sign-in and member-managed account linking are not implemented.
 
 ## Checks
 
-`npm run test:password` covers password hashing, and `npm run test:http` covers sign-up, sign-in, sessions, the administrator, password reset by email and notification emails against a stand-in mail server (build first with `npm run build`). Both use throwaway databases.
+`npm run test:password` covers password hashing, and `npm run test:http` covers sign-up with email confirmation, sign-in, sessions, the administrator, password reset by email and notification emails against a stand-in mail server (build first with `npm run build`). Both use throwaway databases.

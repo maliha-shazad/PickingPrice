@@ -124,6 +124,7 @@ erDiagram
     text email
     text name
     text password_hash
+    int email_verified "1 once the emailed code is entered"
     text role "buyer, seller or both"
     text location
     int verified
@@ -247,7 +248,7 @@ erDiagram
 
 | Entity in the specification | Table or tables |
 |---|---|
-| Users | `accounts` (sign-in details) and `profiles` (public details, role, listing slots) |
+| Users | `accounts` (sign-in details, and whether the email address is confirmed) and `profiles` (public details, role, listing slots) |
 | Product Listings | `listings` |
 | Categories | `categories` |
 | On-Demand Requests | `buyer_requests` (unfinished ones in `request_drafts`) |

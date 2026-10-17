@@ -10,7 +10,11 @@ Picking Price connects buyers and sellers directly. You can browse products that
 2. Enter your name, your mobile number, your email address, a password of at least 8 characters, and the same password again in **Confirm Password**. The mobile number is required and is saved in your profile, where you can change it later.
 3. Choose how you want to use the site: buying only, selling only, or buying and selling. You can change this later in your profile.
 4. Tick **I accept the Privacy Policy and Terms of Service** (both are links you can open and read first). The account cannot be created until the box is ticked.
-5. You can also sign up with your Google account by pressing the **Google** button, when it is offered. The box above is needed only when you sign up with the form.
+5. Press **Create Free Account**. When the site sends email, a **Confirm Your Email** step follows: a 6-digit code is emailed to the address you entered. Type it in and press **Confirm Email**; the account is then ready and you are signed in. The code is valid for 15 minutes; if it does not arrive, check the spam folder or press **Resend code** (offered again after 45 seconds). **Use a different email** takes you back to the form.
+6. If you leave before entering the code, log in later with your email and password: a new code is emailed and the same step opens. Resetting your password with **Forgot Password** also confirms the address.
+7. You can also sign up with your Google account by pressing the **Google** button, when it is offered. The box above is needed only when you sign up with the form, and a Google account does not need a code because Google has already confirmed its email address.
+
+Accounts created before email confirmation was introduced keep working as before; they are not asked for a code.
 
 You can browse products and requests without an account. You need to sign in to save products, chat, post a request, send an offer, write a review or report something. When you try one of these while signed out, the site takes you to the login page and brings you back afterwards.
 
@@ -27,19 +31,20 @@ If you registered with a phone number, or the email does not arrive, contact sup
 | Part of the screen | What it does |
 |---|---|
 | Picking Price logo | Takes you back to the home page, from any page |
-| Slider and **Premium Listings** | The slider (announcements from Picking Price) is on the home page (Discover), just above Explore Categories. Products that sellers have promoted carry a **Premium** badge and have their own **Premium Listings** section on the home page, above Live Buyer Requests. Until the site has real products of a kind, sample ones are shown in their place, each kind on its own: real New products replace only the New samples, real pre-loved products only the pre-loved samples, and real Premium Listings only the premium samples. The same goes for buyer requests and the slider. Sample items are marked as samples on their product page. |
+| Slider and **Premium Products** | The slider (announcements from Picking Price) is on the home page (Discover), just above Explore Categories. Products that sellers have promoted carry a **Premium** badge and have their own **Premium Products** section on the home page, above Live Buyer Requests. Until the site has real products of a kind, sample ones are shown in their place, each kind on its own: real New products replace only the New samples, real pre-loved products only the pre-loved samples, and real Premium Listings only the premium samples. The same goes for buyer requests and the slider. Sample items are marked as samples on their product page. |
 | **Sell Now** (top right on a computer) | List a product for sale |
 | Search box | Searches every product by title, description, category and brand |
 | Location | **All Pakistan** at first. Choose a city to see only its products; every product list shows which one, for example "Peshawar based products". The city you choose is remembered on your device and is the default location for your requests |
 | Buying / Selling switch | Shown when your account can do both; changes the dashboard and shortcuts you see |
-| Bell | Your notifications. A number appears only when something is unread; it goes away when you open the Notifications page |
-| **Discover** | Home page: categories, **Premium Listings** (when sellers have promoted products), live buyer requests with the days left, the **Popular Product** (the most viewed product on the site, marked *Most Viewed* with its number of views; until products have views, the newest one is shown as *Latest Listing*), **Recent Pre-Loved Deals** (used products only) and **Fresh Arrivals** (New products only). Press a seller's name on a product card to see their profile |
+| Bell | Your notifications. A number appears only when something is unread, and it updates by itself within a few seconds of something new; it goes away when you open the Notifications page |
+| **Discover** | Home page: categories, **Premium Products** (when sellers have promoted products), live buyer requests with the days left, the **Popular Product** (the most viewed product on the site, marked *Most Viewed* with its number of views; until products have views, the newest one is shown as *Latest Listing*), **Recent Pre-Loved Deals** (used products only) and **Fresh Arrivals** (New products only). Press a seller's name on a product card to see their profile |
 | **Requests** | Every open buyer request |
 | **New Products** | Products listed in New condition |
 | **Pre-Loved** | Used products: Like New, Good, Fair and Used |
 | **All Categories** | Every product with every filter |
 | **Wishlist** | Products you saved |
-| **Messages** | Your chats |
+| **Messages** | Your chats. A number shows how many messages you have not read yet; it goes down as you open the chats and disappears at zero |
+| Back to top | The orange arrow at the bottom right, shown once you scroll down a page, takes you back to the top |
 
 On a phone the same links are in the bar under the logo, with **Post a Request** and **Sell Now** buttons at the top.
 
@@ -127,7 +132,7 @@ You are notified when a seller sends an offer, when you receive a message, when 
 
 After each change you make (saving to your wishlist, sending an offer, posting a request and so on) a short message at the bottom of the screen says what was done. Opening a chat or a notification does not show one.
 
-**Emails you receive** (when the site has email switched on): a welcome email when you create your account, the code when you use Forgot Password, a notice when your password has been changed (if you did not change it, reset it straight away), and a copy of your notifications. For chats you get at most one email per conversation every 15 minutes, so a busy chat does not fill your inbox.
+**Emails you receive** (when the site has email switched on): the code that confirms your email address when you sign up, a welcome email once the account is confirmed, the code when you use Forgot Password, a notice when your password has been changed (if you did not change it, reset it straight away), and a copy of your notifications. For chats you get at most one email per conversation every 15 minutes, so a busy chat does not fill your inbox.
 
 Opening the Notifications page marks them all as seen, so the number on the bell goes away; the ones that were new stay highlighted until you leave the page. Opening a chat also clears that chat's message notifications.
 
