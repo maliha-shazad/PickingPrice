@@ -2,7 +2,7 @@
 
 A two-way online marketplace for Pakistan. Sellers post fixed-price listings for new and pre-loved products; buyers either browse those listings or post a request for what they need and let sellers send offers.
 
-Live site: https://web-production-e86b77.up.railway.app
+Live site: https://picking-price-production.up.railway.app
 
 ## What it does
 
