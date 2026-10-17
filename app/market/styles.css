@@ -3458,11 +3458,12 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
 @media(max-width:900px){body:has(.product-page-container .pp-action-buttons) .pp-back-top{bottom:86px}}
 @media(max-width:600px){.pp-back-top{width:40px;height:40px;right:12px;bottom:16px}}
 
-/* Footer on phones: logo, description and social icons centred, with room before the link lists */
+/* Footer on phones: logo, description, social icons and the four link lists centred, with room before the lists */
 @media(max-width:600px){
   .hp-footer-brand{text-align:center;padding-bottom:10px}
   .hp-footer-brand img{margin-left:auto;margin-right:auto}
   .hp-footer-social{justify-content:center}
+  .hp-footer-col,.hp-footer-col button{text-align:center}
 }
 /* Footer bottom line on phones: slogan and copyright centred */
 @media(max-width:700px){
