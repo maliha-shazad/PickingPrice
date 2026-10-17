@@ -3470,6 +3470,6 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
   .hp-footer-bottom span:first-child,.hp-footer-bottom span:last-child{text-align:center !important}
 }
 
-/* All Categories tab (first in the tab bar): the Sell Now button's orange, and its hover */
+/* All Categories tab (first in the tab bar): the Sell Now button's orange and hover colour; it stays in place on hover */
 .pp-cat-nav-item.pp-cat-all{background:var(--pp-orange-grad);color:#fff;font-weight:700;border-bottom-color:transparent}
-.pp-cat-nav-item.pp-cat-all:hover{background:var(--pp-orange-grad-hover);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(230,126,34,.35)}
+.pp-cat-nav-item.pp-cat-all:hover{background:var(--pp-orange-grad-hover);color:#fff;box-shadow:0 4px 12px rgba(230,126,34,.35)}

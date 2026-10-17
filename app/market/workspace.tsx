@@ -350,9 +350,17 @@ export default function Workspace() {
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
         if (q.has('auth_error')) {
-            toast.error(q.get('auth_error') === 'google_not_configured'
-                ? 'Google sign-in is not configured yet.'
-                : 'Google sign-in could not be completed. Try email sign-in.');
+            // Each reason the server gives (server/app.ts, Google callback) gets its own explanation.
+            const reasons: Record<string, string> = {
+                google_not_configured: 'Google sign-in is not configured yet.',
+                existing_email: 'This email already has a Picking Price account made with a password. Log in with your email and password instead.',
+                cancelled: 'Google sign-in was cancelled or took too long. Please try again.',
+                invalid_state: 'Google sign-in took too long or was opened in another tab. Please try again.',
+                unverified: 'Your Google account email is not verified, so it cannot be used to sign in.',
+                google_failed: 'Google did not accept the sign-in. Please try again in a moment.',
+                unavailable: 'Google could not be reached just now. Please try again in a moment.',
+            };
+            toast.error(reasons[q.get('auth_error') || ''] || 'Google sign-in could not be completed. Try email sign-in.');
             history.replaceState({}, '', window.location.pathname);
         }
         if (q.has('welcome')) {
