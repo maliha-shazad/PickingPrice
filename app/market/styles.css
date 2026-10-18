@@ -3490,3 +3490,11 @@ body:has(.sn-submit-bar) .pp-back-top{bottom:92px}
 .pp-auth-confirm-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .pp-auth-confirm-links button{background:none;border:0;padding:0;color:#1c694a;font-weight:700;font-size:13px;cursor:pointer}
 .pp-auth-confirm-links button:disabled{opacity:.5;cursor:default}
+
+/* New Products, "Can't Find the New Product You Want?": the home page banners' orange, and hover on both buttons */
+.bn-cta-banner{background:var(--pp-orange-grad)}
+.bn-cta-btn-primary,.bn-cta-btn-secondary{transition:all .2s;white-space:nowrap}
+.bn-cta-right{flex-shrink:0}
+.bn-cta-btn-primary{color:#e67e22}
+.bn-cta-btn-primary:hover{background:#fef9e7;transform:translateY(-1px)}
+.bn-cta-btn-secondary:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.45);transform:translateY(-1px)}
